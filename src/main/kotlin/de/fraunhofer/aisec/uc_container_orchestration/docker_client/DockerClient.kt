@@ -11,8 +11,9 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import org.slf4j.LoggerFactory
+import java.io.Closeable
 
-class DockerClient(dockerSocket: String = "/var/run/docker.sock") {
+class DockerClient(dockerSocket: String = "/var/run/docker.sock") : Closeable{
     internal val httpClient = HttpClient(OkHttp) {
         expectSuccess = true
         engine {
@@ -27,6 +28,10 @@ class DockerClient(dockerSocket: String = "/var/run/docker.sock") {
                 ignoreUnknownKeys = true
             })
         }
+    }
+
+    override fun close() {
+        httpClient.close()
     }
 
     suspend fun ping() {
