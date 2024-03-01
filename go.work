@@ -1,0 +1,4 @@
+go 1.22
+
+use test-containers/http-echo
+use test-containers/proxy
