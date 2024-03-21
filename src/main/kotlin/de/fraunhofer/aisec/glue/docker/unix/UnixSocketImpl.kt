@@ -1,11 +1,10 @@
-package de.fraunhofer.aisec.uc_container_orchestration.docker_client
+package de.fraunhofer.aisec.glue.docker.unix
 
 import java.io.InputStream
 import java.io.OutputStream
 import java.net.*
 import java.nio.channels.Channels
 import java.nio.channels.SocketChannel
-import javax.net.SocketFactory
 
 class UnixSocketImpl(private val path: String) : SocketImpl() {
     private lateinit var channel: SocketChannel
@@ -17,19 +16,31 @@ class UnixSocketImpl(private val path: String) : SocketImpl() {
 
     override fun create(p0: Boolean) {}
 
-    override fun connect(p0: String?, p1: Int) {
+    override fun connect(
+        p0: String?,
+        p1: Int,
+    ) {
         connectImpl()
     }
 
-    override fun connect(p0: InetAddress?, p1: Int) {
+    override fun connect(
+        p0: InetAddress?,
+        p1: Int,
+    ) {
         connectImpl()
     }
 
-    override fun connect(p0: SocketAddress?, p1: Int) {
+    override fun connect(
+        p0: SocketAddress?,
+        p1: Int,
+    ) {
         connectImpl()
     }
 
-    override fun bind(p0: InetAddress?, p1: Int) {
+    override fun bind(
+        p0: InetAddress?,
+        p1: Int,
+    ) {
         throw UnsupportedOperationException("Only client-side sockets are supported")
     }
 
@@ -69,39 +80,14 @@ class UnixSocketImpl(private val path: String) : SocketImpl() {
         return setOf()
     }
 
-    override fun setOption(opt: Int, arg: Any?) {
+    override fun setOption(
+        opt: Int,
+        arg: Any?,
+    ) {
         // TODO: Do we need to implement this? It is used by OkHttp...
     }
 
     override fun getOption(p0: Int): Any? {
         return null
-    }
-}
-
-class UnixSocket(path: String) : Socket(UnixSocketImpl(path))
-
-class UnixSocketFactory(private val path: String) : SocketFactory() {
-    private fun createSocketImpl(): Socket {
-        return UnixSocket(path)
-    }
-
-    override fun createSocket(): Socket {
-        return createSocketImpl()
-    }
-
-    override fun createSocket(addr: String?, port: Int): Socket {
-        return createSocketImpl()
-    }
-
-    override fun createSocket(addr: String?, port: Int, localAddr: InetAddress?, localPort: Int): Socket {
-        return createSocketImpl()
-    }
-
-    override fun createSocket(addr: InetAddress?, port: Int): Socket {
-        return createSocketImpl()
-    }
-
-    override fun createSocket(addr: InetAddress?, port: Int, localAddr: InetAddress?, localPort: Int): Socket {
-        return createSocketImpl()
     }
 }

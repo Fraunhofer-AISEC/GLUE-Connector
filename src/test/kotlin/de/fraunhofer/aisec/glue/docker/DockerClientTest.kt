@@ -1,4 +1,4 @@
-package de.fraunhofer.aisec.uc_container_orchestration.docker_client
+package de.fraunhofer.aisec.glue.docker
 
 import kotlinx.coroutines.runBlocking
 import kotlin.random.Random
@@ -39,6 +39,6 @@ class DockerClientTest {
 
         // Proxy socket to dump requests and responses
         // $ socat -v UNIX-LISTEN:/run/user/1000/docker-socket.sock,fork UNIX-CONNECT:/var/run/docker.sock
-        //const val DOCKER_SOCKET = "/run/user/1000/docker-socket.sock"
+        // const val DOCKER_SOCKET = "/run/user/1000/docker-socket.sock"
     }
 }

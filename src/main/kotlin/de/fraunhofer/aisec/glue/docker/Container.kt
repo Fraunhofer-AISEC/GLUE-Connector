@@ -1,4 +1,4 @@
-package de.fraunhofer.aisec.uc_container_orchestration.docker_client
+package de.fraunhofer.aisec.glue.docker
 
 import io.ktor.client.request.*
 
@@ -15,11 +15,13 @@ class Container internal constructor(val client: DockerClient, val name: String)
         client.httpClient.post("${DockerClient.BASE_URL}/containers/$name/kill")
     }
 
-    suspend fun remove(deleteVolumes: Boolean = false, force: Boolean = false) {
+    suspend fun remove(
+        deleteVolumes: Boolean = false,
+        force: Boolean = false,
+    ) {
         client.httpClient.delete("${DockerClient.BASE_URL}/containers/$name") {
             parameter("v", deleteVolumes)
             parameter("force", force)
         }
     }
-
 }

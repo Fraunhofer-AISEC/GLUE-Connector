@@ -3,6 +3,7 @@ plugins {
     kotlin("plugin.serialization") version "1.9.21"
     application
     id("com.github.johnrengelman.shadow") version "8.1.1"
+    id("com.diffplug.spotless") version "6.25.0"
 }
 
 group = "de.fraunhofer.aisec"
@@ -33,4 +34,15 @@ kotlin {
 
 application {
     mainClass.set("de.fraunhofer.aisec.uc_container_orchestration.ExampleKt")
+}
+
+spotless {
+    kotlin {
+        target("src/*/kotlin/**/*.kt")
+        ktlint().editorConfigOverride(mapOf(
+            "ktlint_code_style" to "ktlint_official",
+            // Since intellij generates inputs like this, this rule is in the way...
+            "ktlint_standard_no-wildcard-imports" to "disabled",
+        ))
+    }
 }
