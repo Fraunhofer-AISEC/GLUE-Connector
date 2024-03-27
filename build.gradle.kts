@@ -21,6 +21,9 @@ dependencies {
     implementation("io.ktor:ktor-client-content-negotiation:2.3.7")
     implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.7")
 
+    // For running example with gradle
+    runtimeOnly("org.slf4j:slf4j-jdk14:2.0.10")
+
     testImplementation("org.slf4j:slf4j-jdk14:2.0.10")
     testImplementation("org.jetbrains.kotlin:kotlin-test")
 }
@@ -33,7 +36,12 @@ kotlin {
 }
 
 application {
-    mainClass.set("de.fraunhofer.aisec.uc_container_orchestration.ExampleKt")
+    mainClass.set("de.fraunhofer.aisec.glue.ExampleKt")
+}
+
+// Required for ./gradlew run in order to wait on readln()
+tasks.named<JavaExec>("run") {
+    standardInput = System.`in`
 }
 
 spotless {

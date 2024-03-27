@@ -1,0 +1,8 @@
+services:
+  http-echo:
+    build: ./http-echo
+    image: ${PREFIX:-copi}/http-echo:latest
+
+  proxy:
+    build: ./proxy
+    image: ${PREFIX:-copi}/proxy:latest
