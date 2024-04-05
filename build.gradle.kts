@@ -1,6 +1,7 @@
 plugins {
     kotlin("jvm") version "1.9.21"
     kotlin("plugin.serialization") version "1.9.21"
+    id("io.ktor.plugin") version "2.3.9"
     application
     id("com.github.johnrengelman.shadow") version "8.1.1"
     id("com.diffplug.spotless") version "6.25.0"
@@ -16,10 +17,14 @@ repositories {
 dependencies {
     implementation("org.slf4j:slf4j-api:2.0.10")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
-    implementation("io.ktor:ktor-client-core:2.3.7")
-    implementation("io.ktor:ktor-client-okhttp:2.3.7")
-    implementation("io.ktor:ktor-client-content-negotiation:2.3.7")
-    implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.7")
+    implementation("io.ktor:ktor-client-core")
+    implementation("io.ktor:ktor-client-okhttp")
+    implementation("io.ktor:ktor-client-content-negotiation")
+    implementation("io.ktor:ktor-serialization-kotlinx-json")
+    implementation("io.ktor:ktor-server-core-jvm")
+    implementation("io.ktor:ktor-server-content-negotiation-jvm")
+    implementation("io.ktor:ktor-server-netty-jvm")
+    implementation("io.ktor:ktor-server-config-yaml")
 
     // For running example with gradle
     runtimeOnly("org.slf4j:slf4j-jdk14:2.0.10")
@@ -36,7 +41,7 @@ kotlin {
 }
 
 application {
-    mainClass.set("de.fraunhofer.aisec.glue.ExampleKt")
+    mainClass.set("de.fraunhofer.aisec.glue.ApplicationKt")
 }
 
 // Required for ./gradlew run in order to wait on readln()
