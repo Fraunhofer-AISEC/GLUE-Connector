@@ -26,6 +26,7 @@ dependencies {
     implementation(libs.ktor.server.contentNegotiation)
     implementation(libs.ktor.server.config.yaml)
     implementation(libs.ktor.server.auth)
+    implementation(libs.koin.ktor)
 
     // For running example with gradle
     runtimeOnly(libs.slf4j.jdk14)
