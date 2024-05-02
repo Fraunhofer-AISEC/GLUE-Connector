@@ -6,24 +6,19 @@ import de.fraunhofer.aisec.glue.PDP
 import de.fraunhofer.aisec.glue.createContainerCreateReq
 import de.fraunhofer.aisec.glue.models.Pipeline
 import de.fraunhofer.aisec.glue.proxy.Proxy
-import io.ktor.client.*
-import io.ktor.client.request.*
-import io.ktor.client.statement.*
 import io.ktor.http.*
-import io.ktor.http.content.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import io.ktor.util.*
-import io.ktor.utils.io.*
-
-val pdp = PDP()
-val pipelines = mutableMapOf<String, ContainerPipeline>()
-val client = HttpClient()
+import org.koin.ktor.ext.inject
+import kotlin.collections.set
 
 fun Application.configureRouting() {
+    val pipelines by inject<MutableMap<String, ContainerPipeline>>()
+    val pdp by inject<PDP>()
+
     routing {
         //       So we should probably add some authentication here as well
         route("contract") {
