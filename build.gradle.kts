@@ -1,10 +1,10 @@
 plugins {
-    kotlin("jvm") version "1.9.21"
-    kotlin("plugin.serialization") version "1.9.21"
-    id("io.ktor.plugin") version "2.3.9"
+    alias(libs.plugins.kotlin)
+    alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.ktor)
+    alias(libs.plugins.shadow)
+    alias(libs.plugins.spotless)
     application
-    id("com.github.johnrengelman.shadow") version "8.1.1"
-    id("com.diffplug.spotless") version "6.25.0"
 }
 
 group = "de.fraunhofer.aisec"
@@ -15,22 +15,23 @@ repositories {
 }
 
 dependencies {
-    implementation("org.slf4j:slf4j-api:2.0.10")
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
-    implementation("io.ktor:ktor-client-core")
-    implementation("io.ktor:ktor-client-okhttp")
-    implementation("io.ktor:ktor-client-content-negotiation")
-    implementation("io.ktor:ktor-serialization-kotlinx-json")
-    implementation("io.ktor:ktor-server-core-jvm")
-    implementation("io.ktor:ktor-server-content-negotiation-jvm")
-    implementation("io.ktor:ktor-server-netty-jvm")
-    implementation("io.ktor:ktor-server-config-yaml")
+    implementation(libs.slf4j.api)
+    implementation(libs.okhttp)
+    implementation(libs.ktor.client.core)
+    implementation(libs.ktor.client.okhttp)
+    implementation(libs.ktor.client.contentNegotiation)
+    implementation(libs.ktor.serialization.kotlinx.json)
+    implementation(libs.ktor.server.core)
+    implementation(libs.ktor.server.netty)
+    implementation(libs.ktor.server.contentNegotiation)
+    implementation(libs.ktor.server.config.yaml)
+    implementation(libs.ktor.server.auth)
 
     // For running example with gradle
-    runtimeOnly("org.slf4j:slf4j-jdk14:2.0.10")
+    runtimeOnly(libs.slf4j.jdk14)
 
-    testImplementation("org.slf4j:slf4j-jdk14:2.0.10")
-    testImplementation("org.jetbrains.kotlin:kotlin-test")
+    testImplementation(libs.slf4j.jdk14)
+    testImplementation(libs.kotlin.test)
 }
 
 tasks.test {
