@@ -1,6 +1,5 @@
 package de.fraunhofer.aisec.glue.docker.model
 
-
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -11,14 +10,11 @@ import kotlinx.serialization.Serializable
  * @param `data` Low-level storage metadata, provided as key/value pairs.  This information is driver-specific, and depends on the storage-driver in use, and should be used for informational purposes only.
  */
 @Serializable
-data class GraphDriverData (
-    /* Name of the storage driver. */
+data class GraphDriverData(
+    // Name of the storage driver.
     @SerialName(value = "Name")
     val name: String,
-
-    /* Low-level storage metadata, provided as key/value pairs.  This information is driver-specific, and depends on the storage-driver in use, and should be used for informational purposes only.  */
+    // Low-level storage metadata, provided as key/value pairs.  This information is driver-specific, and depends on the storage-driver in use, and should be used for informational purposes only.
     @SerialName(value = "Data")
-    val `data`: Map<String, String>
-
+    val `data`: Map<String, String>,
 )
-

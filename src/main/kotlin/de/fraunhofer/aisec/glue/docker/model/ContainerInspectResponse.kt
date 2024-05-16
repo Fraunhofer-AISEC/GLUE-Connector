@@ -8,8 +8,8 @@
 
 package de.fraunhofer.aisec.glue.docker.model
 
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 
 /**
  *
@@ -41,90 +41,63 @@ import kotlinx.serialization.SerialName
  * @param networkSettings
  */
 @Serializable
-
-data class ContainerInspectResponse (
-
-    /* The ID of the container */
+data class ContainerInspectResponse(
+    // The ID of the container
     @SerialName(value = "Id")
     val id: String? = null,
-
-    /* The time the container was created */
+    // The time the container was created
     @SerialName(value = "Created")
     val created: String? = null,
-
-    /* The path to the command being run */
+    // The path to the command being run
     @SerialName(value = "Path")
     val path: String? = null,
-
-    /* The arguments to the command being run */
+    // The arguments to the command being run
     @SerialName(value = "Args")
     val args: List<String>? = null,
-
     @SerialName(value = "State")
     val state: ContainerState? = null,
-
-    /* The container's image ID */
+    // The container's image ID
     @SerialName(value = "Image")
     val image: String? = null,
-
     @SerialName(value = "ResolvConfPath")
     val resolvConfPath: String? = null,
-
     @SerialName(value = "HostnamePath")
     val hostnamePath: String? = null,
-
     @SerialName(value = "HostsPath")
     val hostsPath: String? = null,
-
     @SerialName(value = "LogPath")
     val logPath: String? = null,
-
     @SerialName(value = "Name")
     val name: String? = null,
-
     @SerialName(value = "RestartCount")
     val restartCount: Int? = null,
-
     @SerialName(value = "Driver")
     val driver: String? = null,
-
     @SerialName(value = "Platform")
     val platform: String? = null,
-
     @SerialName(value = "MountLabel")
     val mountLabel: String? = null,
-
     @SerialName(value = "ProcessLabel")
     val processLabel: String? = null,
-
     @SerialName(value = "AppArmorProfile")
     val appArmorProfile: String? = null,
-
-    /* IDs of exec instances that are running in the container. */
+    // IDs of exec instances that are running in the container.
     @SerialName(value = "ExecIDs")
     val execIDs: List<String>? = null,
-
     @SerialName(value = "HostConfig")
     val hostConfig: HostConfig? = null,
-
     @SerialName(value = "GraphDriver")
     val graphDriver: GraphDriverData? = null,
-
-    /* The size of files that have been created or changed by this container.  */
+    // The size of files that have been created or changed by this container.
     @SerialName(value = "SizeRw")
     val sizeRw: Long? = null,
-
-    /* The total size of all the files in this container. */
+    // The total size of all the files in this container.
     @SerialName(value = "SizeRootFs")
     val sizeRootFs: Long? = null,
-
     @SerialName(value = "Mounts")
     val mounts: List<MountPoint>? = null,
-
     @SerialName(value = "Config")
     val config: ContainerConfig? = null,
-
     @SerialName(value = "NetworkSettings")
-    val networkSettings: NetworkSettings? = null
+    val networkSettings: NetworkSettings? = null,
 )
-

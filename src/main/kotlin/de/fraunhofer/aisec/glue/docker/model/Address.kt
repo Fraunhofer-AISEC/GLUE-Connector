@@ -1,6 +1,5 @@
 package de.fraunhofer.aisec.glue.docker.model
 
-
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -11,15 +10,11 @@ import kotlinx.serialization.Serializable
  * @param prefixLen Mask length of the IP address.
  */
 @Serializable
-data class Address (
-
-    /* IP address. */
+data class Address(
+    // IP address.
     @SerialName(value = "Addr")
     val addr: String? = null,
-
-    /* Mask length of the IP address. */
+    // Mask length of the IP address.
     @SerialName(value = "PrefixLen")
-    val prefixLen: Int? = null
-
+    val prefixLen: Int? = null,
 )
-
