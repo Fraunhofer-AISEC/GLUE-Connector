@@ -26,13 +26,15 @@ dependencies {
     implementation(libs.ktor.server.contentNegotiation)
     implementation(libs.ktor.server.config.yaml)
     implementation(libs.ktor.server.auth)
-    implementation(libs.koin.ktor)
+    implementation(libs.kodein)
 
     // For running example with gradle
     runtimeOnly(libs.slf4j.jdk14)
 
     testImplementation(libs.slf4j.jdk14)
     testImplementation(libs.kotlin.test)
+    testImplementation(libs.ktor.server.test.host)
+    testImplementation(libs.mockk)
 }
 
 tasks.test {
