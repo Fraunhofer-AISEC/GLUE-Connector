@@ -5,19 +5,20 @@ import de.fraunhofer.aisec.glue.controllers.Controller
 import de.fraunhofer.aisec.glue.controllers.IngressController
 import de.fraunhofer.aisec.glue.plugins.configureAuthentication
 import de.fraunhofer.aisec.glue.plugins.configureSerialization
+import de.fraunhofer.aisec.glue.proxy.Proxy
 import io.ktor.server.application.*
 import io.ktor.server.routing.*
 import org.kodein.di.*
 import org.kodein.type.jvmType
-
 fun main(args: Array<String>): Unit = io.ktor.server.netty.EngineMain.main(args)
 
-val defaultDependencies = DI.Module {
+val defaultDependencies by DI.Module {
     bind<PDP>() with singleton { PDP() }
     bind<ContractManager>() with singleton { ContractManager() }
     bind<ContainerManager>() with singleton { ContainerManager(instance()) }
     bind<ContractController>() with singleton { ContractController(instance(), instance()) }
-    bind<IngressController>() with singleton { IngressController(instance(), instance(), instance()) }
+    bind<IngressController>() with singleton { IngressController(instance(), instance(), instance(), instance()) }
+    bind<Proxy>() with singleton { Proxy() }
 }
 
 fun Application.module() = module(DI { import(defaultDependencies) })

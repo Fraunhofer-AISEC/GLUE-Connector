@@ -16,38 +16,41 @@ class IngressController(
     private val contractManager: ContractManager,
     private val pdp: PDP,
     private val containerManager: ContainerManager,
+    private val proxy: Proxy
 ) : Controller {
     override fun Route.registerRoutes() {
-        // TODO: It is a little bit annoying that we currently have to always give the whole path here
-        //       Kodein would theoretically offer ktor integration to allow injecting a subcontroller for routes I
-        //       think, but that would bind us to the DI framework
-        //       Alternatively, we could define all controllers with factories, which allow us to create controllers
-        //       with the necessary parameters passed as arguments on the fly.
-        route("/contract/{contractId}/call/{path...}") {
-            handle {
-                // TODO: Mainly fetch an actual contract object here instead
-                val contractId = call.parameters["contractId"]!!
-                val contract = contractManager.get(contractId)
-                val callerIdentity = call.principal<UserIdPrincipal>()?.name ?: "Test"
-                val reqMethod = call.request.httpMethod
-                val path = call.parameters.getAll("path")!!.joinToString("/")
+        authenticate("ingress-auth") {
+            // TODO: It is a little bit annoying that we currently have to always give the whole path here
+            //       Kodein would theoretically offer ktor integration to allow injecting a subcontroller for routes I
+            //       think, but that would bind us to the DI framework
+            //       Alternatively, we could define all controllers with factories, which allow us to create controllers
+            //       with the necessary parameters passed as arguments on the fly.
+            route("/contract/{contractId}/call/{path...}") {
+                handle {
+                    // TODO: Mainly fetch an actual contract object here instead
+                    val contractId = call.parameters["contractId"]!!
+                    val contract = contractManager.get(contractId)
+                    val callerIdentity = call.principal<UserIdPrincipal>()?.name ?: "Test"
+                    val reqMethod = call.request.httpMethod
+                    val path = call.parameters.getAll("path")!!.joinToString("/")
 
-                if (contract == null) {
-                    call.respond(HttpStatusCode.NotFound)
-                    return@handle
+                    if (contract == null) {
+                        call.respond(HttpStatusCode.NotFound)
+                        return@handle
+                    }
+
+                    if (!pdp.checkHttpCall(contract, callerIdentity, reqMethod.value, path)) {
+                        call.respond(HttpStatusCode.Unauthorized)
+                        return@handle
+                    }
+
+                    // TODO: Handle null, which indicates that the contract does not specify any mapping for this path
+                    val containerUrl = resolveContainerUrl(contract, path)!!
+
+                    // TODO: Inject proxy as well
+                    val resp = proxy.delegate(call.request, containerUrl)
+                    call.respond(resp)
                 }
-
-                if (!pdp.checkHttpCall(contract, callerIdentity, reqMethod.value, path)) {
-                    call.respond(HttpStatusCode.Unauthorized)
-                    return@handle
-                }
-
-                // TODO: Handle null, which indicates that the contract does not specify any mapping for this path
-                val containerUrl = resolveContainerUrl(contract, path)!!
-
-                // TODO: Inject proxy as well
-                val resp = Proxy.proxy(call.request, containerUrl)
-                call.respond(resp)
             }
         }
     }

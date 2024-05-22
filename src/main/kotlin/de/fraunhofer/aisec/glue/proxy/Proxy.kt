@@ -3,6 +3,7 @@ package de.fraunhofer.aisec.glue.proxy
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.http.*
+import io.ktor.http.content.*
 import io.ktor.server.plugins.*
 import io.ktor.server.request.*
 import io.ktor.util.*
@@ -11,7 +12,7 @@ import io.ktor.util.*
  * The proxy object is used to forward ktor server requests using a ktor HTTP client.
  * Note that this object may become a non-singleton class at some point.
  */
-object Proxy {
+class Proxy {
     private val httpClient = HttpClient()
 
     // We need to filter out some headers from the incoming request.
@@ -26,10 +27,10 @@ object Proxy {
             // TODO: More headers...
         )
 
-    suspend fun proxy(
+    suspend fun delegate(
         request: ApplicationRequest,
         proxyUrl: String,
-    ): ProxyResponse {
+    ): OutgoingContent {
         val resp =
             httpClient.request(proxyUrl) {
                 method = request.httpMethod
