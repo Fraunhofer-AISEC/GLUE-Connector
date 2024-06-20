@@ -7,6 +7,9 @@ slf4j = "2.0.10"
 okhttp = "4.12.0"
 kodein = "7.21.2"
 mockk = "1.13.10"
+jackson = "2.17.0"
+titaniumJsonLd = "1.4.0"
+jakarta-json = "2.0.0"
 
 [libraries]
 
@@ -26,6 +29,11 @@ ktor-server-test-host = { group = "io.ktor", name = "ktor-server-test-host", ver
 kotlin-test = { group = "org.jetbrains.kotlin", name = "kotlin-test", version.ref = "kotlin" }
 kodein = { group = "org.kodein.di", name = "kodein-di", version.ref = "kodein" }
 mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
+jackson-databind = { group = "com.fasterxml.jackson.core", name = "jackson-databind", version.ref = "jackson" }
+jackson-module-kotlin = { group = "com.fasterxml.jackson.module", name = "jackson-module-kotlin", version.ref = "jackson" }
+jackson-datatype-jsonp = { group = "com.fasterxml.jackson.datatype", name = "jackson-datatype-jakarta-jsonp", version.ref = "jackson" }
+titaniumJsonLd = { group = "com.apicatalog", name = "titanium-json-ld", version.ref = "titaniumJsonLd" }
+jakarta-json = { group = "org.glassfish", name = "jakarta.json", version.ref = "jakarta-json" }
 
 [plugins]
 kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

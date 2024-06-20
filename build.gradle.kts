@@ -27,6 +27,11 @@ dependencies {
     implementation(libs.ktor.server.config.yaml)
     implementation(libs.ktor.server.auth)
     implementation(libs.kodein)
+    implementation(libs.jackson.databind)
+    implementation(libs.jackson.datatype.jsonp)
+    implementation(libs.jackson.module.kotlin)
+    implementation(libs.titaniumJsonLd)
+    implementation(libs.jakarta.json)
 
     // For running example with gradle
     runtimeOnly(libs.slf4j.jdk14)
