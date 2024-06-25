@@ -6,12 +6,18 @@ class OdrlActionParser: OdrlParser() {
     override val key = "action"
 
     fun parse(root: JsonNode): OdrlAction {
-        if (!root.isTextual)
-            throw OdrlException("Expected action to be a string")
+        if (root.isTextual) {
+            isIri(root.asText())
+            return OdrlAction(root.asText())
+        }
 
-        val name = root.asText()
+        if (!root.isObject)
+            throw OdrlException("Expected action to be a string or object")
+
+        val uid = getStringOrThrow(root, "@id")
+        isIri(uid)
 
 
-        return OdrlAction(name)
+        return OdrlAction(uid)
     }
 }

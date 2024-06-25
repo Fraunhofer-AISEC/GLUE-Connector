@@ -11,19 +11,21 @@ open class OdrlConstraintParser : OdrlParser() {
 
         // A Constraint MAY have none or one uid property value of type IRI
         var uid: String? = null;
-        if (root.has("uid"))
-            uid = getIriOrThrow(root, "uid")
+        if (root.has(OdrlIdentifiers.UID))
+            uid = getIriOrThrow(root, OdrlIdentifiers.UID)
+        else if (root.has("@id"))
+            uid = getIriOrThrow(root, "@id")
 
         // A Constraint MUST have one leftOperand property value of type LeftOperand
-        val leftOperand = OdrlLeftOperandParser().parse(getFieldOrThrow(root, "leftOperand"))
+        val leftOperand = OdrlLeftOperandParser().parse(getFieldOrThrow(root, OdrlIdentifiers.HAS_LEFTOPERAND))
 
         // A Constraint MUST have one operator property value of type Operator
-        val operator = OdrlOperatorParser().parse(getFieldOrThrow(root, "operator"))
+        val operator = OdrlOperatorParser().parse(getFieldOrThrow(root, OdrlIdentifiers.HAS_OPERATOR))
 
         // A Constraint MUST have EITHER one rightOperand property value of type
         //      literal, or IRI, or RightOperand; or
         //      for set-based operators; list of literals, or list of IRIs, or list of RightOperands;
-        val rightOperand = OdrlLiteralParser().parse(getFieldOrThrow(root, "rightOperand"))
+        val rightOperand = OdrlLiteralParser().parse(getFieldOrThrow(root, OdrlIdentifiers.HAS_RIGHTOPERAND))
 
 
 

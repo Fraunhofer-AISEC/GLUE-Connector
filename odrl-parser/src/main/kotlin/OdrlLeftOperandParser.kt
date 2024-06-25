@@ -6,11 +6,12 @@ class OdrlLeftOperandParser : OdrlParser() {
     override val key: String = "leftOperand"
 
     fun parse(root: JsonNode): OdrlLeftOperand {
-        if (!root.isTextual)
-            throw OdrlException("Expected left operand to be a string")
+        if (root.isTextual)
+            return OdrlLeftOperand(root.asText())
 
-        val uid = root.asText()
+        if (!root.isObject)
+            throw OdrlException("Expected left operand to be a string or object")
 
-        return OdrlLeftOperand(uid)
+        return OdrlLeftOperand(getStringOrThrow(root, "@id"))
     }
 }

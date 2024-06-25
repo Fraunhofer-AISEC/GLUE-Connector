@@ -36,26 +36,34 @@ class OdrlLiteralParser: OdrlParser() {
         }
 
         if (root.isObject) {
-            val type = getStringOrThrow(root, "@type")
-            val value = getStringOrThrow(root, "@value")
+            var type: String? = null
+            if (root.has(RdfIdentifiers.TYPE))
+                type = RdfTypeParser().parse(root.get(RdfIdentifiers.TYPE))
+            if (root.has("@type"))
+                type = getStringOrThrow(root, "@type")
 
-            if (type == "xsd:string" || type == "string")
+            val value =
+                if (root.has(RdfIdentifiers.VALUE))
+                    RdfValueParser().parse(root.get(RdfIdentifiers.VALUE))
+                else getStringOrThrow(root, "@value")
+
+            if (type == null || type == XsdIdentifiers.STRING)
                 return OdrlLiteral<String>(value)
 
-            if (type == "xsd:int" || type == "int" || type == "xsd:integer" || type == "integer")
+            if (type == XsdIdentifiers.INT || type == XsdIdentifiers.INTEGER || type == XsdIdentifiers.DECIMAL)
                 return OdrlLiteral<Int>(value.toInt())
 
-            if (type == "xsd:bool" || type == "bool" || type == "xsd:boolean" || type == "boolean")
+            if (type == XsdIdentifiers.BOOLEAN)
                 return OdrlLiteral<Boolean>(value == "true" || value == "1");
 
-            if (type == "xsd:double" || type == "double")
+            if (type == XsdIdentifiers.DOUBLE || type == XsdIdentifiers.FLOAT)
                 return OdrlLiteral<Double>(value.toDouble())
 
-            if (type == "xsd:datetime" || type == "datetime") {
+            if (type == XsdIdentifiers.DATETIME) {
                 return OdrlLiteral<LocalDateTime>(LocalDateTime.parse(value))
             }
 
-            if (type == "xsd:date" || type == "date") {
+            if (type == XsdIdentifiers.DATE) {
                 return OdrlLiteral<LocalDateTime>(LocalDateTime.of(LocalDate.parse(value), LocalTime.of(0, 0)))
             }
         }

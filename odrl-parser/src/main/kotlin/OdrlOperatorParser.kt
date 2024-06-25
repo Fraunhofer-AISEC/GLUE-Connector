@@ -6,11 +6,12 @@ class OdrlOperatorParser: OdrlParser() {
     override val key: String = "operator"
 
     fun parse(root: JsonNode): OdrlOperator {
-        if (!root.isTextual)
-            throw OdrlException("Expected operator to be a string")
+        if (root.isTextual)
+            return OdrlOperator(root.asText())
 
-        val operator = root.asText()
+        if (!root.isObject)
+            throw OdrlException("Expected operator to be a string or object")
 
-        return OdrlOperator(operator)
+        return OdrlOperator(getStringOrThrow(root, "@id"))
     }
 }

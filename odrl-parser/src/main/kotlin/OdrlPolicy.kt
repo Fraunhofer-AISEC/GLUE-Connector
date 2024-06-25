@@ -21,9 +21,9 @@ class OdrlPolicy(
 
         // Resolve conflicts
         if (allowed && disallowed) {
-            if (conflict == "invalid") throw OdrlException("Policy is conflicted: Cannot both prohibit and permit!")
-            if (conflict == "perm") disallowed = false
-            if (conflict == "prohibit") allowed = false
+            if (conflict == OdrlIdentifiers.INVALID) throw OdrlException("Policy is conflicted: Cannot both prohibit and permit!")
+            if (conflict == OdrlIdentifiers.PERM) disallowed = false
+            if (conflict == OdrlIdentifiers.PROHIBIT) allowed = false
         }
         var result = allowed && !disallowed
 
