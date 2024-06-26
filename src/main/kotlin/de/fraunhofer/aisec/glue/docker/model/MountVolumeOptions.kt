@@ -1,7 +1,6 @@
 package de.fraunhofer.aisec.glue.docker.model
 
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
+import com.fasterxml.jackson.annotation.JsonProperty
 
 /**
  * Optional configuration for the `volume` type.
@@ -10,14 +9,13 @@ import kotlinx.serialization.Serializable
  * @param labels User-defined key/value metadata.
  * @param driverConfig
  */
-@Serializable
 data class MountVolumeOptions(
     // Populate volume with data from the target.
-    @SerialName(value = "NoCopy")
+    @JsonProperty("NoCopy")
     val noCopy: Boolean? = false,
     // User-defined key/value metadata.
-    @SerialName(value = "Labels")
+    @JsonProperty("Labels")
     val labels: Map<String, String>? = null,
-    @SerialName(value = "DriverConfig")
+    @JsonProperty("DriverConfig")
     val driverConfig: MountVolumeOptionsDriverConfig? = null,
 )

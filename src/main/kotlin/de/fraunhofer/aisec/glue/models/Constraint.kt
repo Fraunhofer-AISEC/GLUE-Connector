@@ -9,5 +9,5 @@ data class Constraint(
     @JsonProperty("http://www.w3.org/ns/odrl/2/operator")
     val operator: String,
     @JsonProperty("http://www.w3.org/ns/odrl/2/rightOperand")
-    val rightOperand: Any
+    val rightOperand: Any,
 )

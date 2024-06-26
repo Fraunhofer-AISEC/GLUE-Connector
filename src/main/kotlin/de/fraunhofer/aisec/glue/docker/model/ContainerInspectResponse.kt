@@ -8,8 +8,7 @@
 
 package de.fraunhofer.aisec.glue.docker.model
 
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
+import com.fasterxml.jackson.annotation.JsonProperty
 
 /**
  *
@@ -40,64 +39,63 @@ import kotlinx.serialization.Serializable
  * @param config
  * @param networkSettings
  */
-@Serializable
 data class ContainerInspectResponse(
     // The ID of the container
-    @SerialName(value = "Id")
+    @JsonProperty("Id")
     val id: String? = null,
     // The time the container was created
-    @SerialName(value = "Created")
+    @JsonProperty("Created")
     val created: String? = null,
     // The path to the command being run
-    @SerialName(value = "Path")
+    @JsonProperty("Path")
     val path: String? = null,
     // The arguments to the command being run
-    @SerialName(value = "Args")
+    @JsonProperty("Args")
     val args: List<String>? = null,
-    @SerialName(value = "State")
+    @JsonProperty("State")
     val state: ContainerState? = null,
     // The container's image ID
-    @SerialName(value = "Image")
+    @JsonProperty("Image")
     val image: String? = null,
-    @SerialName(value = "ResolvConfPath")
+    @JsonProperty("ResolvConfPath")
     val resolvConfPath: String? = null,
-    @SerialName(value = "HostnamePath")
+    @JsonProperty("HostnamePath")
     val hostnamePath: String? = null,
-    @SerialName(value = "HostsPath")
+    @JsonProperty("HostsPath")
     val hostsPath: String? = null,
-    @SerialName(value = "LogPath")
+    @JsonProperty("LogPath")
     val logPath: String? = null,
-    @SerialName(value = "Name")
+    @JsonProperty("Name")
     val name: String? = null,
-    @SerialName(value = "RestartCount")
+    @JsonProperty("RestartCount")
     val restartCount: Int? = null,
-    @SerialName(value = "Driver")
+    @JsonProperty("Driver")
     val driver: String? = null,
-    @SerialName(value = "Platform")
+    @JsonProperty("Platform")
     val platform: String? = null,
-    @SerialName(value = "MountLabel")
+    @JsonProperty("MountLabel")
     val mountLabel: String? = null,
-    @SerialName(value = "ProcessLabel")
+    @JsonProperty("ProcessLabel")
     val processLabel: String? = null,
-    @SerialName(value = "AppArmorProfile")
+    @JsonProperty("AppArmorProfile")
     val appArmorProfile: String? = null,
     // IDs of exec instances that are running in the container.
-    @SerialName(value = "ExecIDs")
+    @JsonProperty("ExecIDs")
     val execIDs: List<String>? = null,
-    @SerialName(value = "HostConfig")
+    @JsonProperty("HostConfig")
     val hostConfig: HostConfig? = null,
-    @SerialName(value = "GraphDriver")
+    @JsonProperty("GraphDriver")
     val graphDriver: GraphDriverData? = null,
     // The size of files that have been created or changed by this container.
-    @SerialName(value = "SizeRw")
+    @JsonProperty("SizeRw")
     val sizeRw: Long? = null,
     // The total size of all the files in this container.
-    @SerialName(value = "SizeRootFs")
+    @JsonProperty("SizeRootFs")
     val sizeRootFs: Long? = null,
-    @SerialName(value = "Mounts")
+    @JsonProperty("Mounts")
     val mounts: List<MountPoint>? = null,
-    @SerialName(value = "Config")
+    @JsonProperty("Config")
     val config: ContainerConfig? = null,
-    @SerialName(value = "NetworkSettings")
+    @JsonProperty("NetworkSettings")
     val networkSettings: NetworkSettings? = null,
 )

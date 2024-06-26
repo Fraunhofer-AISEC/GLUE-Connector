@@ -10,5 +10,5 @@ data class Policy(
     @JsonProperty("http://www.w3.org/ns/odrl/2/source")
     val source: String,
     @JsonProperty("http://www.w3.org/ns/odrl/2/permission")
-    val permission: Permission
+    val permission: Permission,
 )

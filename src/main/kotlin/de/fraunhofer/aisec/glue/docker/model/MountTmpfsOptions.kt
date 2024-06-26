@@ -1,7 +1,6 @@
 package de.fraunhofer.aisec.glue.docker.model
 
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
+import com.fasterxml.jackson.annotation.JsonProperty
 
 /**
  * Optional configuration for the `tmpfs` type.
@@ -9,12 +8,11 @@ import kotlinx.serialization.Serializable
  * @param sizeBytes The size for the tmpfs mount in bytes.
  * @param mode The permission mode for the tmpfs mount in an integer.
  */
-@Serializable
 data class MountTmpfsOptions(
     // The size for the tmpfs mount in bytes.
-    @SerialName(value = "SizeBytes")
+    @JsonProperty("SizeBytes")
     val sizeBytes: Long? = null,
     // The permission mode for the tmpfs mount in an integer.
-    @SerialName(value = "Mode")
+    @JsonProperty("Mode")
     val mode: Int? = null,
 )

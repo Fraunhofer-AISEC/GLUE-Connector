@@ -1,7 +1,6 @@
 package de.fraunhofer.aisec.glue.docker.model
 
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
+import com.fasterxml.jackson.annotation.JsonProperty
 
 /**
  * Map of driver specific options
@@ -9,12 +8,11 @@ import kotlinx.serialization.Serializable
  * @param name Name of the driver to use to create the volume.
  * @param options key/value map of driver specific options.
  */
-@Serializable
 data class MountVolumeOptionsDriverConfig(
     // Name of the driver to use to create the volume.
-    @SerialName(value = "Name")
+    @JsonProperty("Name")
     val name: String? = null,
     // key/value map of driver specific options.
-    @SerialName(value = "Options")
+    @JsonProperty("Options")
     val options: Map<String, String>? = null,
 )
