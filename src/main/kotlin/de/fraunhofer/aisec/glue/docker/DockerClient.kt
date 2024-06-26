@@ -6,6 +6,7 @@ import de.fraunhofer.aisec.glue.docker.model.PortBinding
 import de.fraunhofer.aisec.glue.docker.unix.UnixSocketFactory
 import io.ktor.client.*
 import io.ktor.client.engine.okhttp.*
+import io.ktor.client.plugins.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.http.*
@@ -23,6 +24,7 @@ class DockerClient(dockerSocket: String = "/var/run/docker.sock") : Closeable {
                 }
             }
             install(ContentNegotiation) {
+                jackson()
             }
             install(HttpTimeout) {
                 // The docker daemon will wait for some time before killing a container if it refuses to stop
