@@ -1,7 +1,6 @@
 package de.fraunhofer.aisec.glue.docker.model
 
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
+import com.fasterxml.jackson.annotation.JsonProperty
 
 /**
  * The logging configuration for this container
@@ -9,10 +8,9 @@ import kotlinx.serialization.Serializable
  * @param type
  * @param config
  */
-@Serializable
 data class LogConfig(
-    @SerialName(value = "Type")
+    @JsonProperty("Type")
     val type: String? = null,
-    @SerialName(value = "Config")
+    @JsonProperty("Config")
     val config: Map<String, String>? = null,
 )

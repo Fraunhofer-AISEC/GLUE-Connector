@@ -1,7 +1,6 @@
 package de.fraunhofer.aisec.glue.docker.model
 
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
+import com.fasterxml.jackson.annotation.JsonProperty
 
 /**
  * A device mapping between the host and container
@@ -10,12 +9,11 @@ import kotlinx.serialization.Serializable
  * @param pathInContainer
  * @param cgroupPermissions
  */
-@Serializable
 data class DeviceMapping(
-    @SerialName(value = "PathOnHost")
+    @JsonProperty("PathOnHost")
     val pathOnHost: String? = null,
-    @SerialName(value = "PathInContainer")
+    @JsonProperty("PathInContainer")
     val pathInContainer: String? = null,
-    @SerialName(value = "CgroupPermissions")
+    @JsonProperty("CgroupPermissions")
     val cgroupPermissions: String? = null,
 )

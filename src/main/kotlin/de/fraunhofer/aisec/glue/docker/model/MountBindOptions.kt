@@ -1,7 +1,6 @@
 package de.fraunhofer.aisec.glue.docker.model
 
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
+import com.fasterxml.jackson.annotation.JsonProperty
 
 /**
  * Optional configuration for the `bind` type.
@@ -10,15 +9,14 @@ import kotlinx.serialization.Serializable
  * @param nonRecursive Disable recursive bind mount.
  * @param createMountpoint Create mount point on host if missing
  */
-@Serializable
 data class MountBindOptions(
     // A propagation mode with the value `[r]private`, `[r]shared`, or `[r]slave`.
-    @SerialName(value = "Propagation")
+    @JsonProperty("Propagation")
     val propagation: String? = null,
     // Disable recursive bind mount.
-    @SerialName(value = "NonRecursive")
+    @JsonProperty("NonRecursive")
     val nonRecursive: Boolean? = false,
     // Create mount point on host if missing
-    @SerialName(value = "CreateMountpoint")
+    @JsonProperty("CreateMountpoint")
     val createMountpoint: Boolean? = false,
 )

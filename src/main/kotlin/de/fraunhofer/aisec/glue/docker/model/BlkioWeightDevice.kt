@@ -1,16 +1,14 @@
 package de.fraunhofer.aisec.glue.docker.model
 
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
+import com.fasterxml.jackson.annotation.JsonProperty
 
 /**
  * @param path
  * @param weight
  */
-@Serializable
 data class BlkioWeightDevice(
-    @SerialName(value = "Path")
+    @JsonProperty("Path")
     val path: String? = null,
-    @SerialName(value = "Weight")
+    @JsonProperty("Weight")
     val weight: Int? = null,
 )

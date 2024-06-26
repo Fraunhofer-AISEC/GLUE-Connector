@@ -1,7 +1,6 @@
 package de.fraunhofer.aisec.glue.docker.model
 
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
+import com.fasterxml.jackson.annotation.JsonProperty
 
 /**
  * A test to perform to check that the container is healthy.
@@ -12,21 +11,20 @@ import kotlinx.serialization.Serializable
  * @param retries The number of consecutive failures needed to consider a container as unhealthy. 0 means inherit.
  * @param startPeriod Start period for the container to initialize before starting health-retries countdown in nanoseconds. It should be 0 or at least 1000000 (1 ms). 0 means inherit.
  */
-@Serializable
 data class HealthConfig(
     // The test to perform. Possible values are:  - `[]` inherit healthcheck from image or parent image - `[\"NONE\"]` disable healthcheck - `[\"CMD\", args...]` exec arguments directly - `[\"CMD-SHELL\", command]` run command with system's default shell
-    @SerialName(value = "Test")
+    @JsonProperty("Test")
     val test: List<String>? = null,
     // The time to wait between checks in nanoseconds. It should be 0 or at least 1000000 (1 ms). 0 means inherit.
-    @SerialName(value = "Interval")
+    @JsonProperty("Interval")
     val interval: Long? = null,
     // The time to wait before considering the check to have hung. It should be 0 or at least 1000000 (1 ms). 0 means inherit.
-    @SerialName(value = "Timeout")
+    @JsonProperty("Timeout")
     val timeout: Long? = null,
     // The number of consecutive failures needed to consider a container as unhealthy. 0 means inherit.
-    @SerialName(value = "Retries")
+    @JsonProperty("Retries")
     val retries: Int? = null,
     // Start period for the container to initialize before starting health-retries countdown in nanoseconds. It should be 0 or at least 1000000 (1 ms). 0 means inherit.
-    @SerialName(value = "StartPeriod")
+    @JsonProperty("StartPeriod")
     val startPeriod: Long? = null,
 )

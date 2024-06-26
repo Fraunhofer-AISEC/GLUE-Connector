@@ -1,7 +1,6 @@
 package de.fraunhofer.aisec.glue.docker.model
 
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
+import com.fasterxml.jackson.annotation.JsonProperty
 
 /**
  * Health stores information about the container's healthcheck results.
@@ -10,15 +9,14 @@ import kotlinx.serialization.Serializable
  * @param failingStreak FailingStreak is the number of consecutive failures
  * @param log Log contains the last few results (oldest first)
  */
-@Serializable
 data class Health(
     // Status is one of `none`, `starting`, `healthy` or `unhealthy`  - \"none\"      Indicates there is no healthcheck - \"starting\"  Starting indicates that the container is not yet ready - \"healthy\"   Healthy indicates that the container is running correctly - \"unhealthy\" Unhealthy indicates that the container has a problem
-    @SerialName(value = "Status")
+    @JsonProperty("Status")
     val status: String? = null,
     // FailingStreak is the number of consecutive failures
-    @SerialName(value = "FailingStreak")
+    @JsonProperty("FailingStreak")
     val failingStreak: Int? = null,
     // Log contains the last few results (oldest first)
-    @SerialName(value = "Log")
+    @JsonProperty("Log")
     val log: List<HealthcheckResult>? = null,
 )

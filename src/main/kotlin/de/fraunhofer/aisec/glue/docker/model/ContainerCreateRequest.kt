@@ -1,8 +1,6 @@
 package de.fraunhofer.aisec.glue.docker.model
 
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonObject
+import com.fasterxml.jackson.annotation.JsonProperty
 
 /**
  * @param hostname The hostname to use for the container, as a valid RFC 1123 hostname.
@@ -33,84 +31,83 @@ import kotlinx.serialization.json.JsonObject
  * @param hostConfig
  * @param networkingConfig
  */
-@Serializable
 data class ContainerCreateRequest(
     // The hostname to use for the container, as a valid RFC 1123 hostname.
-    @SerialName(value = "Hostname")
+    @JsonProperty("Hostname")
     val hostname: String? = null,
     // The domain name to use for the container.
-    @SerialName(value = "Domainname")
+    @JsonProperty("Domainname")
     val domainname: String? = null,
     // The user that commands are run as inside the container.
-    @SerialName(value = "User")
+    @JsonProperty("User")
     val user: String? = null,
     // Whether to attach to `stdin`.
-    @SerialName(value = "AttachStdin")
+    @JsonProperty("AttachStdin")
     val attachStdin: Boolean? = false,
     // Whether to attach to `stdout`.
-    @SerialName(value = "AttachStdout")
+    @JsonProperty("AttachStdout")
     val attachStdout: Boolean? = true,
     // Whether to attach to `stderr`.
-    @SerialName(value = "AttachStderr")
+    @JsonProperty("AttachStderr")
     val attachStderr: Boolean? = true,
     // An object mapping ports to an empty object in the form:  `{\"<port>/<tcp|udp|sctp>\": {}}`
-    @SerialName(value = "ExposedPorts")
-    val exposedPorts: Map<String, JsonObject>? = null,
+    @JsonProperty("ExposedPorts")
+    val exposedPorts: Map<String, Any>? = null,
     // Attach standard streams to a TTY, including `stdin` if it is not closed.
-    @SerialName(value = "Tty")
+    @JsonProperty("Tty")
     val tty: Boolean? = false,
     // Open `stdin`
-    @SerialName(value = "OpenStdin")
+    @JsonProperty("OpenStdin")
     val openStdin: Boolean? = false,
     // Close `stdin` after one attached client disconnects
-    @SerialName(value = "StdinOnce")
+    @JsonProperty("StdinOnce")
     val stdinOnce: Boolean? = false,
     // A list of environment variables to set inside the container in the form `[\"VAR=value\", ...]`. A variable without `=` is removed from the environment, rather than to have an empty value.
-    @SerialName(value = "Env")
+    @JsonProperty("Env")
     val env: List<String>? = null,
     // Command to run specified as a string or an array of strings.
-    @SerialName(value = "Cmd")
+    @JsonProperty("Cmd")
     val cmd: List<String>? = null,
-    @SerialName(value = "Healthcheck")
+    @JsonProperty("Healthcheck")
     val healthcheck: HealthConfig? = null,
     // Command is already escaped (Windows only)
-    @SerialName(value = "ArgsEscaped")
+    @JsonProperty("ArgsEscaped")
     val argsEscaped: Boolean? = false,
     // The name (or reference) of the image to use when creating the container, or which was used when the container was created.
-    @SerialName(value = "Image")
+    @JsonProperty("Image")
     val image: String? = null,
     // An object mapping mount point paths inside the container to empty objects.
-    @SerialName(value = "Volumes")
-    val volumes: Map<String, JsonObject>? = null,
+    @JsonProperty("Volumes")
+    val volumes: Map<String, Any>? = null,
     // The working directory for commands to run in.
-    @SerialName(value = "WorkingDir")
+    @JsonProperty("WorkingDir")
     val workingDir: String? = null,
     // The entry point for the container as a string or an array of strings.  If the array consists of exactly one empty string (`[\"\"]`) then the entry point is reset to system default (i.e., the entry point used by docker when there is no `ENTRYPOINT` instruction in the `Dockerfile`).
-    @SerialName(value = "Entrypoint")
+    @JsonProperty("Entrypoint")
     val entrypoint: List<String>? = null,
     // Disable networking for the container.
-    @SerialName(value = "NetworkDisabled")
+    @JsonProperty("NetworkDisabled")
     val networkDisabled: Boolean? = null,
     // MAC address of the container.
-    @SerialName(value = "MacAddress")
+    @JsonProperty("MacAddress")
     val macAddress: String? = null,
     // `ONBUILD` metadata that were defined in the image's `Dockerfile`.
-    @SerialName(value = "OnBuild")
+    @JsonProperty("OnBuild")
     val onBuild: List<String>? = null,
     // User-defined key/value metadata.
-    @SerialName(value = "Labels")
+    @JsonProperty("Labels")
     val labels: Map<String, String>? = null,
     // Signal to stop a container as a string or unsigned integer.
-    @SerialName(value = "StopSignal")
+    @JsonProperty("StopSignal")
     val stopSignal: String? = null,
     // Timeout to stop a container in seconds.
-    @SerialName(value = "StopTimeout")
+    @JsonProperty("StopTimeout")
     val stopTimeout: Int? = null,
     // Shell for when `RUN`, `CMD`, and `ENTRYPOINT` uses a shell.
-    @SerialName(value = "Shell")
+    @JsonProperty("Shell")
     val shell: List<String>? = null,
-    @SerialName(value = "HostConfig")
+    @JsonProperty("HostConfig")
     val hostConfig: HostConfig? = null,
-    @SerialName(value = "NetworkingConfig")
+    @JsonProperty("NetworkingConfig")
     val networkingConfig: NetworkingConfig? = null,
 )

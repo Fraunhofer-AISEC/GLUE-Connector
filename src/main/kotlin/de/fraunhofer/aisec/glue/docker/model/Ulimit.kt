@@ -1,19 +1,17 @@
 package de.fraunhofer.aisec.glue.docker.model
 
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
+import com.fasterxml.jackson.annotation.JsonProperty
 
 /**
  *  * @param name Name of ulimit
  *  * @param soft Soft limit
  *  * @param hard Hard limit
  */
-@Serializable
 data class Ulimit(
-    @SerialName("Name")
+    @JsonProperty("Name")
     val name: String,
-    @SerialName("Soft")
+    @JsonProperty("Soft")
     val soft: Int,
-    @SerialName("Hard")
+    @JsonProperty("Hard")
     val hard: Int,
 )

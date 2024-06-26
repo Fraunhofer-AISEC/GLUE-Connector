@@ -1,7 +1,6 @@
 package de.fraunhofer.aisec.glue.docker.model
 
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
+import com.fasterxml.jackson.annotation.JsonProperty
 
 /**
  * EndpointIPAMConfig represents an endpoint's IPAM configuration.
@@ -10,12 +9,11 @@ import kotlinx.serialization.Serializable
  * @param ipv6Address
  * @param linkLocalIPs
  */
-@Serializable
 data class EndpointIPAMConfig(
-    @SerialName(value = "IPv4Address")
+    @JsonProperty("IPv4Address")
     val ipv4Address: String? = null,
-    @SerialName(value = "IPv6Address")
+    @JsonProperty("IPv6Address")
     val ipv6Address: String? = null,
-    @SerialName(value = "LinkLocalIPs")
+    @JsonProperty("LinkLocalIPs")
     val linkLocalIPs: List<String>? = null,
 )

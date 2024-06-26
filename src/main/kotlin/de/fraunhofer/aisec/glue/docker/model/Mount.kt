@@ -1,7 +1,6 @@
 package de.fraunhofer.aisec.glue.docker.model
 
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
+import com.fasterxml.jackson.annotation.JsonProperty
 
 /**
  * @param target Container path.
@@ -13,27 +12,26 @@ import kotlinx.serialization.Serializable
  * @param volumeOptions
  * @param tmpfsOptions
  */
-@Serializable
 data class Mount(
     // Container path.
-    @SerialName(value = "Target")
+    @JsonProperty("Target")
     val target: String? = null,
     // Mount source (e.g. a volume name, a host path).
-    @SerialName(value = "Source")
+    @JsonProperty("Source")
     val source: String? = null,
     // The mount type. Available types:  - `bind` Mounts a file or directory from the host into the container. Must exist prior to creating the container. - `volume` Creates a volume with the given name and options (or uses a pre-existing volume with the same name and options). These are **not** removed when the container is removed. - `tmpfs` Create a tmpfs with the given options. The mount source cannot be specified for tmpfs. - `npipe` Mounts a named pipe from the host into the container. Must exist prior to creating the container. - `cluster` a Swarm cluster volume
-    @SerialName(value = "Type")
+    @JsonProperty("Type")
     val type: String? = null,
     // Whether the mount should be read-only.
-    @SerialName(value = "ReadOnly")
+    @JsonProperty("ReadOnly")
     val readOnly: Boolean? = null,
     // The consistency requirement for the mount: `default`, `consistent`, `cached`, or `delegated`.
-    @SerialName(value = "Consistency")
+    @JsonProperty("Consistency")
     val consistency: String? = null,
-    @SerialName(value = "BindOptions")
+    @JsonProperty("BindOptions")
     val bindOptions: MountBindOptions? = null,
-    @SerialName(value = "VolumeOptions")
+    @JsonProperty("VolumeOptions")
     val volumeOptions: MountVolumeOptions? = null,
-    @SerialName(value = "TmpfsOptions")
+    @JsonProperty("TmpfsOptions")
     val tmpfsOptions: MountTmpfsOptions? = null,
 )

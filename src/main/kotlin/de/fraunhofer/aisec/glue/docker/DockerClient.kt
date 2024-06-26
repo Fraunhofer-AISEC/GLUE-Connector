@@ -9,8 +9,7 @@ import io.ktor.client.engine.okhttp.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.http.*
-import io.ktor.serialization.kotlinx.json.*
-import kotlinx.serialization.json.*
+import io.ktor.serialization.jackson.*
 import org.slf4j.LoggerFactory
 import java.io.Closeable
 
@@ -24,13 +23,11 @@ class DockerClient(dockerSocket: String = "/var/run/docker.sock") : Closeable {
                 }
             }
             install(ContentNegotiation) {
-                json(
-                    Json {
-                        // This allows us to only specify the keys we need when modeling json responses from docker
-                        // Alternatively, we could just generate the API with openapi and extract the required models
-                        ignoreUnknownKeys = true
-                    },
-                )
+            }
+            install(HttpTimeout) {
+                // The docker daemon will wait for some time before killing a container if it refuses to stop
+                // If 30s is too long, the application will need to enforce its own timeout
+                socketTimeoutMillis = 30000
             }
         }
 
@@ -57,7 +54,7 @@ class DockerClient(dockerSocket: String = "/var/run/docker.sock") : Closeable {
                     env = env?.map { (k, v) -> "$k=$v" },
                     entrypoint = entrypoint,
                     cmd = cmd,
-                    exposedPorts = ports?.keys?.associate { p -> Pair("$p/tcp", JsonObject(mapOf())) },
+                    exposedPorts = ports?.keys?.associate { p -> Pair("$p/tcp", mapOf<String, Any>()) },
                     hostConfig =
                         HostConfig(
                             portBindings =
@@ -108,28 +105,20 @@ class DockerClient(dockerSocket: String = "/var/run/docker.sock") : Closeable {
             subnet: String,
         ): Network {
             val args =
-                JsonObject(
-                    mapOf(
-                        "Name" to JsonPrimitive(name),
-                        "Driver" to JsonPrimitive("bridge"),
-                        "Internal" to JsonPrimitive(true),
-                        "IPAM" to
-                            JsonObject(
-                                mapOf(
-                                    "Driver" to JsonPrimitive("default"),
-                                    "Config" to
-                                        JsonArray(
-                                            listOf(
-                                                JsonObject(
-                                                    mapOf(
-                                                        "Subnet" to JsonPrimitive(subnet),
-                                                    ),
-                                                ),
-                                            ),
-                                        ),
+                mapOf(
+                    "Name" to name,
+                    "Driver" to "bridge",
+                    "Internal" to true,
+                    "IPAM" to
+                        mapOf(
+                            "Driver" to "default",
+                            "Config" to
+                                listOf(
+                                    mapOf(
+                                        "Subnet" to subnet,
+                                    ),
                                 ),
-                            ),
-                    ),
+                        ),
                 )
 
             httpClient.post("$BASE_URL/networks/create") {
