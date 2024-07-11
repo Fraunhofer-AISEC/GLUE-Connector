@@ -5,8 +5,8 @@ import io.ktor.server.auth.*
 
 fun Application.configureAuthentication() {
     install(Authentication) {
-        basic("ingress-auth") {
-            realm = "Ingress"
+        basic {
+            realm = "Test auth todo replace"
             validate { creds ->
                 if (creds.name == "user" && creds.password == "password") {
                     UserIdPrincipal(creds.name)

@@ -3,6 +3,7 @@ package de.fraunhofer.aisec.glue
 import de.fraunhofer.aisec.glue.controllers.ContractController
 import de.fraunhofer.aisec.glue.controllers.Controller
 import de.fraunhofer.aisec.glue.controllers.IngressController
+import de.fraunhofer.aisec.glue.controllers.NegotiationController
 import de.fraunhofer.aisec.glue.plugins.configureAuthentication
 import de.fraunhofer.aisec.glue.plugins.configureSerialization
 import de.fraunhofer.aisec.glue.proxy.Proxy
@@ -10,7 +11,13 @@ import io.ktor.server.application.*
 import io.ktor.server.routing.*
 import org.kodein.di.*
 import org.kodein.type.jvmType
-fun main(args: Array<String>): Unit = io.ktor.server.netty.EngineMain.main(args)
+import org.slf4j.LoggerFactory
+
+fun main(args: Array<String>) {
+    System.setProperty("java.util.logging.ConsoleHandler.level", "ALL")
+    LoggerFactory.getLogger("Test").debug("Test")
+    io.ktor.server.netty.EngineMain.main(args)
+}
 
 val defaultDependencies by DI.Module {
     bind<PDP>() with singleton { PDP() }
@@ -18,6 +25,7 @@ val defaultDependencies by DI.Module {
     bind<ContainerManager>() with singleton { ContainerManager(instance()) }
     bind<ContractController>() with singleton { ContractController(instance(), instance()) }
     bind<IngressController>() with singleton { IngressController(instance(), instance(), instance(), instance()) }
+    bind<NegotiationController>() with singleton { NegotiationController() }
     bind<Proxy>() with singleton { Proxy() }
 }
 
