@@ -1,9 +1,13 @@
 package de.fraunhofer.aisec.glue.models
 
 import com.fasterxml.jackson.annotation.JsonProperty
-import de.fraunhofer.aisec.glue.jsonld.JsonLdId
+import com.fasterxml.jackson.annotation.JsonTypeInfo
+import com.fasterxml.jackson.annotation.JsonTypeName
+import de.fraunhofer.aisec.glue.jsonld.JsonLDType
 
-@JsonLdId("https://www.aisec.fraunhofer.com/odrl-distribute-to-printer")
+@JsonLDType
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type")
+@JsonTypeName("http://www.w3.org/ns/odrl/2/Policy")
 data class Policy(
     @JsonProperty("http://www.w3.org/ns/odrl/2/uid")
     val uid: String,
