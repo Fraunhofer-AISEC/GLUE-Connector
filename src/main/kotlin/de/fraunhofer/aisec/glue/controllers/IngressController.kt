@@ -16,10 +16,10 @@ class IngressController(
     private val contractManager: ContractManager,
     private val pdp: PDP,
     private val containerManager: ContainerManager,
-    private val proxy: Proxy
+    private val proxy: Proxy,
 ) : Controller {
     override fun Route.registerRoutes() {
-        authenticate("ingress-auth") {
+        authenticate {
             // TODO: It is a little bit annoying that we currently have to always give the whole path here
             //       Kodein would theoretically offer ktor integration to allow injecting a subcontroller for routes I
             //       think, but that would bind us to the DI framework
