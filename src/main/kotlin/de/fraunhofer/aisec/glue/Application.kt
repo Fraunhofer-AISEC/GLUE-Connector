@@ -11,11 +11,13 @@ import io.ktor.server.application.*
 import io.ktor.server.routing.*
 import org.kodein.di.*
 import org.kodein.type.jvmType
-import org.slf4j.LoggerFactory
+import java.util.logging.LogManager
 
 fun main(args: Array<String>) {
-    System.setProperty("java.util.logging.ConsoleHandler.level", "ALL")
-    LoggerFactory.getLogger("Test").debug("Test")
+    LogManager.getLogManager().getLogger("").let {
+        it.level = java.util.logging.Level.ALL
+        it.handlers.forEach { h -> h.level = java.util.logging.Level.ALL }
+    }
     io.ktor.server.netty.EngineMain.main(args)
 }
 

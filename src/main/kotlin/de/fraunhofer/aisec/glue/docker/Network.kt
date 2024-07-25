@@ -10,23 +10,16 @@ class Network internal constructor(private val client: DockerClient, val name: S
         container: Container,
         address: String? = null,
     ) {
-        val args =
-            JsonObject(
-                mapOf(
-                    "Container" to JsonPrimitive(container.name),
-                    "EndpointConfig" to
-                        JsonObject(
-                            mapOf(
-                                "IPAMConfig" to
-                                    JsonObject(
-                                        mapOf(
-                                            "IPv4Address" to JsonPrimitive(address),
-                                        ),
-                                    ),
-                            ),
-                        ),
-                ),
-            )
+        val args = mapOf(
+            "Container" to container.name,
+            "EndpointConfig" to
+                    mapOf(
+                        "IPAMConfig" to
+                                mapOf(
+                                    "IPv4Address" to address,
+                                ),
+                    ),
+        )
 
         client.httpClient.post("${DockerClient.BASE_URL}/networks/$name/connect") {
             setBody(args)
@@ -38,13 +31,10 @@ class Network internal constructor(private val client: DockerClient, val name: S
         container: Container,
         force: Boolean = false,
     ) {
-        val args =
-            JsonObject(
-                mapOf(
-                    "Container" to JsonPrimitive(container.name),
-                    "Force" to JsonPrimitive(force),
-                ),
-            )
+        val args = mapOf(
+            "Container" to container.name,
+            "Force" to force,
+        )
 
         client.httpClient.post("${DockerClient.BASE_URL}/networks/$name/disconnect") {
             setBody(args)

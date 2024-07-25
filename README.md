@@ -7,6 +7,7 @@ curl --request POST \
   --header 'Content-Type: application/json' \
   --data '{
     "pipeline": {
+        "id": "foo",
 	    "containers": [
 		    {
 			    "name": "proxy",
