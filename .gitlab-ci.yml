@@ -1,24 +1,39 @@
-default:
-  image: docker:27.1.1
+# Build and push the Docker image off of merges to master; based off
+# of Gitlab CI support in https://pythonspeed.com/products/pythoncontainer/
+docker-build:
+  stage: build
+
+  image:
+    # An alpine-based image with the `docker` CLI installed.
+    name: docker:stable
+
+  # This will run a Docker daemon in a container (Docker-In-Docker), which will
+  # be available at thedockerhost:2375. If you make e.g. port 5000 public in Docker
+  # (`docker run -p 5000:5000 yourimage`) it will be exposed at thedockerhost:5000.
   services:
-    - docker:27.1.1-dind
-  before_script:
-    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+   - name: docker:dind
+     alias: thedockerhost
 
-stages:
-  - docker_build
+  variables:
+    # Tell docker CLI how to talk to Docker daemon; see
+    # https://docs.gitlab.com/ee/ci/docker/using_docker_build.html#use-docker-in-docker-executor
+    DOCKER_HOST: tcp://thedockerhost:2375/
+    # Use the overlayfs driver for improved performance:
+    DOCKER_DRIVER: overlay2
+    DOCKER_TLS_CERTDIR: ""
 
-variables:
-  # Use TLS https://docs.gitlab.com/ee/ci/docker/using_docker_build.html#tls-enabled
-  DOCKER_HOST: tcp://localhost:2375/
-  DOCKER_TLS_CERTDIR: "/certs"
-  CONTAINER_TEST_IMAGE: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG
-  CONTAINER_RELEASE_IMAGE: $CI_REGISTRY_IMAGE:latest
-
-docker_build:
-  stage: docker_build
   script:
-    - docker build --pull -t $CONTAINER_TEST_IMAGE .
-    - docker push $CONTAINER_TEST_IMAGE
-  tags:
-    - asprunner
+    # Download bash:
+    - apk add --no-cache bash python3
+    # GitLab has a built-in Docker image registry, whose parameters are set automatically.
+    # See https://docs.gitlab.com/ee/ci/docker/using_docker_build.html#using-the-gitlab-contai
+    #
+    # CHANGEME: You can use some other Docker registry though by changing the
+    # login and image name.
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+    - docker build -t "$CI_REGISTRY_IMAGE" .
+    - docker push "$CI_REGISTRY_IMAGE"
+
+  # Only build off of master branch:
+  only:
+    - master
