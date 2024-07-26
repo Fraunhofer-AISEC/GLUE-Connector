@@ -1,19 +1,16 @@
 default:
-  image: docker:20.10.16
+  image: docker:27.1.1
   services:
-    - docker:20.10.16-dind
+    - docker:27.1.1-dind
   before_script:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
 
 stages:
   - docker_build
- # - test
- # - release
- # - deploy
 
 variables:
   # Use TLS https://docs.gitlab.com/ee/ci/docker/using_docker_build.html#tls-enabled
-  DOCKER_HOST: tcp://docker:2376
+  DOCKER_HOST: DOCKER_HOST: tcp://localhost:2375/
   DOCKER_TLS_CERTDIR: "/certs"
   CONTAINER_TEST_IMAGE: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG
   CONTAINER_RELEASE_IMAGE: $CI_REGISTRY_IMAGE:latest
@@ -25,26 +22,3 @@ docker_build:
     - docker push $CONTAINER_TEST_IMAGE
   tags:
     - asprunner
-
-#test1:
-#  stage: test
-#  script:
-#    - docker pull $CONTAINER_TEST_IMAGE
-#    - docker run $CONTAINER_TEST_IMAGE /script/to/run/tests
-
-#release-image:
-#  stage: release
-#  script:
-#    - docker pull $CONTAINER_TEST_IMAGE
-#    - docker tag $CONTAINER_TEST_IMAGE $CONTAINER_RELEASE_IMAGE
-#    - docker push $CONTAINER_RELEASE_IMAGE
-#  only:
-#    - main
-
-#deploy:
-#  stage: deploy
-#  script:
-#    - ./deploy.sh
-#  only:
-#    - main
-#  environment: production
