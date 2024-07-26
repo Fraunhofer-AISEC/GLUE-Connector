@@ -45,4 +45,4 @@ build:
 #    - ./deploy.sh
 #  only:
 #    - main
-  environment: production#
+#  environment: production
