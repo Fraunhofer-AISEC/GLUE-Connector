@@ -39,10 +39,10 @@ build:
 #  only:
 #    - main
 
-deploy:
-  stage: deploy
-  script:
-    - ./deploy.sh
-  only:
-    - main
-  environment: production
+#deploy:
+#  stage: deploy
+#  script:
+#    - ./deploy.sh
+#  only:
+#    - main
+  environment: production#
