@@ -1,7 +1,10 @@
+stages:
+  -docker-build
+
 # Build and push the Docker image off of merges to master; based off
 # of Gitlab CI support in https://pythonspeed.com/products/pythoncontainer/
 docker-build:
-  stage: build
+  stage: docker-build
 
   image:
     # An alpine-based image with the `docker` CLI installed.
@@ -33,6 +36,10 @@ docker-build:
     - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
     - docker build -t "$CI_REGISTRY_IMAGE" .
     - docker push "$CI_REGISTRY_IMAGE"
+    
+  tags:
+    - asprunner
+
 
   # Only build off of master branch:
   only:
