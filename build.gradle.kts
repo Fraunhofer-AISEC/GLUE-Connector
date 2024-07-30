@@ -11,6 +11,7 @@ group = "de.fraunhofer.aisec"
 version = "1.0-SNAPSHOT"
 
 repositories {
+    mavenLocal()
     mavenCentral()
 }
 
@@ -32,6 +33,7 @@ dependencies {
     implementation(libs.jackson.module.kotlin)
     implementation(libs.titaniumJsonLd)
     implementation(libs.jakarta.json)
+    implementation("fhg.glue.odrl:odrl-parser:1.0-SNAPSHOT")
 
     // For running example with gradle
     runtimeOnly(libs.slf4j.jdk14)
@@ -46,7 +48,7 @@ tasks.test {
     useJUnitPlatform()
 }
 kotlin {
-    jvmToolchain(17)
+    jvmToolchain(20)
 }
 
 application {
