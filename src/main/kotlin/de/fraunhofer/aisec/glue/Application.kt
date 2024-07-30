@@ -4,9 +4,12 @@ import de.fraunhofer.aisec.glue.controllers.ContractController
 import de.fraunhofer.aisec.glue.controllers.Controller
 import de.fraunhofer.aisec.glue.controllers.IngressController
 import de.fraunhofer.aisec.glue.controllers.NegotiationController
+import de.fraunhofer.aisec.glue.negotiation.DummyNegotiator
+import de.fraunhofer.aisec.glue.negotiation.NegotiationManager
 import de.fraunhofer.aisec.glue.plugins.configureAuthentication
 import de.fraunhofer.aisec.glue.plugins.configureSerialization
 import de.fraunhofer.aisec.glue.proxy.Proxy
+import io.ktor.client.*
 import io.ktor.server.application.*
 import io.ktor.server.routing.*
 import org.kodein.di.*
@@ -22,12 +25,14 @@ fun main(args: Array<String>) {
 }
 
 val defaultDependencies by DI.Module {
+    bind<HttpClient>() with singleton { HttpClient() }
     bind<PDP>() with singleton { PDP() }
     bind<ContractManager>() with singleton { ContractManager() }
     bind<ContainerManager>() with singleton { ContainerManager(instance()) }
+    bind<NegotiationManager>() with singleton { NegotiationManager(instance(), DummyNegotiator()) }
     bind<ContractController>() with singleton { ContractController(instance(), instance()) }
     bind<IngressController>() with singleton { IngressController(instance(), instance(), instance(), instance()) }
-    bind<NegotiationController>() with singleton { NegotiationController() }
+    bind<NegotiationController>() with singleton { NegotiationController(instance()) }
     bind<Proxy>() with singleton { Proxy() }
 }
 
