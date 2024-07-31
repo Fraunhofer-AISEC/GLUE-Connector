@@ -1,0 +1,3 @@
+[submodule "odrl-parser"]
+	path = odrl-parser
+	url = https://gitlab.cc-asp.fraunhofer.de/ccit-glue/usage-control/odrl-parser
