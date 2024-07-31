@@ -68,6 +68,10 @@ tasks.named<JavaExec>("run") {
     standardInput = System.`in`
 }
 
+kotlin {
+    jvmToolchain(21)
+}
+
 spotless {
     kotlin {
         target("src/*/kotlin/**/*.kt")
