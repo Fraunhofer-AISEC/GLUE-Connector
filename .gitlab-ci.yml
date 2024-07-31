@@ -1,4 +1,4 @@
-image: gradle:8.9.0-jdk8
+image: gradle:8.9-jdk22-alpine
 
 stages:
   - jib_build
