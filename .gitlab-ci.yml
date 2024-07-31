@@ -1,6 +1,9 @@
 stages:
   - docker_build
 
+variables:
+  GIT_SUBMODULE_STRATEGY: recursive
+
 docker_build:
   image:
     name: gcr.io/kaniko-project/executor:debug
