@@ -1,8 +1,8 @@
 FROM eclipse-temurin:21 AS builder
 WORKDIR /src
 COPY . .
-ENV GRADLE_OPTS -Dkotlin.compiler.execution.strategy="in-process"
 RUN --mount=type=cache,target=/root/.gradle ./gradlew --no-daemon shadowJar
+RUN sleep 10s
 
 FROM gcr.io/distroless/java21-debian12
 # TODO: Also create a version-independent shadow jar
