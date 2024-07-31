@@ -2,24 +2,23 @@ package de.fraunhofer.aisec.glue.docker
 
 import io.ktor.client.request.*
 import io.ktor.http.*
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
 
 class Network internal constructor(private val client: DockerClient, val name: String) {
     suspend fun connect(
         container: Container,
         address: String? = null,
     ) {
-        val args = mapOf(
-            "Container" to container.name,
-            "EndpointConfig" to
+        val args =
+            mapOf(
+                "Container" to container.name,
+                "EndpointConfig" to
                     mapOf(
                         "IPAMConfig" to
-                                mapOf(
-                                    "IPv4Address" to address,
-                                ),
+                            mapOf(
+                                "IPv4Address" to address,
+                            ),
                     ),
-        )
+            )
 
         client.httpClient.post("${DockerClient.BASE_URL}/networks/$name/connect") {
             setBody(args)
@@ -31,10 +30,11 @@ class Network internal constructor(private val client: DockerClient, val name: S
         container: Container,
         force: Boolean = false,
     ) {
-        val args = mapOf(
-            "Container" to container.name,
-            "Force" to force,
-        )
+        val args =
+            mapOf(
+                "Container" to container.name,
+                "Force" to force,
+            )
 
         client.httpClient.post("${DockerClient.BASE_URL}/networks/$name/disconnect") {
             setBody(args)

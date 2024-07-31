@@ -1,3 +1,4 @@
+
 plugins {
     alias(libs.plugins.kotlin)
     alias(libs.plugins.kotlin.serialization)
@@ -7,13 +8,15 @@ plugins {
     application
 }
 
-group = "de.fraunhofer.aisec"
+group = "fhg.glue.container-pipeline"
 version = "1.0-SNAPSHOT"
 
 repositories {
     mavenLocal()
     mavenCentral()
 }
+
+
 
 dependencies {
     implementation(libs.slf4j.api)
@@ -67,6 +70,7 @@ spotless {
             "ktlint_code_style" to "ktlint_official",
             // Since intellij generates inputs like this, this rule is in the way...
             "ktlint_standard_no-wildcard-imports" to "disabled",
+            "ktlint_standard_if-else-wrapping" to "disabled",
         ))
     }
 }

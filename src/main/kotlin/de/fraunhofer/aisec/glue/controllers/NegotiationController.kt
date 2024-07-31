@@ -18,14 +18,18 @@ import io.ktor.server.routing.*
 class NegotiationController(private val negotiationManager: NegotiationManager) : Controller {
     // Since we may be behind a reverse proxy, make sure that we are reachable when we eventually send a message with a
     // callback URL
-    private fun baseUrlForOrigin(origin: RequestConnectionPoint, backtrack: Int): Url {
+    private fun baseUrlForOrigin(
+        origin: RequestConnectionPoint,
+        backtrack: Int,
+    ): Url {
         val segments = origin.uri.split('/').dropLast(backtrack)
         val protocol = URLProtocol.createOrDefault(origin.scheme)
-        val builder = URLBuilder(
-            protocol = protocol,
-            host = origin.serverHost,
-            pathSegments = segments,
-        )
+        val builder =
+            URLBuilder(
+                protocol = protocol,
+                host = origin.serverHost,
+                pathSegments = segments,
+            )
         if (protocol.defaultPort != origin.serverPort) {
             builder.port = origin.serverPort
         }
