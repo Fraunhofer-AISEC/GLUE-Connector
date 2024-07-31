@@ -32,25 +32,35 @@ class IngressTest {
         }
 
     private fun setupFakeContainerPipeline(): Pair<ContractManager, ContainerManager> {
-        val mockContract = Contract(
-            Pipeline("", listOf(
-                Container("test", "debian", listOf()),
-            )),
-        )
+        val mockContract =
+            Contract(
+                Pipeline(
+                    "",
+                    listOf(
+                        Container("test", "debian", listOf()),
+                    ),
+                ),
+            )
 
         val mockContractManager = mockk<ContractManager>()
         every { mockContractManager.get("test") } returns mockContract
 
         val mockContainer = mockk<DockerContainer>()
-        coEvery { mockContainer.inspect() } returns ContainerInspectResponse(
-            id = "42",
-            name = "test",
-            networkSettings = NetworkSettings(networks = mapOf(
-                "link-0" to EndpointSettings(
-                    ipAddress = "10.10.42.2"
-                ),
-            ))
-        )
+        coEvery { mockContainer.inspect() } returns
+            ContainerInspectResponse(
+                id = "42",
+                name = "test",
+                networkSettings =
+                    NetworkSettings(
+                        networks =
+                            mapOf(
+                                "link-0" to
+                                    EndpointSettings(
+                                        ipAddress = "10.10.42.2",
+                                    ),
+                            ),
+                    ),
+            )
 
         val mockPipeline: ContainerPipeline = mockk<ContainerPipeline>()
         every { mockPipeline.containers } returns listOf(mockContainer)
@@ -75,19 +85,22 @@ class IngressTest {
             }
 
             application {
-                module(DI {
-                    import(defaultDependencies)
+                module(
+                    DI {
+                        import(defaultDependencies)
 
-                    bind<ContractManager>(overrides = true) with singleton { mockContractManager }
-                    bind<ContainerManager>(overrides = true) with singleton { mockContainerManager }
-                    bind<Proxy>(overrides = true) with singleton { mockProxy }
-                })
+                        bind<ContractManager>(overrides = true) with singleton { mockContractManager }
+                        bind<ContainerManager>(overrides = true) with singleton { mockContainerManager }
+                        bind<Proxy>(overrides = true) with singleton { mockProxy }
+                    },
+                )
             }
 
-            val resp = client.get("/contract/test/call/test") {
-                //        Use DI as well or run a test OAuth server (overkill)?
-                basicAuth("user", "password")
-            }
+            val resp =
+                client.get("/contract/test/call/test") {
+                    //        Use DI as well or run a test OAuth server (overkill)?
+                    basicAuth("user", "password")
+                }
 
             assert(resp.status.isSuccess())
 

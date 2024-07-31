@@ -15,17 +15,16 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
-
 class Negotiation(
     var state: NegotiationState,
-    var peerIdentity: String?, // TODO: (How) should we identify and authenticate the peer if we are initiating the negotiation (apart from TLS)
+    var peerIdentity: String?,
     val providerPid: String,
     val consumerPid: String,
     val ownEndpoint: Url,
     val peerEndpoint: Url,
     val httpClient: HttpClient,
-    val negotiator: Negotiator) {
-
+    val negotiator: Negotiator,
+) {
     val completed = CompletableDeferred<OdrlPolicy>(null)
     private val mutex = Mutex()
 
@@ -35,58 +34,89 @@ class Negotiation(
         }
     }
 
-    private suspend inline fun <reified T> sendMessage(endpoint: String, message: T): HttpResponse {
-        val url = URLBuilder(peerEndpoint).apply {
-            path(endpoint)
-        }.build()
+    private suspend inline fun <reified T> sendMessage(
+        endpoint: String,
+        message: T,
+    ): HttpResponse {
+        val url =
+            URLBuilder(peerEndpoint).apply {
+                path(endpoint)
+            }.build()
 
         return httpClient.post(url) {
             setBody(message)
         }
     }
 
-    suspend fun processRequest(req: ContractRequestMessage, initial: Boolean = false) = mutex.withLock {
+    suspend fun processRequest(
+        req: ContractRequestMessage,
+        initial: Boolean = false,
+    ) = mutex.withLock {
         // When we first construct a negotiation, we initialize it to the requested state right away.
         // For later stages, we only allow the consumer to request new contract offers if we have already offered a
         // contract.
-        ensureState(if (initial) { NegotiationState.REQUESTED } else { NegotiationState.OFFERED })
+        ensureState(
+            if (initial) {
+                NegotiationState.REQUESTED
+            } else {
+                NegotiationState.OFFERED
+            },
+        )
 
         val parsedPolicy = OdrlPolicyParser().parse(req.offer)
         val (ok, counter) = negotiator.evaluateRequest(parsedPolicy)
 
         if (!ok) {
             if (counter != null) {
-                sendMessage("$consumerPid/offers", ContractOfferMessage(
-                    providerPid = providerPid,
-                    consumerPid = consumerPid,
-                    callbackAddress = "TODO: Own address",
-                    offer = jacksonObjectMapper().convertValue<JsonNode>(counter),
-                ))
+                sendMessage(
+                    "$consumerPid/offers",
+                    ContractOfferMessage(
+                        providerPid = providerPid,
+                        consumerPid = consumerPid,
+                        callbackAddress = "TODO: Own address",
+                        offer = jacksonObjectMapper().convertValue<JsonNode>(counter),
+                    ),
+                )
                 state = NegotiationState.OFFERED
             } else {
-                sendMessage("$consumerPid/termination", ContractNegotiationTerminationMessage(
-                    providerPid = providerPid,
-                    consumerPid = consumerPid,
-                    code = "noAgreement", // TODO: While error codes are implementation defined, we may want to sync with the EDC
-                    reason = listOf("No acceptable contract can be proposed for this negotiation")
-                ))
+                sendMessage(
+                    "$consumerPid/termination",
+                    ContractNegotiationTerminationMessage(
+                        providerPid = providerPid,
+                        consumerPid = consumerPid,
+                        code = "noAgreement",
+                        reason = listOf("No acceptable contract can be proposed for this negotiation"),
+                    ),
+                )
                 state = NegotiationState.TERMINATED
                 completed.cancel("No agreement can be found")
             }
         }
 
         // We have accepted the contract as is, tell the consumer and anyone waiting for this contract negotiation
-        sendMessage("$consumerPid/agreement", ContractAgreementMessage(
-            providerPid = providerPid,
-            consumerPid = consumerPid,
-            agreement = jacksonObjectMapper().convertValue<JsonNode>(parsedPolicy), // TODO: Convert to odrl agreement before encoding
-            callbackAddress = "TODO: Own address"
-        ))
+        sendMessage(
+            "$consumerPid/agreement",
+            ContractAgreementMessage(
+                providerPid = providerPid,
+                consumerPid = consumerPid,
+                agreement = jacksonObjectMapper().convertValue<JsonNode>(parsedPolicy),
+                callbackAddress = "TODO: Own address",
+            ),
+        )
         state = NegotiationState.AGREED
     }
 
-    suspend fun processOffer(req: ContractOfferMessage, initial: Boolean = false) = mutex.withLock {
-        ensureState(if (initial) { NegotiationState.OFFERED } else { NegotiationState.REQUESTED })
+    suspend fun processOffer(
+        req: ContractOfferMessage,
+        initial: Boolean = false,
+    ) = mutex.withLock {
+        ensureState(
+            if (initial) {
+                NegotiationState.OFFERED
+            } else {
+                NegotiationState.REQUESTED
+            },
+        )
 
         val parsedPolicy = OdrlPolicyParser().parse(req.offer)
         val (ok, newReq) = negotiator.evaluateOffer(parsedPolicy)
@@ -94,38 +124,48 @@ class Negotiation(
         if (!ok) {
             if (newReq != null) {
                 state = NegotiationState.REQUESTED
-                sendMessage("$providerPid/request", ContractRequestMessage(
-                    providerPid = providerPid,
-                    consumerPid = consumerPid,
-                    callbackAddress = "", //TODO: Somehow get own address
-                    offer = jacksonObjectMapper().convertValue(newReq)
-                ))
+                sendMessage(
+                    "$providerPid/request",
+                    ContractRequestMessage(
+                        providerPid = providerPid,
+                        consumerPid = consumerPid,
+                        callbackAddress = "",
+                        offer = jacksonObjectMapper().convertValue(newReq),
+                    ),
+                )
                 return
             } else {
-                sendMessage("$providerPid/termination", ContractNegotiationTerminationMessage(
-                    providerPid = providerPid,
-                    consumerPid = consumerPid,
-                    code = "noAgreement",
-                    reason = listOf("No acceptable contract can be derived from the offer")
-                ))
+                sendMessage(
+                    "$providerPid/termination",
+                    ContractNegotiationTerminationMessage(
+                        providerPid = providerPid,
+                        consumerPid = consumerPid,
+                        code = "noAgreement",
+                        reason = listOf("No acceptable contract can be derived from the offer"),
+                    ),
+                )
                 state = NegotiationState.TERMINATED
                 completed.cancel("No agreement can be reached")
             }
         }
 
-        sendMessage("$providerPid/events", ContractNegotiationEventMessage(
-            providerPid = providerPid,
-            consumerPid = consumerPid,
-            eventType = NegotiationEvent.ACCEPTED,
-        ))
+        sendMessage(
+            "$providerPid/events",
+            ContractNegotiationEventMessage(
+                providerPid = providerPid,
+                consumerPid = consumerPid,
+                eventType = NegotiationEvent.ACCEPTED,
+            ),
+        )
         state = NegotiationState.ACCEPTED
     }
 
-    suspend fun getStateMessage(): ContractNegotiation = mutex.withLock {
-        return ContractNegotiation(
-            providerPid,
-            consumerPid,
-            state
-        )
-    }
+    suspend fun getStateMessage(): ContractNegotiation =
+        mutex.withLock {
+            return ContractNegotiation(
+                providerPid,
+                consumerPid,
+                state,
+            )
+        }
 }

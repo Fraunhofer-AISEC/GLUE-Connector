@@ -35,34 +35,44 @@ class NegotiationManager(private val httpClient: HttpClient, private val default
      * A custom negotiator can be used to evaluate any offer returned by the peer.
      * Return a future that will yield a policy object.
      */
-    suspend fun startNegotiation(provider: Url, callbackUrl: Url, request: OdrlPolicy, negotiator: Negotiator? = null): Deferred<OdrlPolicy> {
-        val consumerPid = consumerPidMutex.withLock {
-            val consumerPid = newProcessId { pid ->
-                !(consumerReservedIds.contains(pid) || consumerNegotiations.containsKey(pid))
+    suspend fun startNegotiation(
+        provider: Url,
+        callbackUrl: Url,
+        request: OdrlPolicy,
+        negotiator: Negotiator? = null,
+    ): Deferred<OdrlPolicy> {
+        val consumerPid =
+            consumerPidMutex.withLock {
+                val consumerPid =
+                    newProcessId { pid ->
+                        !(consumerReservedIds.contains(pid) || consumerNegotiations.containsKey(pid))
+                    }
+                consumerReservedIds.add(consumerPid)
+                consumerPid
             }
-            consumerReservedIds.add(consumerPid)
-            consumerPid
-        }
 
         //       automatic jsonld serialization.
         //       Maybe we can get away with setting the base to the ODRL namespace.
         val odrlRequest = jacksonObjectMapper().convertValue<JsonNode>(request)
-        val contractRequestMessage = ContractRequestMessage(
-            providerPid = null,
-            consumerPid = consumerPid,
-            callbackUrl.toString(),
-            odrlRequest
-        )
+        val contractRequestMessage =
+            ContractRequestMessage(
+                providerPid = null,
+                consumerPid = consumerPid,
+                callbackUrl.toString(),
+                odrlRequest,
+            )
 
-        val requestUrl = URLBuilder(provider).apply {
-            path("request")
-        }.build()
+        val requestUrl =
+            URLBuilder(provider).apply {
+                path("request")
+            }.build()
 
-        val resp = httpClient.post(requestUrl) {
-            contentType(ContentType.Application.Json)
-            setBody(contractRequestMessage)
-            // Authentication should be handled by the HTTP client via plugin
-        }
+        val resp =
+            httpClient.post(requestUrl) {
+                contentType(ContentType.Application.Json)
+                setBody(contractRequestMessage)
+                // Authentication should be handled by the HTTP client via plugin
+            }
 
         if (!resp.status.isSuccess()) {
             return CompletableDeferred<OdrlPolicy>().apply {
@@ -93,16 +103,17 @@ class NegotiationManager(private val httpClient: HttpClient, private val default
         // Create the final negotiation object now that we have all the information required.
         // Note that we cannot bind the peer identity yet because we don't have a request with an Authorization header
         // at this point.
-        val negotiation = Negotiation(
-            state = NegotiationState.REQUESTED,
-            peerIdentity = null,
-            consumerPid = consumerPid,
-            providerPid = deserializedResponse.providerPid,
-            negotiator = negotiator ?: defaultNegotiator,
-            httpClient = httpClient,
-            ownEndpoint = callbackUrl,
-            peerEndpoint = requestUrl,
-        )
+        val negotiation =
+            Negotiation(
+                state = NegotiationState.REQUESTED,
+                peerIdentity = null,
+                consumerPid = consumerPid,
+                providerPid = deserializedResponse.providerPid,
+                negotiator = negotiator ?: defaultNegotiator,
+                httpClient = httpClient,
+                ownEndpoint = callbackUrl,
+                peerEndpoint = requestUrl,
+            )
 
         consumerPidMutex.withLock {
             consumerReservedIds.remove(consumerPid)
@@ -116,7 +127,11 @@ class NegotiationManager(private val httpClient: HttpClient, private val default
      * Create a new negotiation object from a consumer's request.
      * If the request contains a PID for an existing negotiation, this function is equivalent to [getAsProvider].
      */
-    suspend fun createFromRequest(request: ContractRequestMessage, originUrl: Url, peerIdent: String): Negotiation? {
+    suspend fun createFromRequest(
+        request: ContractRequestMessage,
+        originUrl: Url,
+        peerIdent: String,
+    ): Negotiation? {
         if (request.providerPid != null) {
             return getAsProvider(request.providerPid, request.consumerPid, peerIdent)
         }
@@ -124,48 +139,59 @@ class NegotiationManager(private val httpClient: HttpClient, private val default
         providerPidMutex.withLock {
             val providerPid = newProcessId { pid -> !providerNegotiation.containsKey(pid) }
 
-            val negotiation = Negotiation(
-                state = NegotiationState.REQUESTED,
-                peerIdentity = peerIdent,
-                providerPid = providerPid,
-                consumerPid = request.consumerPid,
-                negotiator = defaultNegotiator,
-                httpClient = httpClient,
-                ownEndpoint = originUrl,
-                peerEndpoint = Url(request.callbackAddress)
-            )
+            val negotiation =
+                Negotiation(
+                    state = NegotiationState.REQUESTED,
+                    peerIdentity = peerIdent,
+                    providerPid = providerPid,
+                    consumerPid = request.consumerPid,
+                    negotiator = defaultNegotiator,
+                    httpClient = httpClient,
+                    ownEndpoint = originUrl,
+                    peerEndpoint = Url(request.callbackAddress),
+                )
             providerNegotiation[providerPid] = negotiation
             return negotiation
         }
     }
 
-    suspend fun createFromOffer(request: ContractOfferMessage, originUrl: Url, peerIdent: String): Negotiation? {
+    suspend fun createFromOffer(
+        request: ContractOfferMessage,
+        originUrl: Url,
+        peerIdent: String,
+    ): Negotiation? {
         if (request.consumerPid != null) {
             return getAsConsumer(request.consumerPid, request.providerPid, peerIdent)
         }
 
         consumerPidMutex.withLock {
-            val consumerPid = newProcessId { pid ->
-                !(consumerNegotiations.containsKey(pid) || consumerReservedIds.contains(pid))
-            }
+            val consumerPid =
+                newProcessId { pid ->
+                    !(consumerNegotiations.containsKey(pid) || consumerReservedIds.contains(pid))
+                }
 
-            val negotiation = Negotiation(
-                state = NegotiationState.OFFERED,
-                peerIdentity = peerIdent,
-                providerPid = request.providerPid,
-                consumerPid = consumerPid,
-                negotiator = defaultNegotiator,
-                httpClient = httpClient,
-                ownEndpoint = originUrl,
-                peerEndpoint = Url(request.callbackAddress)
-            )
+            val negotiation =
+                Negotiation(
+                    state = NegotiationState.OFFERED,
+                    peerIdentity = peerIdent,
+                    providerPid = request.providerPid,
+                    consumerPid = consumerPid,
+                    negotiator = defaultNegotiator,
+                    httpClient = httpClient,
+                    ownEndpoint = originUrl,
+                    peerEndpoint = Url(request.callbackAddress),
+                )
 
             consumerNegotiations[consumerPid] = negotiation
             return negotiation
         }
     }
 
-    fun getAsProvider(providerPid: String, consumerPid: String?, peerIdent: String): Negotiation? {
+    fun getAsProvider(
+        providerPid: String,
+        consumerPid: String?,
+        peerIdent: String,
+    ): Negotiation? {
         val negotiation = providerNegotiation[providerPid] ?: return null
 
         if (consumerPid != null && negotiation.consumerPid != consumerPid) {
@@ -181,7 +207,11 @@ class NegotiationManager(private val httpClient: HttpClient, private val default
         return negotiation
     }
 
-    fun getAsConsumer(consumerPid: String, providerPid: String?, peerIdent: String): Negotiation? {
+    fun getAsConsumer(
+        consumerPid: String,
+        providerPid: String?,
+        peerIdent: String,
+    ): Negotiation? {
         val negotiation = consumerNegotiations[consumerPid] ?: return null
 
         if (providerPid != null && negotiation.providerPid != providerPid) {

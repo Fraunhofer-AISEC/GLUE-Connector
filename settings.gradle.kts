@@ -3,3 +3,6 @@ plugins {
 }
 rootProject.name = "uc-container-orchestration"
 
+includeBuild("odrl-parser")
+
+
