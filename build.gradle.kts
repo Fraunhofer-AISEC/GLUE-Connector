@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.ktor)
     alias(libs.plugins.shadow)
     alias(libs.plugins.spotless)
+    id("com.google.cloud.tools.jib") version "3.4.3"
     application
 }
 
@@ -56,6 +57,10 @@ kotlin {
 
 application {
     mainClass.set("de.fraunhofer.aisec.glue.ApplicationKt")
+}
+
+jib {
+    container.mainClass = "de.fraunhofer.aisec.glue.ApplicationKt"
 }
 
 // Required for ./gradlew run in order to wait on readln()
