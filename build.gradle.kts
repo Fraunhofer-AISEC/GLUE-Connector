@@ -52,7 +52,7 @@ tasks.test {
     useJUnitPlatform()
 }
 kotlin {
-    jvmToolchain(20)
+    jvmToolchain(21)
 }
 
 application {
@@ -66,10 +66,6 @@ jib {
 // Required for ./gradlew run in order to wait on readln()
 tasks.named<JavaExec>("run") {
     standardInput = System.`in`
-}
-
-kotlin {
-    jvmToolchain(21)
 }
 
 spotless {
