@@ -1,4 +1,4 @@
-image: gradle:8.9-jdk21-alpine
+image: eclipse-temurin:21
 
 stages:
   - jib_build
@@ -21,7 +21,7 @@ cache:
 jib_build:
   stage: jib_build
   script:
-    - gradle jibDockerBuild --debug -Djib.to.auth.username=${CI_REGISTRY_USER} -Djib.to.auth.password=${CI_REGISTRY_PASSWORD} -Djib.to.image=${CI_REGISTRY_IMAGE}:latest
+    - ./gradle jibDockerBuild -Djib.to.auth.username=${CI_REGISTRY_USER} -Djib.to.auth.password=${CI_REGISTRY_PASSWORD} -Djib.to.image=${CI_REGISTRY_IMAGE}:latest
   tags:
       - asprunner
 
