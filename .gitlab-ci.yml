@@ -3,6 +3,10 @@ image: gradle:8.9-jdk21-alpine
 stages:
   - jib_build
 
+variables:
+  GIT_SUBMODULE_STRATEGY: recursive
+
+
 before_script:
 #  - echo `pwd` # debug
 #  - echo "$CI_BUILD_NAME, $CI_BUILD_REF_NAME $CI_BUILD_STAGE" # debug
