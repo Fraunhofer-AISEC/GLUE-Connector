@@ -21,7 +21,7 @@ cache:
 jib_build:
   stage: jib_build
   script:
-    - ./gradlew jibDockerBuild -Djib.to.auth.username=${CI_REGISTRY_USER} -Djib.to.auth.password=${CI_REGISTRY_PASSWORD} -Djib.to.image=${CI_REGISTRY_IMAGE}:latest
+    - ./gradlew jib -Djib.to.auth.username=${CI_REGISTRY_USER} -Djib.to.auth.password=${CI_REGISTRY_PASSWORD} -Djib.to.image=${CI_REGISTRY_IMAGE}:latest
   tags:
       - asprunner
 
