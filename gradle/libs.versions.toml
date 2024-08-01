@@ -10,6 +10,7 @@ mockk = "1.13.10"
 jackson = "2.17.0"
 titaniumJsonLd = "1.4.0"
 jakarta-json = "2.0.0"
+jib = "3.4.3"
 
 [libraries]
 
@@ -42,3 +43,4 @@ kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", versi
 ktor = { id = "io.ktor.plugin", version.ref = "ktor" }
 shadow = { id ="com.github.johnrengelman.shadow",  version.ref="shadow" }
 spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
+jib = { id = "com.google.cloud.tools.jib", version.ref = "jib" }
