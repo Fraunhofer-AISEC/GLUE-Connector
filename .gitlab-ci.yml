@@ -1,4 +1,4 @@
-image: gradle:8.9-jdk21-alpine
+image: eclipse-temurin:21
 
 stages:
   - jib_build
