@@ -24,4 +24,12 @@ interface Negotiator {
      * Otherwise, the negotiation is terminated.
      */
     fun evaluateRequest(contractRequest: OdrlPolicy): Pair<Boolean, OdrlPolicy?> // TODO: Replace Policy with types for request and offer
+
+    /**
+     * Determine if the received agreement is still semantically the same as the policy offer.
+     */
+    fun verifyAgreement(
+        policyOffer: OdrlPolicy,
+        receivedAgreement: OdrlPolicy,
+    ): Boolean
 }
