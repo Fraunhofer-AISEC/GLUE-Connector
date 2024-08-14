@@ -1,6 +1,7 @@
 package de.fraunhofer.aisec.glue.controllers
 
 import de.fraunhofer.aisec.glue.models.negotiation.*
+import de.fraunhofer.aisec.glue.negotiation.Negotiation
 import de.fraunhofer.aisec.glue.negotiation.NegotiationManager
 import io.ktor.http.*
 import io.ktor.server.application.*
@@ -36,6 +37,18 @@ class NegotiationController(private val negotiationManager: NegotiationManager) 
         return builder.build()
     }
 
+    private fun stateErrorResponse(negotiation: Negotiation): ContractNegotiationError {
+        // Since this function is only called from response callbacks, the negotiation's lock should be held up the call
+        // stack.
+        val state = negotiation.getStateMessageUnlocked()
+
+        return ContractNegotiationError(
+            providerPid = state.providerPid,
+            consumerPid = state.consumerPid,
+            code = "invalidState",
+        )
+    }
+
     private fun Route.registerRoutes20241() {
         post("/request") {
             val principal = call.principal<UserIdPrincipal>()!!
@@ -48,13 +61,13 @@ class NegotiationController(private val negotiationManager: NegotiationManager) 
                 return@post
             }
 
-            call.respond(HttpStatusCode.Created, negotiation.getStateMessage())
-
-            // We call this after returning from the HTTP call in order to (hopefully) send the offer after the response
-            // of our negotiation.
-            // We unfortunately don't control the network behaviour, so there is no guarantee that the messages arrive
-            // in order.
-            negotiation.processRequest(req, initial = true)
+            negotiation.processRequest(req, initial = true) { ok ->
+                if (ok) {
+                    call.respond(HttpStatusCode.Created, negotiation.getStateMessageUnlocked())
+                } else {
+                    call.respond(HttpStatusCode.BadRequest, stateErrorResponse(negotiation))
+                }
+            }
         }
 
         post("/offers") {
@@ -69,7 +82,13 @@ class NegotiationController(private val negotiationManager: NegotiationManager) 
             }
 
             call.respond(HttpStatusCode.Created, negotiation.getStateMessage())
-            negotiation.processOffer(req, initial = true)
+            negotiation.processOffer(req, initial = true) { ok ->
+                if (ok) {
+                    call.respond(HttpStatusCode.Created, negotiation.getStateMessageUnlocked())
+                } else {
+                    call.respond(HttpStatusCode.BadRequest, stateErrorResponse(negotiation))
+                }
+            }
         }
 
         route("/{id}") {
@@ -106,9 +125,13 @@ class NegotiationController(private val negotiationManager: NegotiationManager) 
                     return@post
                 }
 
-                // Again, respond before processing to get the ordering right
-                call.respond(HttpStatusCode.OK)
-                negotiation.processRequest(req)
+                negotiation.processRequest(req) { ok ->
+                    if (ok) {
+                        call.respond(HttpStatusCode.OK)
+                    } else {
+                        call.respond(HttpStatusCode.BadRequest, stateErrorResponse(negotiation))
+                    }
+                }
             }
 
             post("/offers") {
@@ -128,39 +151,153 @@ class NegotiationController(private val negotiationManager: NegotiationManager) 
                 }
 
                 call.respond(HttpStatusCode.OK)
-                negotiation.processOffer(req)
+                negotiation.processOffer(req) { ok ->
+                    if (ok) {
+                        call.respond(HttpStatusCode.OK)
+                    } else {
+                        call.respond(HttpStatusCode.BadRequest, stateErrorResponse(negotiation))
+                    }
+                }
             }
 
             post("/events") {
-                val principal = call.principal<UserIdPrincipal>()
+                val principal = call.principal<UserIdPrincipal>()!!
                 val id = call.parameters["id"]!!
                 val req = call.receive<ContractNegotiationEventMessage>()
 
-                // TODO: Process peer event
+                // This endpoint is valid for both provider and consumer, so handle it in two different ways
+
+                when (req.eventType) {
+                    NegotiationEvent.ACCEPTED -> {
+                        if (id != req.consumerPid) {
+                            call.respond(HttpStatusCode.BadRequest)
+                            return@post
+                        }
+
+                        val negotiation = negotiationManager.getAsProvider(id, req.consumerPid, principal.name)
+                        if (negotiation == null) {
+                            call.respond(HttpStatusCode.NotFound)
+                            return@post
+                        }
+
+                        negotiation.processAccept { ok ->
+                            if (ok) {
+                                call.respond(HttpStatusCode.OK)
+                            } else {
+                                call.respond(
+                                    HttpStatusCode.BadRequest,
+                                    stateErrorResponse(negotiation),
+                                )
+                            }
+                        }
+                    }
+                    NegotiationEvent.FINALIZED -> {
+                        if (id != req.providerPid) {
+                            call.respond(HttpStatusCode.BadRequest)
+                            return@post
+                        }
+
+                        val negotiation = negotiationManager.getAsConsumer(id, req.consumerPid, principal.name)
+                        if (negotiation == null) {
+                            call.respond(HttpStatusCode.NotFound)
+                            return@post
+                        }
+
+                        negotiation.processFinalize { ok ->
+                            if (ok) {
+                                call.respond(HttpStatusCode.OK)
+                            } else {
+                                call.respond(
+                                    HttpStatusCode.BadRequest,
+                                    stateErrorResponse(negotiation),
+                                )
+                            }
+                        }
+                    }
+                }
             }
 
             post("/agreement") {
-                val principal = call.principal<UserIdPrincipal>()
+                val principal = call.principal<UserIdPrincipal>()!!
                 val id = call.parameters["id"]!!
                 val req = call.receive<ContractAgreementMessage>()
 
-                // TODO: Process agreement
+                if (id != req.consumerPid) {
+                    call.respond(HttpStatusCode.BadRequest)
+                    return@post
+                }
+
+                val negotiation = negotiationManager.getAsConsumer(id, req.providerPid, principal.name)
+                if (negotiation == null) {
+                    call.respond(HttpStatusCode.NotFound)
+                    return@post
+                }
+
+                negotiation.processAgreement(req) { ok ->
+                    if (ok) {
+                        call.respond(HttpStatusCode.OK)
+                    } else {
+                        call.respond(HttpStatusCode.BadRequest, stateErrorResponse(negotiation))
+                    }
+                }
             }
 
             post("/agreement/verification") {
-                val principal = call.principal<UserIdPrincipal>()
+                val principal = call.principal<UserIdPrincipal>()!!
                 val id = call.parameters["id"]!!
                 val req = call.receive<ContractAgreementVerificationMessage>()
 
-                // TODO: Process verification message
+                if (id != req.providerPid) {
+                    call.respond(HttpStatusCode.BadRequest)
+                    return@post
+                }
+
+                val negotiation = negotiationManager.getAsProvider(id, req.consumerPid, principal.name)
+                if (negotiation == null) {
+                    call.respond(HttpStatusCode.NotFound)
+                    return@post
+                }
+
+                negotiation.processVerify { ok ->
+                    if (ok) {
+                        call.respond(HttpStatusCode.OK)
+                    } else {
+                        call.respond(HttpStatusCode.BadRequest, stateErrorResponse(negotiation))
+                    }
+                }
             }
 
             post("/termination") {
-                val principal = call.principal<UserIdPrincipal>()
+                val principal = call.principal<UserIdPrincipal>()!!
                 val id = call.parameters["id"]!!
                 val req = call.receive<ContractNegotiationTerminationMessage>()
 
-                // TODO: Process termination message
+                // This handler is a bit awkward since termination messages are the same for provider and consumer
+                // We just try both, which is only safe since we make sure that all pids are only assigned once
+                var negotiation = negotiationManager.getAsProvider(id, req.consumerPid, principal.name)
+
+                // As a side effect, we also have to push our correctness checks back
+                if (negotiation != null) {
+                    if (id != req.consumerPid) {
+                        call.respond(HttpStatusCode.BadRequest)
+                        return@post
+                    }
+                } else {
+                    negotiation = negotiationManager.getAsConsumer(id, req.providerPid, principal.name)
+                    if (negotiation != null) {
+                        if (id != req.providerPid) {
+                            call.respond(HttpStatusCode.BadRequest)
+                            return@post
+                        }
+                    } else {
+                        call.respond(HttpStatusCode.NotFound)
+                        return@post
+                    }
+                }
+
+                negotiation.processTermination(req) {
+                    call.respond(HttpStatusCode.OK)
+                }
             }
         }
     }

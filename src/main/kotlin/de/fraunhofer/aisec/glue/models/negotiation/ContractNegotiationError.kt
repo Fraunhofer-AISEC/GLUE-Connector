@@ -16,7 +16,7 @@ data class ContractNegotiationError(
     @JsonProperty("${Namespaces.DSPACE}/code")
     val code: String,
     @JsonProperty("${Namespaces.DSPACE}/reason")
-    val reason: List<Any>,
+    val reason: List<Any>? = null,
     @JsonProperty("${Namespaces.DC_TERMS}/description")
-    val description: List<MultilanguageProperty>,
+    val description: List<MultilanguageProperty>? = null,
 )
