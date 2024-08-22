@@ -42,6 +42,9 @@ class OdrlLiteralParser: OdrlParser() {
             if (root.has("@type"))
                 type = getStringOrThrow(root, "@type")
 
+            if (type == GlueOdrlIdentifiers.CONTAINER_PIPELINE)
+                return OdrlLiteral<GlueContainerPipeline>(GlueContainerPipelineParser().parse(root))
+
             val value =
                 if (root.has(RdfIdentifiers.VALUE))
                     RdfValueParser().parse(root.get(RdfIdentifiers.VALUE))
@@ -59,13 +62,11 @@ class OdrlLiteralParser: OdrlParser() {
             if (type == XsdIdentifiers.DOUBLE || type == XsdIdentifiers.FLOAT)
                 return OdrlLiteral<Double>(value.toDouble())
 
-            if (type == XsdIdentifiers.DATETIME) {
+            if (type == XsdIdentifiers.DATETIME)
                 return OdrlLiteral<LocalDateTime>(LocalDateTime.parse(value))
-            }
 
-            if (type == XsdIdentifiers.DATE) {
+            if (type == XsdIdentifiers.DATE)
                 return OdrlLiteral<LocalDateTime>(LocalDateTime.of(LocalDate.parse(value), LocalTime.of(0, 0)))
-            }
         }
 
         throw OdrlException("Invalid ODRL literal")

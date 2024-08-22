@@ -8,11 +8,11 @@ class OdrlPolicy(
     val profiles: List<String>,
     val conflict: String)
 {
-    fun evaluate(ctx: Context): Boolean {
+    fun evaluate(ctx: Context, onExerciseAction: (OdrlAction) -> Boolean = {true}): Boolean {
         // Evaluate permissions
         var allowed = false
         for (p in permissions)
-            allowed = allowed || p.isAllowed(ctx)
+            allowed = allowed || p.isAllowed(ctx, onExerciseAction)
 
         // Evaluate prohibitions
         var disallowed = false;
@@ -30,7 +30,7 @@ class OdrlPolicy(
         // Exercise obligations
         if (result)
             for (o in obligations)
-                result = result && o.isFulfilled(ctx)
+                result = result && o.isFulfilled(ctx, onExerciseAction)
 
         return result;
     }

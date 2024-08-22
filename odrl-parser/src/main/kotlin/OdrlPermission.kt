@@ -9,7 +9,7 @@ class OdrlPermission(
     val assignee: OdrlParty?,
     val duties: List<OdrlDuty>) : OdrlRule(uid, action, constraints)
 {
-    fun isAllowed(ctx: Context): Boolean {
+    fun isAllowed(ctx: Context, onExerciseAction: (OdrlAction) -> Boolean): Boolean {
         // Action has to match
         if(!action.matches(ctx))
             return false;
@@ -26,7 +26,7 @@ class OdrlPermission(
 
         // Duties have to be fulfilled
         for (d in duties) {
-            if (!d.isFulfilled(ctx))
+            if (!d.isFulfilled(ctx, onExerciseAction))
                 return false;
         }
 

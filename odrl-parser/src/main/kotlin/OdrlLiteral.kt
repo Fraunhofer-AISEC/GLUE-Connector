@@ -4,7 +4,7 @@ import java.time.LocalDateTime
 
 class OdrlLiteral<T>(val value: T): Comparable<OdrlLiteral<*>> {
     init {
-        if (value !is Int && value !is String && value !is Boolean && value !is Double && value !is LocalDateTime && value !is List<*>)
+        if (value !is Int && value !is String && value !is Boolean && value !is Double && value !is LocalDateTime && value !is GlueContainerPipeline && value !is List<*>)
             throw OdrlException("Invalid ODRL literal type")
         if (value is List<*> && !value.all { it is Int || it is String || it is Boolean || it is Double || it is LocalDateTime })
             throw OdrlException("Invalid ODRL literal type in list")
@@ -22,6 +22,7 @@ class OdrlLiteral<T>(val value: T): Comparable<OdrlLiteral<*>> {
             is Boolean -> return compareToBoolean(other.value)
             is Double -> return compareToDouble(other.value)
             is LocalDateTime -> return compareToDateTime(other.value)
+            is GlueContainerPipeline -> return compareToGlueContainerPipeline(other.value)
             is List<*> -> return compareToList(other.value)
         }
         throw OdrlException("Invalid type for ODRL literal")
@@ -34,6 +35,7 @@ class OdrlLiteral<T>(val value: T): Comparable<OdrlLiteral<*>> {
             is Boolean -> return if (value == (other != 0)) 0 else -1
             is Double -> return value.toInt().compareTo(other)
             is LocalDateTime -> throw OdrlException("Cannot compare DateTime to Integer")
+            is GlueContainerPipeline -> throw OdrlException("Cannot compare GlueContainerPipeline to Integer")
             is List<*> -> throw OdrlException("Cannot compare List to Integer")
         }
         throw OdrlException("Invalid type for ODRL literal")
@@ -46,6 +48,7 @@ class OdrlLiteral<T>(val value: T): Comparable<OdrlLiteral<*>> {
             is Boolean -> return if (value == (other == "true")) 0 else -1
             is Double -> return value.compareTo(other.toDouble())
             is LocalDateTime -> throw OdrlException("Cannot compare DateTime to String")
+            is GlueContainerPipeline -> throw OdrlException("Cannot compare GlueContainerPipeline to String")
             is List<*> -> throw OdrlException("Cannot compare List to String")
         }
         throw OdrlException("Invalid type for ODRL literal")
@@ -58,6 +61,7 @@ class OdrlLiteral<T>(val value: T): Comparable<OdrlLiteral<*>> {
             is Boolean -> return value.compareTo(other)
             is Double -> return if ((value != 0.0) == other) 0 else 1
             is LocalDateTime -> throw OdrlException("Cannot compare DateTime to Boolean")
+            is GlueContainerPipeline -> throw OdrlException("Cannot compare GlueContainerPipeline to Boolean")
             is List<*> -> throw OdrlException("Cannot compare List to Boolean")
         }
         throw OdrlException("Invalid type for ODRL literal")
@@ -70,6 +74,7 @@ class OdrlLiteral<T>(val value: T): Comparable<OdrlLiteral<*>> {
             is Boolean -> return if (value == (other != 0.0)) 0 else -1
             is Double -> return value.compareTo(other)
             is LocalDateTime -> throw OdrlException("Cannot compare DateTime to Double")
+            is GlueContainerPipeline -> throw OdrlException("Cannot compare GlueContainerPipeline to Double")
             is List<*> -> throw OdrlException("Cannot compare List to Double")
         }
         throw OdrlException("Invalid type for ODRL literal")
@@ -82,7 +87,21 @@ class OdrlLiteral<T>(val value: T): Comparable<OdrlLiteral<*>> {
             is Boolean -> throw OdrlException("Cannot compare Boolean to DateTime")
             is Double -> throw OdrlException("Cannot compare Double to DateTime")
             is LocalDateTime -> return value.compareTo(other)
+            is GlueContainerPipeline -> throw OdrlException("Cannot compare GlueContainerPipeline to DateTime")
             is List<*> -> throw OdrlException("Cannot compare List to DateTime")
+        }
+        throw OdrlException("Invalid type for ODRL literal")
+    }
+
+    private fun compareToGlueContainerPipeline(other: GlueContainerPipeline): Int {
+        when (value) {
+            is String -> throw OdrlException("Cannot compare String to GlueContainerPipeline")
+            is Int -> throw OdrlException("Cannot compare Integer to GlueContainerPipeline")
+            is Boolean -> throw OdrlException("Cannot compare Boolean to GlueContainerPipeline")
+            is Double -> throw OdrlException("Cannot compare Double to GlueContainerPipeline")
+            is LocalDateTime -> throw OdrlException("Cannot compare DateTime to GlueContainerPipeline")
+            is GlueContainerPipeline -> return if (value == other) 0 else 1
+            is List<*> -> throw OdrlException("Cannot compare List to GlueContainerPipeline")
         }
         throw OdrlException("Invalid type for ODRL literal")
     }
@@ -94,6 +113,7 @@ class OdrlLiteral<T>(val value: T): Comparable<OdrlLiteral<*>> {
             is Boolean -> throw OdrlException("Cannot compare Boolean to List")
             is Double -> throw OdrlException("Cannot compare Double to List")
             is LocalDateTime -> throw OdrlException("Cannot compare DateTime to List")
+            is GlueContainerPipeline -> throw OdrlException("Cannot compare GlueContainerPipeline to List")
             is List<*> -> return if (value == other) 0 else 1
         }
         throw OdrlException("Invalid type for ODRL literal")
