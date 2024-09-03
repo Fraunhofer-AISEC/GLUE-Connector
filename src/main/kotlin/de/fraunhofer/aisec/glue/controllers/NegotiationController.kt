@@ -169,7 +169,7 @@ class NegotiationController(private val negotiationManager: NegotiationManager) 
 
                 when (req.eventType) {
                     NegotiationEvent.ACCEPTED -> {
-                        if (id != req.consumerPid) {
+                        if (id != req.providerPid) {
                             call.respond(HttpStatusCode.BadRequest)
                             return@post
                         }
@@ -192,12 +192,12 @@ class NegotiationController(private val negotiationManager: NegotiationManager) 
                         }
                     }
                     NegotiationEvent.FINALIZED -> {
-                        if (id != req.providerPid) {
+                        if (id != req.consumerPid) {
                             call.respond(HttpStatusCode.BadRequest)
                             return@post
                         }
 
-                        val negotiation = negotiationManager.getAsConsumer(id, req.consumerPid, principal.name)
+                        val negotiation = negotiationManager.getAsConsumer(id, req.providerPid, principal.name)
                         if (negotiation == null) {
                             call.respond(HttpStatusCode.NotFound)
                             return@post

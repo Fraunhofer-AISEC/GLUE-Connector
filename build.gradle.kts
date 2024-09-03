@@ -1,4 +1,3 @@
-
 plugins {
     alias(libs.plugins.kotlin)
     alias(libs.plugins.kotlin.serialization)
@@ -17,8 +16,6 @@ repositories {
     mavenCentral()
 }
 
-
-
 dependencies {
     implementation(libs.slf4j.api)
     implementation(libs.okhttp)
@@ -35,6 +32,7 @@ dependencies {
     implementation(libs.jackson.databind)
     implementation(libs.jackson.datatype.jsonp)
     implementation(libs.jackson.module.kotlin)
+    implementation(libs.jackson.datatype.jsr310)
     implementation(libs.titaniumJsonLd)
     implementation(libs.jakarta.json)
     implementation("fhg.glue.odrl:odrl-parser:1.0-SNAPSHOT")
@@ -45,6 +43,7 @@ dependencies {
     testImplementation(libs.slf4j.jdk14)
     testImplementation(libs.kotlin.test)
     testImplementation(libs.ktor.server.test.host)
+    testImplementation(libs.ktor.client.mock)
     testImplementation(libs.mockk)
 }
 

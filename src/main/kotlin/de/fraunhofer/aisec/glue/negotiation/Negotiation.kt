@@ -2,8 +2,9 @@ package de.fraunhofer.aisec.glue.negotiation
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ObjectNode
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.convertValue
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.module.kotlin.jacksonMapperBuilder
 import de.fraunhofer.aisec.glue.models.negotiation.*
 import fhg.glue.odrl.OdrlException
 import fhg.glue.odrl.OdrlPolicy
@@ -34,6 +35,9 @@ class Negotiation(
 ) {
     val completed = CompletableDeferred<OdrlPolicy>(null)
     private val mutex = Mutex()
+
+    // TODO: Inject
+    private val objectMapper = jacksonMapperBuilder().addModules(JavaTimeModule()).build()
 
     init {
         completed.invokeOnCompletion { cause ->
@@ -69,10 +73,11 @@ class Negotiation(
     ): HttpResponse {
         val url =
             URLBuilder(peerEndpoint).apply {
-                path(endpoint)
+                pathSegments = pathSegments + endpoint.split('/').map { s -> s.trim('/') }
             }.build()
 
         return httpClient.post(url) {
+            contentType(ContentType.Application.Json)
             setBody(message)
         }
     }
@@ -156,7 +161,7 @@ class Negotiation(
                         providerPid = ownPid,
                         consumerPid = peerPid,
                         callbackAddress = ownEndpoint.toString(),
-                        offer = jacksonObjectMapper().convertValue<JsonNode>(counter),
+                        offer = objectMapper.convertValue<JsonNode>(counter),
                     ),
                 )
                 currentPolicy = counter
@@ -178,7 +183,7 @@ class Negotiation(
                 providerPid = ownPid,
                 consumerPid = peerPid,
                 // TODO: Properly convert to ODRL agreement before encoding (see processAgree)
-                agreement = jacksonObjectMapper().convertValue<JsonNode>(parsedPolicy),
+                agreement = objectMapper.convertValue<JsonNode>(parsedPolicy),
                 callbackAddress = ownEndpoint.toString(),
             ),
         )
@@ -215,7 +220,7 @@ class Negotiation(
                         providerPid = peerPid,
                         consumerPid = ownPid,
                         callbackAddress = ownEndpoint.toString(),
-                        offer = jacksonObjectMapper().convertValue(newReq),
+                        offer = objectMapper.convertValue(newReq),
                     ),
                 )
                 state = NegotiationState.REQUESTED
@@ -255,7 +260,7 @@ class Negotiation(
             val now = Instant.now()
             val formatted = DateTimeFormatter.ISO_INSTANT.format(now)
             // TODO: We probably need something more to convert to agreement here
-            val agreement = jacksonObjectMapper().convertValue<ObjectNode>(currentPolicy!!)
+            val agreement = objectMapper.convertValue<ObjectNode>(currentPolicy!!)
             // We need to add a DSP-specific timestamp option
             agreement.put("${Namespaces.DSPACE}/timestamp", formatted)
             // HACK: Add a top-level context URL which should translate all unprefixed properties to prefixed ones
@@ -354,6 +359,7 @@ class Negotiation(
             }
 
             responseCallback(true)
+            state = NegotiationState.VERIFIED
             sendMessage(
                 "$peerPid/agreement/verification",
                 ContractAgreementVerificationMessage(
