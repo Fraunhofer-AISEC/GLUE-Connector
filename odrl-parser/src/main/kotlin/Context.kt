@@ -1,4 +1,10 @@
 package fhg.glue.odrl
 
-class Context(val actionName: String, val target: String) {
+class Context(
+    val actionUid: String,
+    val targetUid: String,
+    val pipeline: GlueContainerPipeline? = null
+)
+{
+
 }

@@ -1,6 +1,9 @@
+import fhg.glue.odrl.GlueContainer
+import fhg.glue.odrl.GlueContainerPipeline
 import fhg.glue.odrl.OdrlLiteral
 import java.time.LocalDateTime
 import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 import kotlin.test.assertFalse
 import kotlin.test.Test
@@ -18,6 +21,19 @@ class OdrlLiteralTest {
         assertEquals(OdrlLiteral(stringList), OdrlLiteral(stringList))
         val intList = listOf(1, 2, 3)
         assertEquals(OdrlLiteral(intList), OdrlLiteral(intList))
+        assertEquals(OdrlLiteral("test"), OdrlLiteral("test"))
+    }
+
+    @Test
+    fun containerPipelineEquality() {
+        val list1 = GlueContainerPipeline(listOf(GlueContainer("image1", "hash1",), GlueContainer("image2", "hash2",)))
+        val list2 = GlueContainerPipeline(listOf(GlueContainer("image2", "hash2",), GlueContainer("image1", "hash1",)))
+        val list3 = GlueContainerPipeline(listOf(GlueContainer("image1", "hash1",), GlueContainer("image2", "hash2",)))
+        assertEquals(OdrlLiteral(list1), OdrlLiteral(list1))
+        assertEquals(OdrlLiteral(list1), OdrlLiteral(list3))
+        assertEquals(OdrlLiteral(list3), OdrlLiteral(list1))
+        assertNotEquals(OdrlLiteral(list1), OdrlLiteral(list2))
+        assertNotEquals(OdrlLiteral(list2), OdrlLiteral(list1))
     }
 
     @Test

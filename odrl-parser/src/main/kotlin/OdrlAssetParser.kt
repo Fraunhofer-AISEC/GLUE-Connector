@@ -7,7 +7,7 @@ class OdrlAssetParser: OdrlParser() {
 
     fun parse(root: JsonNode): OdrlAsset {
         if (root.isTextual) {
-            isIri(root.asText())
+            isIriOrThrow(root.asText())
             return OdrlAsset(root.asText())
         }
 
@@ -15,8 +15,7 @@ class OdrlAssetParser: OdrlParser() {
             throw OdrlException("Expected asset to be a string or object")
 
         // An Asset SHOULD have one uid property value of type IRI
-        val uid = getStringOrThrow(root, "@id")
-        isIri(uid)
+        val uid = getIriOrThrow(root, "@id")
 
 
         return OdrlAsset(uid)

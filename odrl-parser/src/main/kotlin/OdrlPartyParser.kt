@@ -7,7 +7,7 @@ class OdrlPartyParser: OdrlParser() {
 
     fun parse(root: JsonNode): OdrlParty {
         if (root.isTextual) {
-            isIri(root.asText())
+            isIriOrThrow(root.asText())
             return OdrlParty(root.asText())
         }
 
@@ -15,8 +15,7 @@ class OdrlPartyParser: OdrlParser() {
             throw OdrlException("Expected party to be a string or object")
 
         // A Party SHOULD have one uid property value of type IRI
-        val uid = getStringOrThrow(root, "@id")
-        isIri(uid)
+        val uid = getIriOrThrow(root, "@id")
 
 
         return OdrlParty(uid)

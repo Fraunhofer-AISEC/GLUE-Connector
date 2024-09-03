@@ -32,7 +32,7 @@ class OdrlPolicyParser : OdrlParser() {
             throw OdrlException("Expected ODRL policy to be a JSON object")
 
         // Only ODRL policies supported
-        var type: String? = null
+        var type = OdrlIdentifiers.SET // "The Set Policy subclass is the default subclass of Policy" (https://www.w3.org/TR/odrl-model)
         if (root.has("@type")) {
             type = getStringOrThrow(root, "@type")
         }

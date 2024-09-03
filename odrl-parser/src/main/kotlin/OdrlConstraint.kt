@@ -7,6 +7,6 @@ class OdrlConstraint(
     val rightOperand: OdrlLiteral<*>)
 {
     fun isSatisfied(ctx: Context): Boolean {
-        return operator.eval(leftOperand, rightOperand)
+        return operator.eval(ctx, leftOperand, rightOperand)
     }
 }

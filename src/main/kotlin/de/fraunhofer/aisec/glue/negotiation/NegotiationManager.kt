@@ -227,7 +227,7 @@ class NegotiationManager(private val httpClient: HttpClient, private val default
     }
 
     private fun newProcessId(): String {
-        return sequence<UUID> { UUID.randomUUID() }
+        return generateSequence { UUID.randomUUID() }
             .map { uuid -> "urn:uuid:$uuid" }
             .first { id -> !assignedIds.contains(id) }
     }
