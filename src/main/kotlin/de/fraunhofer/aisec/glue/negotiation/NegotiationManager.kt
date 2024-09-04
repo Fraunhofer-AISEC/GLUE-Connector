@@ -1,8 +1,8 @@
 package de.fraunhofer.aisec.glue.negotiation
 
 import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.convertValue
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import de.fraunhofer.aisec.glue.models.negotiation.ContractNegotiation
 import de.fraunhofer.aisec.glue.models.negotiation.ContractOfferMessage
 import de.fraunhofer.aisec.glue.models.negotiation.ContractRequestMessage
@@ -21,7 +21,11 @@ import kotlinx.coroutines.sync.withLock
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
-class NegotiationManager(private val httpClient: HttpClient, private val defaultNegotiator: Negotiator) {
+class NegotiationManager(
+    private val httpClient: HttpClient,
+    private val objectMapper: ObjectMapper,
+    private val defaultNegotiator: Negotiator,
+) {
     private val pidMutex = Mutex()
     private val assignedIds = mutableSetOf<String>()
     private val providerNegotiation = ConcurrentHashMap<String, Negotiation>()
@@ -48,7 +52,7 @@ class NegotiationManager(private val httpClient: HttpClient, private val default
         // TODO: We probably need a custom serializer here since the ODRL classes don't have the jackson tags for
         //       automatic jsonld serialization.
         //       Maybe we can get away with setting the base to the ODRL namespace.
-        val odrlRequest = jacksonObjectMapper().convertValue<JsonNode>(request)
+        val odrlRequest = objectMapper.convertValue<JsonNode>(request)
         val contractRequestMessage =
             ContractRequestMessage(
                 providerPid = null,
@@ -59,7 +63,7 @@ class NegotiationManager(private val httpClient: HttpClient, private val default
 
         val requestUrl =
             URLBuilder(provider).apply {
-                path("request")
+                pathSegments = pathSegments + listOf("request")
             }.build()
 
         val resp =
@@ -111,6 +115,7 @@ class NegotiationManager(private val httpClient: HttpClient, private val default
                 httpClient = httpClient,
                 ownEndpoint = callbackUrl,
                 peerEndpoint = requestUrl,
+                objectMapper = objectMapper,
             )
 
         pidMutex.withLock {
@@ -153,6 +158,7 @@ class NegotiationManager(private val httpClient: HttpClient, private val default
                     httpClient = httpClient,
                     ownEndpoint = originUrl,
                     peerEndpoint = Url(request.callbackAddress),
+                    objectMapper = objectMapper,
                 )
             providerNegotiation[providerPid] = negotiation
             return negotiation
@@ -184,6 +190,7 @@ class NegotiationManager(private val httpClient: HttpClient, private val default
                     httpClient = httpClient,
                     ownEndpoint = originUrl,
                     peerEndpoint = Url(request.callbackAddress),
+                    objectMapper = objectMapper,
                 )
 
             consumerNegotiations[consumerPid] = negotiation

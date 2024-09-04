@@ -1,10 +1,9 @@
 package de.fraunhofer.aisec.glue.negotiation
 
 import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.convertValue
-import com.fasterxml.jackson.module.kotlin.jacksonMapperBuilder
 import de.fraunhofer.aisec.glue.models.negotiation.*
 import fhg.glue.odrl.OdrlException
 import fhg.glue.odrl.OdrlPolicy
@@ -32,12 +31,10 @@ class Negotiation(
     val peerEndpoint: Url,
     val httpClient: HttpClient,
     val negotiator: Negotiator,
+    val objectMapper: ObjectMapper,
 ) {
     val completed = CompletableDeferred<OdrlPolicy>(null)
     private val mutex = Mutex()
-
-    // TODO: Inject
-    private val objectMapper = jacksonMapperBuilder().addModules(JavaTimeModule()).build()
 
     init {
         completed.invokeOnCompletion { cause ->
