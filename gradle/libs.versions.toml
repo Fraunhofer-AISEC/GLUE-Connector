@@ -1,6 +1,7 @@
 [versions]
 kotlin = "1.9.21"
 ktor = "2.3.9"
+kotlinx-coroutines = "1.7.1"
 shadow = "8.1.1"
 spotless = "6.25.0"
 slf4j = "2.0.10"
@@ -30,7 +31,9 @@ ktor-server-netty = { group = "io.ktor", name = "ktor-server-netty-jvm", version
 ktor-server-config-yaml = { group = "io.ktor", name = "ktor-server-config-yaml", version.ref = "ktor" }
 ktor-server-auth = { group = "io.ktor", name = "ktor-server-auth", version.ref = "ktor" }
 ktor-server-test-host = { group = "io.ktor", name = "ktor-server-test-host", version.ref = "ktor" }
+ktor-server-callLogging = { group = "io.ktor", name = "ktor-server-call-logging", version.ref = "ktor" }
 kotlin-test = { group = "org.jetbrains.kotlin", name = "kotlin-test", version.ref = "kotlin" }
+kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }
 kodein = { group = "org.kodein.di", name = "kodein-di", version.ref = "kodein" }
 mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
 jackson-databind = { group = "com.fasterxml.jackson.core", name = "jackson-databind", version.ref = "jackson" }

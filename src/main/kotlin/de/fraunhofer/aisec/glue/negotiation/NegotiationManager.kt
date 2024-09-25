@@ -16,6 +16,9 @@ import io.ktor.http.*
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.util.*
@@ -30,6 +33,10 @@ class NegotiationManager(
     private val assignedIds = mutableSetOf<String>()
     private val providerNegotiation = ConcurrentHashMap<String, Negotiation>()
     private val consumerNegotiations = ConcurrentHashMap<String, Negotiation>()
+    private val pendingConsumerNegotiations = ConcurrentHashMap<String, Channel<Negotiation?>>()
+
+    private val newNegotiationsFlow = MutableSharedFlow<Deferred<OdrlPolicy>>()
+    val newNegotiations = newNegotiationsFlow.asSharedFlow()
 
     /**
      * Start a negotiation by sending the provided contract request to the provider.
@@ -39,13 +46,15 @@ class NegotiationManager(
     suspend fun startNegotiation(
         provider: Url,
         callbackUrl: Url,
-        request: OdrlPolicy,
+        // TODO: Perhaps accept the parsed policy if we get serialization to work
+        request: JsonNode,
         negotiator: Negotiator? = null,
     ): Deferred<OdrlPolicy> {
         val consumerPid =
             pidMutex.withLock {
                 val consumerPid = newProcessId()
                 assignedIds.add(consumerPid)
+                pendingConsumerNegotiations[consumerPid] = Channel()
                 consumerPid
             }
 
@@ -61,10 +70,7 @@ class NegotiationManager(
                 odrlRequest,
             )
 
-        val requestUrl =
-            URLBuilder(provider).apply {
-                pathSegments = pathSegments + listOf("request")
-            }.build()
+        val requestUrl = URLBuilder(provider).appendPathSegments("request").build()
 
         val resp =
             httpClient.post(requestUrl) {
@@ -86,13 +92,25 @@ class NegotiationManager(
             NegotiationState.REQUESTED -> {}
             // The provider terminated the negotiation
             NegotiationState.TERMINATED -> {
-                pidMutex.withLock { assignedIds.remove(consumerPid) }
+                pidMutex.withLock {
+                    assignedIds.remove(consumerPid)
+                    pendingConsumerNegotiations.remove(consumerPid)!!.run {
+                        trySend(null)
+                        close()
+                    }
+                }
                 return CompletableDeferred<OdrlPolicy>().apply {
                     cancel("The provider terminated the negotiation")
                 }
             }
             else -> {
-                pidMutex.withLock { assignedIds.remove(consumerPid) }
+                pidMutex.withLock {
+                    assignedIds.remove(consumerPid)
+                    pendingConsumerNegotiations.remove(consumerPid)!!.run {
+                        trySend(null)
+                        close()
+                    }
+                }
                 return CompletableDeferred<OdrlPolicy>().apply {
                     cancel("The provider returned an invalid response")
                 }
@@ -114,17 +132,19 @@ class NegotiationManager(
                 negotiator = negotiator ?: defaultNegotiator,
                 httpClient = httpClient,
                 ownEndpoint = callbackUrl,
-                peerEndpoint = requestUrl,
+                peerEndpoint = provider,
                 objectMapper = objectMapper,
             )
 
         pidMutex.withLock {
+            pendingConsumerNegotiations.remove(consumerPid)!!.trySend(negotiation)
             consumerNegotiations[consumerPid] = negotiation
         }
 
         // TODO: Do we need the negotiation object to survive beyond the termination of the negotiation?
         //       If not, register a completion handler here that deletes the negotiation object.
 
+        newNegotiationsFlow.emit(negotiation.completed)
         return negotiation.completed
     }
 
@@ -161,6 +181,7 @@ class NegotiationManager(
                     objectMapper = objectMapper,
                 )
             providerNegotiation[providerPid] = negotiation
+            newNegotiationsFlow.emit(negotiation.completed)
             return negotiation
         }
     }
@@ -194,6 +215,7 @@ class NegotiationManager(
                 )
 
             consumerNegotiations[consumerPid] = negotiation
+            newNegotiationsFlow.emit(negotiation.completed)
             return negotiation
         }
     }
@@ -218,12 +240,27 @@ class NegotiationManager(
         return negotiation
     }
 
-    fun getAsConsumer(
+    suspend fun getAsConsumer(
         consumerPid: String,
         providerPid: String?,
         peerIdent: String,
     ): Negotiation? {
-        val negotiation = consumerNegotiations[consumerPid] ?: return null
+        // This is needed since kotlinx coroutines does not support condition variables...
+        // TODO: If this function is called multiple times while the negotiation is still pending, only one of the calls
+        //       will be successful. During normal operation, this is no problem, right?
+        val negotiationProducer =
+            pidMutex.withLock {
+                if (consumerNegotiations.containsKey(consumerPid)) {
+                    val negotiation = consumerNegotiations[consumerPid]!!
+                    suspend { negotiation }
+                } else if (pendingConsumerNegotiations.containsKey(consumerPid)) {
+                    val channel = pendingConsumerNegotiations[consumerPid]!!
+                    suspend { channel.receiveCatching().getOrNull() }
+                } else {
+                    suspend { null }
+                }
+            }
+        val negotiation = negotiationProducer() ?: return null
 
         if (providerPid != null && negotiation.peerPid != providerPid) {
             return null

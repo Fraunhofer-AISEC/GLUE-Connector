@@ -23,7 +23,7 @@ class Negotiation(
     var state: NegotiationState,
     // TODO: Don't save this as string and don't make it nullable or mutable
     var peerIdentity: String?,
-    var currentPolicy: OdrlPolicy?,
+    var currentPolicy: JsonNode?,
     val role: Role,
     val ownPid: String,
     val peerPid: String,
@@ -54,29 +54,31 @@ class Negotiation(
      * This should be the right function for most interactions where the negotiation has to validate that the incoming
      * message can lead to a valid state transition and returning an error if not.
      */
-    private suspend fun ensurePreconditions(
+    private fun precondition(
         expectedState: NegotiationState,
         expectedRole: Role,
-        cb: suspend (Boolean) -> Unit,
     ): Boolean {
-        val ok = state == expectedState && role == expectedRole
-        cb(ok)
-        return ok
+        return state == expectedState && role == expectedRole
     }
 
     private suspend inline fun <reified T> sendMessage(
         endpoint: String,
         message: T,
     ): HttpResponse {
-        val url =
-            URLBuilder(peerEndpoint).apply {
-                pathSegments = pathSegments + endpoint.split('/').map { s -> s.trim('/') }
-            }.build()
-
+        val url = URLBuilder(peerEndpoint).appendEncodedPathSegments(endpoint).build()
         return httpClient.post(url) {
             contentType(ContentType.Application.Json)
             setBody(message)
         }
+    }
+
+    private suspend fun terminateOnError(resp: HttpResponse): Boolean {
+        if (!resp.status.isSuccess()) {
+            terminateNegotiation("errInvalidResponse")
+            completed.completeExceptionally(NegotiationException("A request to the peer failed"))
+            return false
+        }
+        return true
     }
 
     /**
@@ -92,7 +94,6 @@ class Negotiation(
 
     /**
      * Send a termination message to the peer containing the stated code and reason (if any)
-     * TODO: Inline?
      */
     private suspend fun terminateNegotiation(
         code: String,
@@ -120,7 +121,8 @@ class Negotiation(
      */
     private fun completeNegotiation() {
         LOG.debug("Negotiation completed")
-        completed.complete(currentPolicy!!)
+        // The non-null assertion here is safe since the negotiation may only be completed with a contract
+        completed.complete(OdrlPolicyParser().parse(currentPolicy!!))
     }
 
     /**
@@ -143,25 +145,43 @@ class Negotiation(
             } else {
                 NegotiationState.OFFERED
             }
-        if (!ensurePreconditions(allowedState, Role.PROVIDER, responseCallback)) {
+        if (!precondition(allowedState, Role.PROVIDER)) {
+            responseCallback(false)
             return
         }
 
-        val parsedPolicy = OdrlPolicyParser().parse(req.offer)
+        val parsedPolicy =
+            try {
+                OdrlPolicyParser().parse(req.offer)
+            } catch (e: OdrlException) {
+                responseCallback(false)
+                return
+            }
+
+        responseCallback(true)
+
         val (ok, counter) = negotiator.evaluateRequest(parsedPolicy)
 
         if (!ok) {
             if (counter != null) {
-                sendMessage(
-                    "$peerPid/offers",
-                    ContractOfferMessage(
-                        providerPid = ownPid,
-                        consumerPid = peerPid,
-                        callbackAddress = ownEndpoint.toString(),
-                        offer = objectMapper.convertValue<JsonNode>(counter),
-                    ),
-                )
-                currentPolicy = counter
+                val convertedCounter = objectMapper.convertValue<JsonNode>(counter)
+
+                if (!terminateOnError(
+                        sendMessage(
+                            "$peerPid/offers",
+                            ContractOfferMessage(
+                                providerPid = ownPid,
+                                consumerPid = peerPid,
+                                callbackAddress = ownEndpoint.toString(),
+                                offer = convertedCounter,
+                            ),
+                        ),
+                    )
+                ) {
+                    return
+                }
+                // TODO: This will not work
+                currentPolicy = convertedCounter
                 state = NegotiationState.OFFERED
                 return
             } else {
@@ -174,17 +194,22 @@ class Negotiation(
         }
 
         // We have accepted the contract as is, tell the consumer and anyone waiting for this contract negotiation
-        sendMessage(
-            "$peerPid/agreement",
-            ContractAgreementMessage(
-                providerPid = ownPid,
-                consumerPid = peerPid,
-                // TODO: Properly convert to ODRL agreement before encoding (see processAgree)
-                agreement = objectMapper.convertValue<JsonNode>(parsedPolicy),
-                callbackAddress = ownEndpoint.toString(),
-            ),
-        )
-        currentPolicy = parsedPolicy
+        if (!terminateOnError(
+                sendMessage(
+                    "$peerPid/agreement",
+                    ContractAgreementMessage(
+                        providerPid = ownPid,
+                        consumerPid = peerPid,
+                        // TODO: Properly convert to ODRL agreement before encoding (see processAgree)
+                        agreement = req.offer,
+                        callbackAddress = ownEndpoint.toString(),
+                    ),
+                ),
+            )
+        ) {
+            return
+        }
+        currentPolicy = req.offer
         state = NegotiationState.AGREED
     }
 
@@ -204,24 +229,39 @@ class Negotiation(
             } else {
                 NegotiationState.REQUESTED
             }
-        ensurePreconditions(allowedState, Role.CONSUMER, responseCallback)
 
-        val parsedPolicy = OdrlPolicyParser().parse(req.offer)
+        if (!precondition(allowedState, Role.CONSUMER)) {
+            responseCallback(false)
+            return
+        }
+
+        val parsedPolicy =
+            try {
+                OdrlPolicyParser().parse(req.offer)
+            } catch (e: OdrlException) {
+                responseCallback(false)
+                return
+            }
+
+        responseCallback(true)
+
         val (ok, newReq) = negotiator.evaluateOffer(parsedPolicy)
 
         if (!ok) {
             if (newReq != null) {
+                val convertedNewReq = objectMapper.convertValue<JsonNode>(newReq)
+
                 sendMessage(
                     "$peerPid/request",
                     ContractRequestMessage(
                         providerPid = peerPid,
                         consumerPid = ownPid,
                         callbackAddress = ownEndpoint.toString(),
-                        offer = objectMapper.convertValue(newReq),
+                        offer = convertedNewReq,
                     ),
                 )
                 state = NegotiationState.REQUESTED
-                currentPolicy = newReq
+                currentPolicy = convertedNewReq
                 return
             } else {
                 terminateNegotiation("errPolicyFailure", "No counteroffer can be computed for this request")
@@ -232,15 +272,20 @@ class Negotiation(
             }
         }
 
-        currentPolicy = parsedPolicy
-        sendMessage(
-            "$peerPid/events",
-            ContractNegotiationEventMessage(
-                providerPid = peerPid,
-                consumerPid = ownPid,
-                eventType = NegotiationEvent.ACCEPTED,
-            ),
-        )
+        currentPolicy = req.offer
+        if (!terminateOnError(
+                sendMessage(
+                    "$peerPid/events",
+                    ContractNegotiationEventMessage(
+                        providerPid = peerPid,
+                        consumerPid = ownPid,
+                        eventType = NegotiationEvent.ACCEPTED,
+                    ),
+                ),
+            )
+        ) {
+            return
+        }
         state = NegotiationState.ACCEPTED
     }
 
@@ -248,9 +293,11 @@ class Negotiation(
         mutex.withLock {
             // By making sure that the state machine is in the offered state, we make sure that the current offer has
             // been made by us, as client offers (= requests) move us into the requested state.
-            if (!ensurePreconditions(NegotiationState.OFFERED, Role.PROVIDER, responseCallback)) {
+            if (!precondition(NegotiationState.OFFERED, Role.PROVIDER)) {
+                responseCallback(false)
                 return
             }
+            responseCallback(true)
 
             state = NegotiationState.ACCEPTED
 
@@ -263,43 +310,56 @@ class Negotiation(
             // HACK: Add a top-level context URL which should translate all unprefixed properties to prefixed ones
             agreement.put("@context", "${Namespaces.ODRL}/")
 
-            sendMessage(
-                "$peerPid/agreement",
-                ContractAgreementMessage(
-                    providerPid = ownPid,
-                    consumerPid = peerPid,
-                    agreement = agreement,
-                    callbackAddress = ownEndpoint.toString(),
-                ),
-            )
+            if (!terminateOnError(
+                    sendMessage(
+                        "$peerPid/agreement",
+                        ContractAgreementMessage(
+                            providerPid = ownPid,
+                            consumerPid = peerPid,
+                            agreement = agreement,
+                            callbackAddress = ownEndpoint.toString(),
+                        ),
+                    ),
+                )
+            ) {
+                return
+            }
             state = NegotiationState.AGREED
         }
 
     suspend fun processVerify(responseCallback: suspend (Boolean) -> Unit): Unit =
         mutex.withLock {
-            if (!ensurePreconditions(NegotiationState.AGREED, Role.PROVIDER, responseCallback)) {
+            if (!precondition(NegotiationState.AGREED, Role.PROVIDER)) {
+                responseCallback(false)
                 return
             }
+            responseCallback(true)
 
             state = NegotiationState.VERIFIED
-
-            sendMessage(
-                "$peerPid/events",
-                ContractNegotiationEventMessage(
-                    providerPid = ownPid,
-                    consumerPid = peerPid,
-                    eventType = NegotiationEvent.FINALIZED,
-                ),
-            )
+            if (!terminateOnError(
+                    sendMessage(
+                        "$peerPid/events",
+                        ContractNegotiationEventMessage(
+                            providerPid = ownPid,
+                            consumerPid = peerPid,
+                            eventType = NegotiationEvent.FINALIZED,
+                        ),
+                    ),
+                )
+            ) {
+                return
+            }
 
             state = NegotiationState.FINALIZED
             completeNegotiation()
         }
 
     suspend fun processFinalize(responseCallback: suspend (Boolean) -> Unit) {
-        if (!ensurePreconditions(NegotiationState.VERIFIED, Role.CONSUMER, responseCallback)) {
+        if (!precondition(NegotiationState.VERIFIED, Role.CONSUMER)) {
+            responseCallback(false)
             return
         }
+        responseCallback(true)
 
         state = NegotiationState.FINALIZED
         completeNegotiation()
@@ -344,9 +404,11 @@ class Negotiation(
                     return
                 }
 
+            val parsedPolicy = OdrlPolicyParser().parse(currentPolicy!!)
+
             // If the provider tries to send a (semantically) different agreement, reject and terminate the negotiation.
             // We leave the semantics to the negotiator :)
-            if (!negotiator.verifyAgreement(currentPolicy!!, agreement)) {
+            if (!negotiator.verifyAgreement(parsedPolicy, agreement)) {
                 responseCallback(false)
                 terminateNegotiation("errPolicyFailure")
                 completed.completeExceptionally(

@@ -278,14 +278,14 @@ class NegotiationController(private val negotiationManager: NegotiationManager) 
 
                 // As a side effect, we also have to push our correctness checks back
                 if (negotiation != null) {
-                    if (id != req.consumerPid) {
+                    if (id != req.providerPid) {
                         call.respond(HttpStatusCode.BadRequest)
                         return@post
                     }
                 } else {
                     negotiation = negotiationManager.getAsConsumer(id, req.providerPid, principal.name)
                     if (negotiation != null) {
-                        if (id != req.providerPid) {
+                        if (id != req.consumerPid) {
                             call.respond(HttpStatusCode.BadRequest)
                             return@post
                         }

@@ -14,10 +14,10 @@ import de.fraunhofer.aisec.glue.models.negotiation.*
 import de.fraunhofer.aisec.glue.negotiation.DummyNegotiator
 import de.fraunhofer.aisec.glue.negotiation.NegotiationManager
 import de.fraunhofer.aisec.glue.plugins.configureSerialization
-import fhg.glue.odrl.OdrlPolicyParser
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.engine.mock.*
+import io.ktor.client.engine.okhttp.*
 import io.ktor.client.plugins.auth.*
 import io.ktor.client.plugins.auth.providers.*
 import io.ktor.client.plugins.contentnegotiation.*
@@ -28,19 +28,26 @@ import io.ktor.serialization.jackson.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.config.*
+import io.ktor.server.engine.*
+import io.ktor.server.netty.*
+import io.ktor.server.plugins.callloging.*
+import io.ktor.server.request.*
 import io.ktor.server.routing.*
 import io.ktor.server.testing.*
 import jakarta.json.JsonObject
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.time.withTimeout
+import kotlinx.coroutines.test.runTest
+import org.slf4j.event.Level
 import java.time.Duration
-import java.time.temporal.ChronoUnit
 import java.util.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import kotlin.time.toKotlinDuration
 
 class NegotiationTest {
     private fun httpClient(mockFactory: MockRequestHandleScope.(HttpRequestData) -> HttpResponseData) =
@@ -402,31 +409,36 @@ class NegotiationTest {
 
     @Test
     fun `Test mutual contract negotiation`() =
-        testApplication {
+        runTest(timeout = Duration.ofSeconds(30).toKotlinDuration()) {
             val testClient =
-                testClient().config {
-                    // Since we currently always enable auth for all endpoints in the negotiation controller
+                HttpClient(OkHttp) {
+                    install(ContentNegotiation) {
+                        jackson {
+                            registerModules(JsonLDModule(JsonLdOptions()))
+                        }
+                    }
                     install(Auth) {
                         basic {
                             credentials {
-                                // For simplicity, just use the same credentials for everything
                                 BasicAuthCredentials("connector", "password")
                             }
+                            sendWithoutRequest { true }
                         }
                     }
                 }
 
             val providerNegotiationManager = NegotiationManager(testClient, objectMapper, DummyNegotiator())
+            val providerNegotiationFuture = async { providerNegotiationManager.newNegotiations.first() }
             val providerController = NegotiationController(providerNegotiationManager)
 
             val consumerNegotiationManager = NegotiationManager(testClient, objectMapper, DummyNegotiator())
             val consumerController = NegotiationController(consumerNegotiationManager)
 
-            environment {
-                config = ApplicationConfig("/dev/null")
-            }
-            externalServices {
-                hosts("https://provider") {
+            fun appEnv(
+                role: String,
+                controller: NegotiationController,
+            ) = applicationEngineEnvironment {
+                module {
                     configureSerialization()
                     install(Authentication) {
                         basic {
@@ -434,34 +446,46 @@ class NegotiationTest {
                         }
                     }
                     install(Routing) {
-                        providerController.apply { registerRoutes() }
+                        controller.apply { registerRoutes() }
                     }
-                }
-                hosts("https://consumer") {
-                    configureSerialization()
-                    install(Authentication) {
-                        basic {
-                            validate { creds -> UserIdPrincipal(creds.name) }
+                    install(CallLogging) {
+                        level = Level.INFO
+                        format { call ->
+                            "$role: ${call.request.httpMethod.value} ${call.request.path()} - ${call.response.status()}"
                         }
                     }
-                    install(Routing) {
-                        consumerController.apply { registerRoutes() }
-                    }
                 }
+                connector {
+                    host = "localhost"
+                    port = 0
+                }
+                developmentMode = true
+                config =
+                    MapApplicationConfig(
+                        "ktor.deployment.parallelism" to "1",
+                    )
             }
 
-            val policy = OdrlPolicyParser().parse(parsedExamplePolicy)
-            val future =
+            val provider = embeddedServer(Netty, appEnv("provider", providerController)).start(false)
+            // Note: dynamic ports would be better but oh well...
+            val providerAddress = provider.resolvedConnectors().first().run { "http://$host:$port" }
+
+            val consumer = embeddedServer(Netty, appEnv("consumer", consumerController)).start(false)
+            val consumerAddress = consumer.resolvedConnectors().first().run { "http://$host:$port" }
+
+            // This indirectly checks if the consumer side negotiation completed successfully
+            val negotiatedPolicy =
                 consumerNegotiationManager.startNegotiation(
-                    Url("https://provider/negotiations"),
-                    Url("https://consumer/negotiations"),
-                    policy,
+                    URLBuilder(providerAddress).appendPathSegments("negotiations").build(),
+                    URLBuilder(consumerAddress).appendPathSegments("negotiations").build(),
+                    parsedExamplePolicy,
                     null,
-                )
+                ).await()
 
-            withTimeout(Duration.of(5, ChronoUnit.SECONDS)) {
-                val result = future.await()
-            }
+            // Check if the provider-side negotiation completed successfully as well
+            // Note: We await twice, once to get the negotiation future from the event flow and once for the negotiation
+            // itself
+            providerNegotiationFuture.await().await()
         }
 
     // TODO: Add tests that try incorrect or behavior as well
