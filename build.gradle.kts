@@ -43,7 +43,9 @@ dependencies {
 
     testImplementation(libs.slf4j.jdk14)
     testImplementation(libs.kotlin.test)
+    testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.ktor.server.test.host)
+    testImplementation(libs.ktor.server.callLogging)
     testImplementation(libs.ktor.client.mock)
     testImplementation(libs.mockk)
 }
