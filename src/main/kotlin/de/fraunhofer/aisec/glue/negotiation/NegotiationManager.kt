@@ -13,14 +13,13 @@ import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
-import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.Deferred
-import kotlinx.coroutines.cancel
+import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
@@ -35,8 +34,8 @@ class NegotiationManager(
     private val consumerNegotiations = ConcurrentHashMap<String, Negotiation>()
     private val pendingConsumerNegotiations = ConcurrentHashMap<String, Channel<Negotiation?>>()
 
-    private val newNegotiationsFlow = MutableSharedFlow<Deferred<OdrlPolicy>>()
-    val newNegotiations = newNegotiationsFlow.asSharedFlow()
+    private val negotiatedContractsFlow = MutableSharedFlow<OdrlPolicy>()
+    val negotiatedContracts = negotiatedContractsFlow.asSharedFlow()
 
     /**
      * Start a negotiation by sending the provided contract request to the provider.
@@ -138,9 +137,14 @@ class NegotiationManager(
             consumerNegotiations[consumerPid] = negotiation
         }
 
-        //       If not, register a completion handler here that deletes the negotiation object.
+        CoroutineScope(Dispatchers.Default).launch {
+            negotiationCompletedHandler(negotiation) {
+                pidMutex.withLock {
+                    consumerNegotiations.remove(consumerPid)
+                }
+            }
+        }
 
-        newNegotiationsFlow.emit(negotiation.completed)
         return negotiation.completed
     }
 
@@ -177,7 +181,13 @@ class NegotiationManager(
                     objectMapper = objectMapper,
                 )
             providerNegotiation[providerPid] = negotiation
-            newNegotiationsFlow.emit(negotiation.completed)
+            CoroutineScope(Dispatchers.Default).launch {
+                negotiationCompletedHandler(negotiation) {
+                    pidMutex.withLock {
+                        providerNegotiation.remove(providerPid)
+                    }
+                }
+            }
             return negotiation
         }
     }
@@ -211,7 +221,13 @@ class NegotiationManager(
                 )
 
             consumerNegotiations[consumerPid] = negotiation
-            newNegotiationsFlow.emit(negotiation.completed)
+            CoroutineScope(Dispatchers.Default).launch {
+                negotiationCompletedHandler(negotiation) {
+                    pidMutex.withLock {
+                        consumerNegotiations.remove(consumerPid)
+                    }
+                }
+            }
             return negotiation
         }
     }
@@ -272,5 +288,19 @@ class NegotiationManager(
         return generateSequence { UUID.randomUUID() }
             .map { uuid -> "urn:uuid:$uuid" }
             .first { id -> !assignedIds.contains(id) }
+    }
+
+    private suspend fun negotiationCompletedHandler(negotiation: Negotiation, deleter: suspend () -> Unit) {
+        try {
+            val policy = negotiation.completed.await()
+            negotiatedContractsFlow.emit(policy)
+        } catch (e: Exception) {
+            LOG.info("Policy negotiation completed exceptionally", e)
+        }
+        deleter()
+    }
+
+    companion object {
+        private val LOG = LoggerFactory.getLogger(NegotiationManager::class.java)
     }
 }

@@ -424,7 +424,7 @@ class NegotiationTest {
                 }
 
             val providerNegotiationManager = NegotiationManager(testClient, objectMapper, DummyNegotiator())
-            val providerNegotiationFuture = async { providerNegotiationManager.newNegotiations.first() }
+            val providerNegotiationFuture = async { providerNegotiationManager.negotiatedContracts.first() }
             val providerController = NegotiationController(providerNegotiationManager)
 
             val consumerNegotiationManager = NegotiationManager(testClient, objectMapper, DummyNegotiator())
@@ -463,7 +463,6 @@ class NegotiationTest {
             }
 
             val provider = embeddedServer(Netty, appEnv("provider", providerController)).start(false)
-            // Note: dynamic ports would be better but oh well...
             val providerAddress = provider.resolvedConnectors().first().run { "http://$host:$port" }
 
             val consumer = embeddedServer(Netty, appEnv("consumer", consumerController)).start(false)
@@ -478,10 +477,8 @@ class NegotiationTest {
                     null,
                 ).await()
 
-            // Check if the provider-side negotiation completed successfully as well
-            // Note: We await twice, once to get the negotiation future from the event flow and once for the negotiation
-            // itself
-            providerNegotiationFuture.await().await()
+            // Check if the provider-side negotiation completed successfully as well (if not, this will time out)
+            providerNegotiationFuture.await()
         }
 
 
