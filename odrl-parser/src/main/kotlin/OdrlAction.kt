@@ -5,7 +5,7 @@ class OdrlAction(
     val refinements: List<OdrlConstraint>)
 {
     fun matches(ctx: Context): Boolean {
-        if (ctx.actionUid != uid)
+        if (ctx.params["actionUid"] != uid)
             return false
 
         // Refinements have to be satisfied

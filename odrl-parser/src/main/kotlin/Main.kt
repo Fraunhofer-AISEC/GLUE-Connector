@@ -74,27 +74,34 @@ fun main() {
             "        \"odrl:target\": \"http://dataowner.com/document:1234\",\n" +
             "        \"odrl:assigner\": \"http://dataowner.com/org\",\n" +
             "        \"odrl:assignee\": \"http://dataconsumer.com/org\",\n" +
-            "        \"odrl:action\": {\n" +
-            "            \"@id\": \"http://www.w3.org/ns/odrl/2/use\",\n" +
-            "            \"odrl:refinement\": [{\n" +
-            "                \"odrl:leftOperand\": \"http://fhg.de/glue/containerPipeline\",\n" +
-            "                \"odrl:operator\": \"http://www.w3.org/ns/odrl/2/eq\",\n" +
-            "                \"odrl:rightOperand\": {\n" +
-            "                    \"@type\": \"http://fhg.de/glue/ContainerPipeline\",\n" +
-            "                    \"glue:container\": [{\n" +
-            "                        \"@type\": \"http://fhg.de/glue/Container\",\n" +
-            "                        \"glue:image\": \"test/container1\",\n" +
-            "                        \"glue:hash\": \"364a4787748a98c1c28085d4154a06c3a9be9a67c0b08a56b3f69fa8fabf172e\",\n" +
-            "                        \"glue:entrypoint\": \"/app\",\n" +
-            "                        \"glue:allowNetwork\": true\n" +
-            "                    },\n" +
-            "                    {\n" +
-            "                        \"@type\": \"http://fhg.de/glue/Container\",\n" +
-            "                        \"glue:image\": \"test/container2\",\n" +
-            "                        \"glue:hash\": \"ac924fdd26993b2ad157e3512c4a36ad293491f6eb8d268d6d4e1bf1c5c307ad\"\n" +
-            "                    }]\n" +
-            "                }\n" +
-            "            }]\n" +
+            "        \"odrl:action\": \"http://www.w3.org/ns/odrl/2/use\",\n" +
+            "        \"odrl:duty\": {\n" +
+            "            \"odrl:action\": {\n" +
+            "                \"@id\": \"http://fhg.de/glue/deployPipeline\",\n" +
+            "                \"odrl:refinement\": [{\n" +
+            "                    \"odrl:leftOperand\": \"http://fhg.de/glue/containerPipeline\",\n" +
+            "                    \"odrl:operator\": \"http://www.w3.org/ns/odrl/2/eq\",\n" +
+            "                    \"odrl:rightOperand\": {\n" +
+            "                        \"@type\": \"http://fhg.de/glue/ContainerPipeline\",\n" +
+            "                        \"glue:container\": [{\n" +
+            "                            \"@type\": \"http://fhg.de/glue/Container\",\n" +
+            "                            \"glue:image\": \"test/container1\",\n" +
+            "                            \"glue:hash\": \"364a4787748a98c1c28085d4154a06c3a9be9a67c0b08a56b3f69fa8fabf172e\",\n" +
+            "                            \"glue:parameter\": {\n" +
+            "                                \"@type\": \"http://fhg.de/glue/RestParameter\",\n" +
+            "                                \"glue:url\": \"http://0.0.0.0:1234/dockerEndpoint?key1=value1\",\n" +
+            "                                \"glue:httpType\": \"GET\"\n" +
+            "                            },\n" +
+            "                            \"glue:allowNetwork\": true\n" +
+            "                        },\n" +
+            "                        {\n" +
+            "                            \"@type\": \"http://fhg.de/glue/Container\",\n" +
+            "                            \"glue:image\": \"test/container2\",\n" +
+            "                            \"glue:hash\": \"ac924fdd26993b2ad157e3512c4a36ad293491f6eb8d268d6d4e1bf1c5c307ad\"\n" +
+            "                        }]\n" +
+            "                    }\n" +
+            "                }]\n" +
+            "            }\n" +
             "        },\n" +
             "        \"odrl:constraint\": [{\n" +
             "            \"odrl:leftOperand\": \"http://www.w3.org/ns/odrl/2/dateTime\",\n" +
@@ -119,8 +126,12 @@ fun main() {
             "                            \"@type\": \"http://fhg.de/glue/Container\",\n" +
             "                            \"glue:image\": \"test/policyCompiler\",\n" +
             "                            \"glue:hash\": \"5e7ef9594b0b96c5f591dc9d3462943e340941c770e5e3885a1864b998de016f\",\n" +
-            "                            \"glue:entrypoint\": \"/app --template=http://dataowner.com/policyTemplate:1234\",\n" +
-            "                            \"glue:allowNetwork\": true\n" +
+            "                            \"glue:parameter\": [{\n" +
+            "                                \"@type\": \"http://fhg.de/glue/RestParameter\",\n" +
+            "                                \"glue:url\": \"http://0.0.0.0:1234/dockerEndpoint\",\n" +
+            "                                \"glue:httpType\": \"POST\",\n" +
+            "                                \"glue:httpBody\": \"{\\\"key1\\\":\\\"value1\\\",\\\"key2\\\":\\\"value2\\\"}\"\n" +
+            "                            }]\n" +
             "                        }\n" +
             "                    }\n" +
             "                }]\n" +
@@ -129,30 +140,26 @@ fun main() {
             "    }]\n" +
             "}\n"
 
-    val legitimatePipeline = GlueContainerPipeline(listOf(
-        GlueContainer("test/container1", "364a4787748a98c1c28085d4154a06c3a9be9a67c0b08a56b3f69fa8fabf172e", "/app", true),
-        GlueContainer("test/container2", "ac924fdd26993b2ad157e3512c4a36ad293491f6eb8d268d6d4e1bf1c5c307ad")))
-    decision = OdrlPolicyParser().parseJsonLd(simplePipelinePolicy).evaluate(
-        Context("http://www.w3.org/ns/odrl/2/use", "http://dataowner.com/document:1234", legitimatePipeline))
-    println("Decision of simplePipelinePolicy with a legitimate pipeline is '$decision' (should be: true)")
-
-    val maliciousPipeline = GlueContainerPipeline(listOf(
-        GlueContainer("test/container1", "364a4787748a98c1c28085d4154a06c3a9be9a67c0b08a56b3f69fa8fabf172e", "/app", true),
-        GlueContainer("test/container2", "someotherhashvaluesomeotherhashvaluesomeotherhashvaluesomeotherh")))
-    decision = OdrlPolicyParser().parseJsonLd(simplePipelinePolicy).evaluate(
-        Context("http://www.w3.org/ns/odrl/2/use", "http://dataowner.com/document:1234", maliciousPipeline))
-    println("Decision of simplePipelinePolicy with a malicious pipeline is '$decision' (should be: false)")
-
     val onActionCallback = { action: OdrlAction ->
-        if (action.uid == "http://www.w3.org/ns/odrl/2/nextPolicy") {
+        if (action.uid == OdrlIdentifiers.NEXTPOLICY) {
             println("   | Launching policy pipeline " + action.refinements[0].rightOperand.value)
             println("   | Deploying policy template at remote data consumer...")
+            true
+        } else if (action.uid == GlueOdrlIdentifiers.DEPLOY_PIPELINE) {
+            println("   | Launching data processing pipeline " + action.refinements[0].rightOperand.value)
             true
         } else {
             false
         }
     }
+
+    println("Evaluating simplePipelinePolicy...")
+    decision = OdrlPolicyParser().parseJsonLd(simplePipelinePolicy).evaluate(
+        Context("http://www.w3.org/ns/odrl/2/use", "http://dataowner.com/document:1234"), onActionCallback)
+    println("Decision of simplePipelinePolicy when USING asset is '$decision' (should be: true)\n")
+
+    println("Evaluating simplePipelinePolicy...")
     decision = OdrlPolicyParser().parseJsonLd(simplePipelinePolicy).evaluate(
         Context("http://www.w3.org/ns/odrl/2/distribute", "http://dataowner.com/document:1234"), onActionCallback)
-    println("Decision of simplePipelinePolicy when distributing asset is '$decision' (should be: true)")
+    println("Decision of simplePipelinePolicy when DISTRIBUTING asset is '$decision' (should be: true)")
 }

@@ -13,4 +13,7 @@ class GlueContainerPipeline(
         return containers.joinToString(prefix = "(", postfix = ")", separator = " -> ")
     }
 
+    override fun hashCode(): Int {
+        return containers.hashCode()
+    }
 }
