@@ -1,5 +1,6 @@
 package de.fraunhofer.aisec.glue.docker
 
+import com.fasterxml.jackson.annotation.JsonInclude
 import de.fraunhofer.aisec.glue.docker.model.ContainerCreateRequest
 import de.fraunhofer.aisec.glue.docker.model.HostConfig
 import de.fraunhofer.aisec.glue.docker.model.PortBinding
@@ -25,7 +26,7 @@ class DockerClient(dockerSocket: String = "/var/run/docker.sock") : Closeable {
             }
             install(ContentNegotiation) {
                 jackson(streamRequestBody = false) {
-
+                    setSerializationInclusion(JsonInclude.Include.NON_NULL)
                 }
             }
             install(HttpTimeout) {

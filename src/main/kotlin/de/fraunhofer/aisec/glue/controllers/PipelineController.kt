@@ -12,11 +12,13 @@ import io.ktor.server.auth.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.slf4j.LoggerFactory
 
-class PipelineController(private val contractStore: ContractStore, private val containerManager: ContainerManager) : Controller {
+class PipelineController(private val contractStore: ContractStore, private val containerManager: ContainerManager) :
+    Controller {
     override fun Route.registerRoutes() {
         authenticate {
             route("/pipeline") {
@@ -34,8 +36,7 @@ class PipelineController(private val contractStore: ContractStore, private val c
                         }
 
                     // Note: We have to initialize this here
-                    var pipelineName = ""
-                    var pipelinePort = 0
+                    val pipelineCreateChannel = Channel<PipelineCreateResponse>(1)
 
                     withContext(coroutineContext) {
                         contract.evaluate(Context(req.action ?: "TODO: Default action?", req.target)) { action ->
@@ -47,15 +48,21 @@ class PipelineController(private val contractStore: ContractStore, private val c
                                             containerManager.createPipelineFromAction(
                                                 action,
                                                 publishPorts =
-                                                    listOf(
-                                                        DEFAULT_PORT,
-                                                    ),
+                                                listOf(
+                                                    DEFAULT_PORT,
+                                                ),
                                             )
-                                        pipelineName = name
 
                                         // Find the exposed port for the first container
                                         val containerDetails = pipeline.containers[0].inspect()
-                                        pipelinePort = containerDetails.networkSettings!!.ports!![DEFAULT_PORT]!![0].hostPort!!.toInt()
+                                        pipelineCreateChannel.trySend(
+                                            PipelineCreateResponse(
+                                                name,
+                                                containerDetails.networkSettings?.ports?.get(DEFAULT_PORT)
+                                                    ?.get(0)?.hostPort?.toInt()
+                                                    ?: throw RuntimeException("Error getting port")
+                                            )
+                                        )
                                     }
                                     true
                                 }
@@ -70,7 +77,7 @@ class PipelineController(private val contractStore: ContractStore, private val c
 
 
                     // Now the container pipeline is set up, return the pipeline ID and port to the caller
-                    call.respond(PipelineCreateResponse(pipelineName, pipelinePort))
+                    call.respond(pipelineCreateChannel.tryReceive().getOrThrow())
                 }
 
                 get("{id}") {
