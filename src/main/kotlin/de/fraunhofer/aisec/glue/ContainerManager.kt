@@ -23,7 +23,7 @@ class ContainerManager {
             // TODO: Insert c.params as a config map of some kind (probably a ro module with a single file)
             ContainerCreateRequest(
                 // TODO: Allow for other hash algorithms?
-                image = "${c.image}@sha256:${c.hash}",
+                image = "${c.image}@${c.hash}",
                 hostConfig =
                     HostConfig(
                         // TODO: In case allowNetwork is true, use an isolated bridge instead of the default bridge
@@ -69,7 +69,7 @@ class ContainerManager {
         // To find the port, the container can be inspected after it is running
         createRequests[0] =
             createRequests[0].copy(
-                exposedPorts = publishPorts.associateWith { Any() },
+                exposedPorts = publishPorts.associateWith { emptyMap<Any, Any>() },
                 hostConfig =
                     createRequests[0].hostConfig!!.copy(
                         portBindings =
