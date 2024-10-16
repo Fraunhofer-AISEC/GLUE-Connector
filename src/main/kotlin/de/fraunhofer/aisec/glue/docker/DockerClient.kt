@@ -1,6 +1,5 @@
 package de.fraunhofer.aisec.glue.docker
 
-import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import de.fraunhofer.aisec.glue.docker.model.ContainerCreateRequest
 import de.fraunhofer.aisec.glue.docker.model.HostConfig
 import de.fraunhofer.aisec.glue.docker.model.PortBinding
@@ -25,8 +24,8 @@ class DockerClient(dockerSocket: String = "/var/run/docker.sock") : Closeable {
                 }
             }
             install(ContentNegotiation) {
-                jackson {
-                    registerKotlinModule()
+                jackson(streamRequestBody = false) {
+
                 }
             }
             install(HttpTimeout) {

@@ -20,7 +20,7 @@ class ContainerManager {
     private fun dockerReqsForPipeline(pipelineDef: GlueContainerPipeline): MutableList<ContainerCreateRequest> {
         return pipelineDef.containers.map { c ->
             ContainerCreateRequest(
-                image = "${c.image}@sha256:${c.hash}",
+                image = "${c.image}@${c.hash}",
                 hostConfig =
                     HostConfig(
                         networkMode = if (c.allowNetwork) "bridge" else "none",
@@ -64,7 +64,7 @@ class ContainerManager {
         // To find the port, the container can be inspected after it is running
         createRequests[0] =
             createRequests[0].copy(
-                exposedPorts = publishPorts.associateWith { Any() },
+                exposedPorts = publishPorts.associateWith { emptyMap<Any, Any>() },
                 hostConfig =
                     createRequests[0].hostConfig!!.copy(
                         portBindings =
