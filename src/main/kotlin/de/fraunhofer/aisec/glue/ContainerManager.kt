@@ -111,4 +111,11 @@ class ContainerManager : Closeable {
     override fun close() {
         dockerClient.close()
     }
+
+    suspend fun getPipelineStatus(id: String): Boolean = pipelineMutex.withLock {
+        val pipeline = pipelines[id] ?: return false
+
+        // TODO: Check the integrity of the running containers (using healthchecks if available)
+        return true
+    }
 }
