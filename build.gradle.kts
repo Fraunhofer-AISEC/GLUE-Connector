@@ -37,6 +37,7 @@ dependencies {
     implementation(libs.titaniumJsonLd)
     implementation(libs.jakarta.json)
     implementation("fhg.glue.odrl:odrl-parser:1.0-SNAPSHOT")
+    implementation(libs.duckdb)
 
     // For running example with gradle
     runtimeOnly(libs.slf4j.jdk14)
