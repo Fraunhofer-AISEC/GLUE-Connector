@@ -14,7 +14,7 @@ class JsonLDBeanDeserializerModifier(private val options: JsonLdOptions, private
         deserializer: JsonDeserializer<*>,
     ): JsonDeserializer<*> {
         return if (beanDesc.beanClass.isAnnotationPresent(JsonLDType::class.java)) {
-            JsonLDDeserializer(options, mapper, beanDesc.beanClass)
+            JsonLDDeserializer(options, mapper, beanDesc.type, beanDesc.beanClass)
         } else {
             deserializer
         }

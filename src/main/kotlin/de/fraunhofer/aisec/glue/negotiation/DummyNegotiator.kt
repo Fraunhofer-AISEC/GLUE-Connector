@@ -3,9 +3,11 @@ package de.fraunhofer.aisec.glue.negotiation
 import fhg.glue.odrl.OdrlPolicy
 import org.slf4j.LoggerFactory
 
-class DummyNegotiator : Negotiator {
+class DummyNegotiator(disableWarning: Boolean = false) : Negotiator {
     init {
-        LOG.warn("Using placeholder dummy negotiator, which should be replaced ASAP")
+        if (!disableWarning) {
+            LOG.warn("Using placeholder dummy negotiator, which should be replaced ASAP")
+        }
     }
 
     override fun evaluateOffer(contractOffer: OdrlPolicy): Pair<Boolean, OdrlPolicy?> {

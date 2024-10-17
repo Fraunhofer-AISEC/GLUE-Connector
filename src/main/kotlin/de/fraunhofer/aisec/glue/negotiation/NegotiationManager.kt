@@ -3,6 +3,7 @@ package de.fraunhofer.aisec.glue.negotiation
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.convertValue
+import de.fraunhofer.aisec.glue.jsonld.AsJsonLd.Companion.convertFromJsonLd
 import de.fraunhofer.aisec.glue.models.negotiation.ContractNegotiation
 import de.fraunhofer.aisec.glue.models.negotiation.ContractOfferMessage
 import de.fraunhofer.aisec.glue.models.negotiation.ContractRequestMessage
@@ -116,6 +117,9 @@ class NegotiationManager(
             }
         }
 
+        // HACK: in case the user passed in an unexpanded jsonld object, make sure it is expanded
+        val expandedPolicy = objectMapper.convertFromJsonLd<JsonNode>(request)
+
         // Create the final negotiation object now that we have all the information required.
         // Note that we cannot bind the peer identity yet because we don't have a request with an Authorization header
         // at this point.
@@ -124,7 +128,7 @@ class NegotiationManager(
             Negotiation(
                 state = NegotiationState.REQUESTED,
                 peerIdentity = null,
-                currentPolicy = request,
+                currentPolicy = expandedPolicy,
                 role = Negotiation.Role.CONSUMER,
                 ownPid = consumerPid,
                 peerPid = deserializedResponse.providerPid,
@@ -294,7 +298,10 @@ class NegotiationManager(
             .first { id -> !assignedIds.contains(id) }
     }
 
-    private suspend fun negotiationCompletedHandler(negotiation: Negotiation, deleter: suspend () -> Unit) {
+    private suspend fun negotiationCompletedHandler(
+        negotiation: Negotiation,
+        deleter: suspend () -> Unit,
+    ) {
         try {
             val policy = negotiation.completed.await()
             negotiatedContractsFlow.emit(policy)
