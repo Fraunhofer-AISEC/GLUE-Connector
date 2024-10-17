@@ -11,16 +11,18 @@ import fhg.glue.odrl.OdrlAction
 import fhg.glue.odrl.OdrlIdentifiers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import java.io.Closeable
 import kotlin.random.Random
 
-class ContainerManager {
+class ContainerManager : Closeable {
     private val pipelines = mutableMapOf<String, ContainerPipeline>()
     private val pipelineMutex = Mutex()
+    private val dockerClient = DockerClient()
 
     private fun dockerReqsForPipeline(pipelineDef: GlueContainerPipeline): MutableList<ContainerCreateRequest> {
         return pipelineDef.containers.map { c ->
             ContainerCreateRequest(
-                image = "${c.image}@${c.hash}",
+                image = c.image,
                 hostConfig =
                     HostConfig(
                         networkMode = if (c.allowNetwork) "bridge" else "none",
@@ -82,7 +84,7 @@ class ContainerManager {
             val pipelineName = createPipelineName()
             val pipeline = ContainerPipeline.create(
                 createRequests.mapIndexed { i, r -> "pipeline-$pipelineName-$i" to r },
-                DockerClient("/run/user/1000/docker-socket.sock"),
+                dockerClient,
             )
             pipeline.start()
             pipelines[pipelineName] = pipeline
@@ -98,4 +100,8 @@ class ContainerManager {
                 pipeline.remove()
             } != null
         }
+
+    override fun close() {
+        dockerClient.close()
+    }
 }
