@@ -71,6 +71,16 @@ tasks.named<JavaExec>("run") {
     standardInput = System.`in`
 }
 
+// A tool to simply register a policy with the connector
+tasks.register<JavaExec>("runPolicyTool") {
+    group = "tools"
+    description = "Run a tool to register a policy with a running connector"
+
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass.set("de.fraunhofer.aisec.glue.tools.RegisterPolicyKt")
+    standardInput = System.`in`
+}
+
 spotless {
     kotlin {
         target("src/*/kotlin/**/*.kt")
