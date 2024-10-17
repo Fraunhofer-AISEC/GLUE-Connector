@@ -4,16 +4,20 @@ import com.apicatalog.jsonld.JsonLdOptions
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.jacksonMapperBuilder
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import de.fraunhofer.aisec.glue.controllers.ContractController
 import de.fraunhofer.aisec.glue.controllers.Controller
 import de.fraunhofer.aisec.glue.controllers.NegotiationController
+import de.fraunhofer.aisec.glue.controllers.PipelineController
 import de.fraunhofer.aisec.glue.jsonld.JsonLDModule
 import de.fraunhofer.aisec.glue.negotiation.DummyNegotiator
 import de.fraunhofer.aisec.glue.negotiation.NegotiationManager
 import de.fraunhofer.aisec.glue.plugins.configureAuthentication
 import de.fraunhofer.aisec.glue.plugins.configureSerialization
 import io.ktor.client.*
+import io.ktor.client.engine.okhttp.*
+import io.ktor.client.plugins.auth.*
+import io.ktor.client.plugins.auth.providers.*
+import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.serialization.jackson.*
 import io.ktor.server.application.*
 import io.ktor.server.routing.*
 import org.kodein.di.*
@@ -29,20 +33,32 @@ fun main(args: Array<String>) {
 }
 
 val defaultDependencies by DI.Module {
-    bind<HttpClient>() with singleton { HttpClient() }
-    bind<PDP>() with singleton { PDP() }
+    bind<HttpClient>() with
+        singleton {
+            HttpClient(OkHttp) {
+                install(ContentNegotiation) {
+                    jackson {
+                        registerModules(JsonLDModule(JsonLdOptions()))
+                    }
+                }
+                install(Auth) {
+                    basic {
+                        credentials {
+                            BasicAuthCredentials("user", "password")
+                        }
+                    }
+                }
+            }
+        }
     bind<ObjectMapper>() with
         singleton {
             jacksonMapperBuilder().addModules(JavaTimeModule(), JsonLDModule(JsonLdOptions())).build()
         }
-    bind<ContractManager>() with singleton { ContractManager() }
-    bind<ContainerManager>() with singleton { ContainerManager(instance()) }
-    bind<NegotiationManager>() with
-        singleton {
-            NegotiationManager(instance(), jacksonObjectMapper(), DummyNegotiator())
-        }
-    bind<ContractController>() with singleton { ContractController(instance(), instance()) }
+    bind<ContainerManager>() with singleton { ContainerManager() }
+    bind<NegotiationManager>() with singleton { NegotiationManager(instance(), instance(), DummyNegotiator()) }
+    bind<ContractStore>() with singleton { ContractStore(instance(), instance()) }
     bind<NegotiationController>() with singleton { NegotiationController(instance()) }
+    bind<PipelineController>() with singleton { PipelineController(instance(), instance()) }
 }
 
 fun Application.module() = module(DI { import(defaultDependencies) })
