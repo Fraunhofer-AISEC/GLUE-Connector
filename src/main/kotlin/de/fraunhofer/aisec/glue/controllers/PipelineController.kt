@@ -81,6 +81,12 @@ class PipelineController(private val contractStore: ContractStore, private val c
                 }
 
                 get("{id}") {
+                    val principal = call.principal<UserIdPrincipal>()
+                    val id = call.parameters["id"]!!
+
+                    val status = containerManager.getPipelineStatus(id)
+                    // Currently this only checks if the pipeline exists
+                    call.respond(if (status) HttpStatusCode.OK else HttpStatusCode.NotFound)
                 }
 
                 delete("{id}") {
