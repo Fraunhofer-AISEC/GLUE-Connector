@@ -67,6 +67,11 @@ object OdrlIdentifiers {
     const val PROHIBIT = "http://www.w3.org/ns/odrl/2/prohibit"
     const val INVALID = "http://www.w3.org/ns/odrl/2/invalid"
 
+    // 4.4) Actions for Rules
+    const val NEXTPOLICY = "http://www.w3.org/ns/odrl/2/nextPolicy"
+    const val DISTRIBUTE = "http://www.w3.org/ns/odrl/2/distribute"
+    const val USE = "http://www.w3.org/ns/odrl/2/use"
+
     // 4.5) Constraint Left Operands
     const val DATETIME = "http://www.w3.org/ns/odrl/2/dateTime"
 

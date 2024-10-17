@@ -1,6 +1,6 @@
 package de.fraunhofer.aisec.glue.docker
 
-import de.fraunhofer.aisec.glue.Utils
+import de.fraunhofer.aisec.glue.Utils.hexEncode
 import kotlinx.coroutines.runBlocking
 import kotlin.random.Random
 import kotlin.test.Test
@@ -18,7 +18,7 @@ class DockerClientTest {
     @Test
     fun testContainerFlow() {
         runBlocking {
-            val name = Utils.hexEncode(Random.Default.nextBytes(10))
+            val name = Random.Default.nextBytes(10).hexEncode()
             val container = client.containers.create(name, "test-container:latest")
             container.start()
             container.stop()
@@ -29,7 +29,7 @@ class DockerClientTest {
     @Test
     fun testNetworkFlow() {
         runBlocking {
-            val name = Utils.hexEncode(Random.Default.nextBytes(10))
+            val name = Random.Default.nextBytes(10).hexEncode()
             val net = client.networks.create(name, "10.0.${Random.Default.nextInt(256)}.0/24")
             net.remove()
         }

@@ -13,9 +13,17 @@ class GlueContainerParser : OdrlParser() {
         val image = getStringOrThrow(root, GlueOdrlIdentifiers.IMAGE)
         val hash = getStringOrThrow(root, GlueOdrlIdentifiers.HASH)
 
-        var entrypoint: String? = null;
-        if (root.has(GlueOdrlIdentifiers.ENTRYPOINT)) {
-            entrypoint = root.get(GlueOdrlIdentifiers.ENTRYPOINT).asText(null)
+        val parameters = mutableListOf<GlueParameter>()
+        if (root.has(GlueOdrlIdentifiers.HAS_PARAMETER)) {
+            val parameterNode = root.get(GlueOdrlIdentifiers.HAS_PARAMETER)
+            if (parameterNode.isObject) {
+                parameters.add(GlueParameterParser().parse(parameterNode))
+            } else if (parameterNode.isArray) {
+                for (p in parameterNode.elements())
+                    parameters.add(GlueParameterParser().parse(p))
+            } else {
+                throw OdrlException("Expected field 'parameter' to be a JSON object or array")
+            }
         }
 
         var allowNetwork = false;
@@ -23,6 +31,6 @@ class GlueContainerParser : OdrlParser() {
             allowNetwork = root.get(GlueOdrlIdentifiers.ALLOW_NETWORK).asBoolean(false)
         }
 
-        return GlueContainer(image, hash, entrypoint, allowNetwork);
+        return GlueContainer(image, hash, parameters, allowNetwork);
     }
 }

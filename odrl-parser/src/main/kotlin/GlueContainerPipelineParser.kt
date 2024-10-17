@@ -19,7 +19,7 @@ class GlueContainerPipelineParser : OdrlParser() {
             for (c in containerNode.elements())
                 containers.add(GlueContainerParser().parse(c))
         } else {
-            throw OdrlException("Expected field 'containers' to be a JSON object or array")
+            throw OdrlException("Expected field 'container' to be a JSON object or array")
         }
 
         return GlueContainerPipeline(containers)
