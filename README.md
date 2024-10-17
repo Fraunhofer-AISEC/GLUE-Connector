@@ -25,7 +25,7 @@ curl -X POST -H "Content-Type: application/json" -v -u user:password -d '{"targe
 ```
 The server will return the pipeline ID as well as the port the pipeline is listening on.
 
-### Stop/Delete demo pipeline (Note: Currently a noop)
+### Stop/Delete the demo pipeline
 
 ```sh
 curl --request DELETE -u user:password http://localhost:8080/pipeline/<pipeline id>
