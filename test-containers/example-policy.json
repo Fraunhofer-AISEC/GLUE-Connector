@@ -1,0 +1,85 @@
+{
+  "@context": {
+    "odrl": "http://www.w3.org/ns/odrl/2/",
+    "glue": "http://fhg.de/glue/"
+  },
+  "@id": "http://dataowner.com/policy:6163",
+  "odrl:permission": [
+    {
+      "odrl:target": "http://dataowner.com/document:1234",
+      "odrl:assigner": "http://dataowner.com/org",
+      "odrl:assignee": "http://dataconsumer.com/org",
+      "odrl:action": "http://www.w3.org/ns/odrl/2/use",
+      "odrl:duty": {
+        "odrl:action": {
+          "@id": "http://fhg.de/glue/deployPipeline",
+          "odrl:refinement": [
+            {
+              "odrl:leftOperand": "http://fhg.de/glue/containerPipeline",
+              "odrl:operator": "http://www.w3.org/ns/odrl/2/eq",
+              "odrl:rightOperand": {
+                "@type": "http://fhg.de/glue/ContainerPipeline",
+                "glue:container": [
+                  {
+                    "@type": "http://fhg.de/glue/Container",
+                    "glue:image": "container-pipeline/http-echo",
+                    "glue:hash": "sha256:b0f253b8653b5d11adac8dd3fa960f3d0ded0e673ace705b802d1ce601553170",
+                    "glue:parameter": {
+                      "@type": "http://fhg.de/glue/RestParameter",
+                      "glue:url": "http://0.0.0.0:1234/dockerEndpoint?key1=value1",
+                      "glue:httpType": "GET"
+                    },
+                    "glue:allowNetwork": true
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "odrl:constraint": [
+        {
+          "odrl:leftOperand": "http://www.w3.org/ns/odrl/2/dateTime",
+          "odrl:operator": "http://www.w3.org/ns/odrl/2/lteq",
+          "odrl:rightOperand": {
+            "@value": "2025-12-21",
+            "@type": "http://www.w3.org/2001/XMLSchema#date"
+          }
+        }
+      ]
+    },
+    {
+      "odrl:target": "http://dataowner.com/document:1234",
+      "odrl:assigner": "http://dataowner.com/org",
+      "odrl:assignee": "http://dataconsumer.com/org",
+      "odrl:action": "http://www.w3.org/ns/odrl/2/distribute",
+      "odrl:duty": {
+        "odrl:action": {
+          "@id": "http://www.w3.org/ns/odrl/2/nextPolicy",
+          "odrl:refinement": [
+            {
+              "odrl:leftOperand": "http://fhg.de/glue/containerPipeline",
+              "odrl:operator": "http://www.w3.org/ns/odrl/2/eq",
+              "odrl:rightOperand": {
+                "@type": "http://fhg.de/glue/ContainerPipeline",
+                "glue:container": {
+                  "@type": "http://fhg.de/glue/Container",
+                  "glue:image": "test/policyCompiler",
+                  "glue:hash": "5e7ef9594b0b96c5f591dc9d3462943e340941c770e5e3885a1864b998de016f",
+                  "glue:parameter": [
+                    {
+                      "@type": "http://fhg.de/glue/RestParameter",
+                      "glue:url": "http://0.0.0.0:1234/dockerEndpoint",
+                      "glue:httpType": "POST",
+                      "glue:httpBody": "{\"key1\":\"value1\",\"key2\":\"value2\"}"
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
