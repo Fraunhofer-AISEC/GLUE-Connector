@@ -5,6 +5,7 @@ import com.apicatalog.jsonld.JsonLdOptions
 import com.apicatalog.jsonld.document.JsonDocument
 import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.databind.DeserializationContext
+import com.fasterxml.jackson.databind.JavaType
 import com.fasterxml.jackson.databind.JsonDeserializer
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.jsontype.TypeDeserializer
@@ -13,7 +14,8 @@ import jakarta.json.JsonObject
 class JsonLDDeserializer<T : Any>(
     private val options: JsonLdOptions,
     private val mapper: ObjectMapper,
-    private val cls: Class<T>,
+    private val type: JavaType,
+    cls: Class<T>,
 ) : JsonDeserializer<T>() {
     override fun deserialize(
         parser: JsonParser,
@@ -25,7 +27,7 @@ class JsonLDDeserializer<T : Any>(
                 .options(options)
                 .get()
 
-        return mapper.convertValue(transformed, cls)
+        return mapper.convertValue(transformed, type)
     }
 
     override fun deserializeWithType(
