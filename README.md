@@ -3,7 +3,7 @@
 ### Build the test container image
 
 ```sh
-docker build -t test-containers/http-echo test-containers/http-echo
+docker build -t container-pipeline/http-echo test-containers/http-echo
 ```
 
 ### Run the connector:
