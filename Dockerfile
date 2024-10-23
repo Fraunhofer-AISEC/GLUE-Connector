@@ -6,6 +6,6 @@ RUN sleep 10s
 
 FROM gcr.io/distroless/java21-debian12
 # TODO: Also create a version-independent shadow jar
-COPY --from=builder /src/build/libs/uc-container-orchestration-1.0-SNAPSHOT-all.jar app.jar
+COPY --from=builder /src/build/libs/uc-container-orchestration-1.0-SNAPSHOT.jar app.jar
 VOLUME /var/run/docker.sock
 ENTRYPOINT ["java", "-jar", "app.jar"]

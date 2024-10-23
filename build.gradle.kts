@@ -1,3 +1,5 @@
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+
 plugins {
     alias(libs.plugins.kotlin)
     alias(libs.plugins.kotlin.serialization)
@@ -49,6 +51,16 @@ dependencies {
     testImplementation(libs.ktor.server.callLogging)
     testImplementation(libs.ktor.client.mock)
     testImplementation(libs.mockk)
+}
+
+tasks.jar {
+    manifest {
+
+    }
+}
+
+tasks.withType<ShadowJar> {
+    archiveFileName.set("${project.name}-${project.version}.jar")
 }
 
 tasks.test {
