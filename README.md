@@ -10,6 +10,7 @@ docker build -t container-pipeline/http-echo test-containers/http-echo
 ```sh
 socat -v UNIX-LISTEN:/tmp/docker-socket.sock,fork UNIX-CONNECT:/var/run/docker.sock
 ```
+This can be passed to the container manager by exporting the `DOCKER_SOCKET` environment variable.
 
 ### Run the connector:
 
