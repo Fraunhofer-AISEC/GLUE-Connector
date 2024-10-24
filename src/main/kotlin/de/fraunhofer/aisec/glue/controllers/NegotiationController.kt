@@ -1,5 +1,6 @@
 package de.fraunhofer.aisec.glue.controllers
 
+import de.fraunhofer.aisec.glue.Utils
 import de.fraunhofer.aisec.glue.models.negotiation.*
 import de.fraunhofer.aisec.glue.negotiation.Negotiation
 import de.fraunhofer.aisec.glue.negotiation.NegotiationManager
@@ -17,26 +18,6 @@ import io.ktor.server.routing.*
  * <https://docs.internationaldataspaces.org/ids-knowledgebase/v/dataspace-protocol/contract-negotiation/contract.negotiation.binding.https>
  */
 class NegotiationController(private val negotiationManager: NegotiationManager) : Controller {
-    // Since we may be behind a reverse proxy, make sure that we are reachable when we eventually send a message with a
-    // callback URL
-    private fun baseUrlForOrigin(
-        origin: RequestConnectionPoint,
-        backtrack: Int,
-    ): Url {
-        val segments = origin.uri.split('/').dropLast(backtrack)
-        val protocol = URLProtocol.createOrDefault(origin.scheme)
-        val builder =
-            URLBuilder(
-                protocol = protocol,
-                host = origin.serverHost,
-                pathSegments = segments,
-            )
-        if (protocol.defaultPort != origin.serverPort) {
-            builder.port = origin.serverPort
-        }
-        return builder.build()
-    }
-
     private fun stateErrorResponse(negotiation: Negotiation): ContractNegotiationError {
         // Since this function is only called from response callbacks, the negotiation's lock should be held up the call
         // stack.
@@ -53,7 +34,7 @@ class NegotiationController(private val negotiationManager: NegotiationManager) 
         post("/request") {
             val principal = call.principal<UserIdPrincipal>()!!
             val req = call.receive<ContractRequestMessage>()
-            val originUrl = baseUrlForOrigin(call.request.origin, 1)
+            val originUrl = Utils.baseUrlForOrigin(call.request.origin, 1)
 
             val negotiation = negotiationManager.createFromRequest(req, originUrl, principal.name)
             if (negotiation == null) {
@@ -73,7 +54,7 @@ class NegotiationController(private val negotiationManager: NegotiationManager) 
         post("/offers") {
             val principal = call.principal<UserIdPrincipal>()!!
             val req = call.receive<ContractOfferMessage>()
-            val originUrl = baseUrlForOrigin(call.request.origin, 1)
+            val originUrl = Utils.baseUrlForOrigin(call.request.origin, 1)
 
             val negotiation = negotiationManager.createFromOffer(req, originUrl, principal.name)
             if (negotiation == null) {

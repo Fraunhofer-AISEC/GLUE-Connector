@@ -7,6 +7,8 @@ import com.fasterxml.jackson.module.kotlin.jacksonMapperBuilder
 import de.fraunhofer.aisec.glue.controllers.Controller
 import de.fraunhofer.aisec.glue.controllers.NegotiationController
 import de.fraunhofer.aisec.glue.controllers.PipelineController
+import de.fraunhofer.aisec.glue.controllers.api.NegotiationApiController
+import de.fraunhofer.aisec.glue.controllers.api.RemotePipelineApiController
 import de.fraunhofer.aisec.glue.jsonld.JsonLDModule
 import de.fraunhofer.aisec.glue.negotiation.DummyNegotiator
 import de.fraunhofer.aisec.glue.negotiation.NegotiationManager
@@ -59,6 +61,8 @@ val defaultDependencies by DI.Module {
     bind<ContractStore>() with singleton { ContractStore(instance(), instance()) }
     bind<NegotiationController>() with singleton { NegotiationController(instance()) }
     bind<PipelineController>() with singleton { PipelineController(instance(), instance()) }
+    bind<NegotiationApiController>() with singleton { NegotiationApiController(instance()) }
+    bind<RemotePipelineApiController>() with singleton { RemotePipelineApiController(instance(), instance()) }
 }
 
 fun Application.module() = module(DI { import(defaultDependencies) })

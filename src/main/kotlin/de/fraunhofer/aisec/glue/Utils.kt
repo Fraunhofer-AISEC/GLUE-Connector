@@ -1,5 +1,7 @@
 package de.fraunhofer.aisec.glue
 
+import io.ktor.http.*
+
 object Utils {
     private const val HEX_DIGITS = "0123456789abcdef"
 
@@ -14,4 +16,24 @@ object Utils {
     }
 
     fun <T> identity(value: T) = value
+
+    /**
+     * Get the base url that a request has been made against.
+     * This is useful when we want to find out the exact point our API is reachable from, provided all reverse proxies
+     * in front of us set the correct forwarding headers.
+     */
+    fun baseUrlForOrigin(origin: RequestConnectionPoint, backtrack: Int): Url {
+        val segments = origin.uri.split('/').dropLast(backtrack)
+        val protocol = URLProtocol.createOrDefault(origin.scheme)
+        val builder =
+            URLBuilder(
+                protocol = protocol,
+                host = origin.serverHost,
+                pathSegments = segments,
+            )
+        if (protocol.defaultPort != origin.serverPort) {
+            builder.port = origin.serverPort
+        }
+        return builder.build()
+    }
 }
