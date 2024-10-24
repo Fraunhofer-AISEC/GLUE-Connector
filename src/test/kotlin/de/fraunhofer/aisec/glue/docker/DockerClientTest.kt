@@ -39,7 +39,7 @@ class DockerClientTest {
         // const val DOCKER_SOCKET = "/var/run/docker.sock"
 
         // Proxy socket to dump requests and responses
-        // $ socat -v UNIX-LISTEN:/run/user/1000/docker-socket.sock,fork UNIX-CONNECT:/var/run/docker.sock
-        const val DOCKER_SOCKET = "/run/user/1000/docker-socket.sock"
+        // $ socat -v UNIX-LISTEN:/tmp/docker-socket.sock,fork UNIX-CONNECT:/var/run/docker.sock
+        const val DOCKER_SOCKET = "/tmp/docker-socket.sock"
     }
 }
