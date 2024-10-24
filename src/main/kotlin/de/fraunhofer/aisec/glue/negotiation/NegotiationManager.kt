@@ -15,9 +15,9 @@ import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import kotlinx.coroutines.*
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.slf4j.LoggerFactory
@@ -33,7 +33,7 @@ class NegotiationManager(
     private val assignedIds = mutableSetOf<String>()
     private val providerNegotiation = ConcurrentHashMap<String, Negotiation>()
     private val consumerNegotiations = ConcurrentHashMap<String, Negotiation>()
-    private val pendingConsumerNegotiations = ConcurrentHashMap<String, Channel<Negotiation?>>()
+    private val pendingConsumerNegotiations = ConcurrentHashMap<String, MutableSharedFlow<Negotiation?>>()
 
     private val negotiatedContractsFlow = MutableSharedFlow<OdrlPolicy>()
     val negotiatedContracts = negotiatedContractsFlow.asSharedFlow()
@@ -54,7 +54,7 @@ class NegotiationManager(
             pidMutex.withLock {
                 val consumerPid = newProcessId()
                 assignedIds.add(consumerPid)
-                pendingConsumerNegotiations[consumerPid] = Channel()
+                pendingConsumerNegotiations[consumerPid] = MutableSharedFlow()
                 consumerPid
             }
 
@@ -94,10 +94,7 @@ class NegotiationManager(
             NegotiationState.TERMINATED -> {
                 pidMutex.withLock {
                     assignedIds.remove(consumerPid)
-                    pendingConsumerNegotiations.remove(consumerPid)!!.run {
-                        trySend(null)
-                        close()
-                    }
+                    pendingConsumerNegotiations.remove(consumerPid)!!.tryEmit(null)
                 }
                 return CompletableDeferred<OdrlPolicy>().apply {
                     cancel("The provider terminated the negotiation")
@@ -106,10 +103,7 @@ class NegotiationManager(
             else -> {
                 pidMutex.withLock {
                     assignedIds.remove(consumerPid)
-                    pendingConsumerNegotiations.remove(consumerPid)!!.run {
-                        trySend(null)
-                        close()
-                    }
+                    pendingConsumerNegotiations.remove(consumerPid)!!.tryEmit(null)
                 }
                 return CompletableDeferred<OdrlPolicy>().apply {
                     cancel("The provider returned an invalid response")
@@ -140,7 +134,7 @@ class NegotiationManager(
             )
 
         pidMutex.withLock {
-            pendingConsumerNegotiations.remove(consumerPid)!!.trySend(negotiation)
+            pendingConsumerNegotiations.remove(consumerPid)!!.tryEmit(negotiation)
             consumerNegotiations[consumerPid] = negotiation
         }
 
@@ -265,8 +259,6 @@ class NegotiationManager(
         peerIdent: String,
     ): Negotiation? {
         // This is needed since kotlinx coroutines does not support condition variables...
-        // TODO: If this function is called multiple times while the negotiation is still pending, only one of the calls
-        //       will be successful. During normal operation, this is no problem, right?
         val negotiationProducer =
             pidMutex.withLock {
                 if (consumerNegotiations.containsKey(consumerPid)) {
@@ -274,7 +266,7 @@ class NegotiationManager(
                     suspend { negotiation }
                 } else if (pendingConsumerNegotiations.containsKey(consumerPid)) {
                     val channel = pendingConsumerNegotiations[consumerPid]!!
-                    suspend { channel.receiveCatching().getOrNull() }
+                    suspend { channel.first() }
                 } else {
                     suspend { null }
                 }
@@ -290,6 +282,10 @@ class NegotiationManager(
         }
 
         return negotiation
+    }
+
+    fun getNegotiations(): List<Negotiation> {
+        return (consumerNegotiations.values + providerNegotiation.values).toList()
     }
 
     private fun newProcessId(): String {
