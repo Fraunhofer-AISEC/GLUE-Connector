@@ -17,6 +17,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.slf4j.LoggerFactory
 
+/**
+ * This controller provides an interface for other connectors to manage container pipelines associated with their
+ * policies.
+ */
 class PipelineController(private val contractStore: ContractStore, private val containerManager: ContainerManager) :
     Controller {
     override fun Route.registerRoutes() {
@@ -31,12 +35,23 @@ class PipelineController(private val contractStore: ContractStore, private val c
                     // TODO: Push this code down to some other class (ContractManager?)
                     val contract =
                         if (req.contractId != null) {
-                            // TODO: Return proper error to user on null
-                            contractStore.getContract(req.contractId)!!
+                            contractStore.getContract(req.contractId)
                         } else {
-                            // TODO: Return error if size != 1
-                            contractStore.getContract(req.target, req.action).first()
+                            val contracts = contractStore.getContract(req.target, req.action)
+                            when (contracts.size) {
+                                0 -> null
+                                1 -> contracts.first()
+                                else -> {
+                                    call.respond(HttpStatusCode.BadRequest)
+                                    return@post
+                                }
+                            }
                         }
+
+                    if (contract == null) {
+                        call.respond(HttpStatusCode.NotFound)
+                        return@post
+                    }
 
                     // Note: We have to initialize this here
                     val pipelineCreateChannel = Channel<PipelineCreateResponse>(1)
