@@ -5,6 +5,11 @@
 ```sh
 docker build -t container-pipeline/http-echo test-containers/http-echo
 ```
+### Start socat to create socket proxy to dump requests and responses:
+
+```sh
+socat -v UNIX-LISTEN:/tmp/docker-socket.sock,fork UNIX-CONNECT:/var/run/docker.sock
+```
 
 ### Run the connector:
 
