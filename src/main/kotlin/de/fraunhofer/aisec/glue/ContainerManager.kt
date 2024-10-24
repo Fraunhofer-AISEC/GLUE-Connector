@@ -17,7 +17,7 @@ import kotlin.random.Random
 class ContainerManager : Closeable {
     private val pipelines = mutableMapOf<String, ContainerPipeline>()
     private val pipelineMutex = Mutex()
-    private val dockerClient = DockerClient()
+    private val dockerClient = DockerClient(System.getenv("DOCKER_SOCKET") ?: "/var/run/docker.sock")
 
     private fun dockerReqsForPipeline(pipelineDef: GlueContainerPipeline): MutableList<ContainerCreateRequest> {
         return pipelineDef.containers.map { c ->
