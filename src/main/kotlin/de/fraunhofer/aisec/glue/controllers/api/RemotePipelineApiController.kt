@@ -80,7 +80,7 @@ class RemotePipelineApiController(
                     name
                 }
 
-                call.respond(RemotePipelineStatusResponse(req.peer, localId, remotePipeline))
+                call.respond(HttpStatusCode.Created, RemotePipelineStatusResponse(req.peer, localId, remotePipeline))
             }
 
             delete("{id}") {
