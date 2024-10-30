@@ -38,9 +38,9 @@ import jakarta.json.JsonObject
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.slf4j.event.Level
+import java.io.File
 import java.time.Duration
 import java.util.*
 import kotlin.test.Test
@@ -50,24 +50,24 @@ import kotlin.test.assertTrue
 import kotlin.time.toKotlinDuration
 
 class NegotiationTest {
-    private fun httpClient(mockFactory: MockRequestHandleScope.(HttpRequestData) -> HttpResponseData) =
+    private fun httpClient(mockFactory: suspend MockRequestHandleScope.(HttpRequestData) -> HttpResponseData) =
         HttpClient(MockEngine(mockFactory)) {
             install(ContentNegotiation) {
-                jackson {
+                jackson(streamRequestBody = false) {
                     registerModules(JsonLDModule(JsonLdOptions()))
                 }
             }
         }
 
-    private inline fun <reified T> convertValue(body: OutgoingContent): T =
-        runBlocking {
-            val raw = body.toByteArray()
-            objectMapper.readValue(raw, T::class.java)
-        }
+    private suspend inline fun <reified T> convertValue(body: OutgoingContent): T {
+        val raw = body.toByteArray()
+        val res = objectMapper.readValue(raw, T::class.java)
+        return res
+    }
 
     @Test
     fun `Test negotiation as provider`() =
-        runBlocking {
+        runTest(timeout = Duration.ofSeconds(30).toKotlinDuration()) {
             val consumerPid = "urn:uuid:${UUID.randomUUID()}"
             var consumerState = NegotiationState.REQUESTED
             val httpClient =
@@ -90,7 +90,7 @@ class NegotiationTest {
                         }
                     }
                 }
-            val negotiationManager = NegotiationManager(httpClient, objectMapper, DummyNegotiator())
+            val negotiationManager = NegotiationManager(httpClient, objectMapper, DummyNegotiator(true))
 
             val contractRequest =
                 ContractRequestMessage(
@@ -134,7 +134,7 @@ class NegotiationTest {
 
     @Test
     fun `Test negotiation as consumer`() =
-        runBlocking {
+        runTest(timeout = Duration.ofSeconds(30).toKotlinDuration()) {
             val providerPid = "urn:uuid:${UUID.randomUUID()}"
             var providerState = NegotiationState.OFFERED
             val httpClient =
@@ -494,73 +494,14 @@ class NegotiationTest {
                 .addModules(JsonLDModule(JsonLdOptions()), JSONPModule(), JavaTimeModule())
                 .build()
 
-        private val examplePolicy =
-            """
-            {
-                "@context": "http://www.w3.org/ns/odrl.jsonld",
-                "@type": "Policy",
-                "uid": "http://example.com/policy:6163",
-                "permission": [{
-                    "target": "http://example.com/document:1234",
-                    "assigner": "http://example.com/org:616",
-                    "action": {
-                        "@id": "use",
-                        "refinement": [{
-                            "leftOperand": "http://fhg.de/glue:containerPipeline",
-                            "operator": "eq",
-                            "rightOperand": {
-                                "@type": "http://fhg.de/glue:ContainerPipeline",
-                                "containers": [{
-                                    "@type": "http://fhg.de/glue:Container",
-                                    "image": "test/container:latest",
-                                    "hash": "364a4787748a98c1c28085d4154a06c3a9be9a67c0b08a56b3f69fa8fabf172e",
-                                    "cmd": "/app",
-                                    "dockerArgs": "--network=...",
-                                    "allowNetwork": true
-                                },
-                                {
-                                    "@type": "http://fhg.de/glue:Container",
-                                    "image": "test/container:latest",
-                                    "hash": "364a4787748a98c1c28085d4154a06c3a9be9a67c0b08a56b3f69fa8fabf172e"
-                                }]
-                            }
-                        }]
-                    },
-                    "constraint": [{
-                        "leftOperand": "dateTime",
-                        "operator": "lteq",
-                        "rightOperand": {"@value": "2024-12-21T00:00", "@type": "xsd:dateTime"}
-                    }]
-                }],
-                "obligation": [{
-                    "target": "http://example.com/document:1234",
-                    "action": "distribute",
-                    "duty": {
-                        "action": "nextPolicy",
-                        "assignee": "http://example.com/org:1234",
-                        "target": "http://example.com/policyTemplate:1234",
-                        "refinement": [{
-                            "leftOperand": "http://fhg.de/glue:containerPipeline",
-                            "operator": "eq",
-                            "rightOperand": {
-                                "@type": "http://fhg.de/glue:ContainerPipeline",
-                                "containers": [{
-                                    "@type": "http://fhg.de/glue:Container",
-                                    "image": "test/policyCompiler:latest",
-                                    "hash": "364a4787748a98c1c28085d4154a06c3a9be9a67c0b08a56b3f69fa8fabf172e"
-                                }]
-                            }
-                        }]
-                    }
-                }]
-            }
-            """.trimIndent()
-
         val parsedExamplePolicy: JsonNode by lazy {
-            val mapper = jacksonMapperBuilder().addModules(JSONPModule(), JavaTimeModule()).build()
-            val jsonld = mapper.readValue(examplePolicy, JsonObject::class.java)
-            val compacted = JsonLd.compact(JsonDocument.of(jsonld), JsonDocument.of(JsonObject.EMPTY_JSON_OBJECT)).get()
-            mapper.convertValue(compacted, JsonNode::class.java)
+            File("test-containers/example-policy.json").inputStream().use { input ->
+                val mapper = jacksonMapperBuilder().addModules(JSONPModule(), JavaTimeModule()).build()
+                val jsonld = mapper.readValue(input, JsonObject::class.java)
+                val compacted =
+                    JsonLd.compact(JsonDocument.of(jsonld), JsonDocument.of(JsonObject.EMPTY_JSON_OBJECT)).get()
+                mapper.convertValue(compacted, JsonNode::class.java)
+            }
         }
     }
 }
