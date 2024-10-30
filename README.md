@@ -1,3 +1,8 @@
+## API Documentation
+
+The OpenAPI specification for the API is available [here](./doc/api.yaml).
+Note that the api specification may not always be in sync with the implementation.
+
 ## HTTP-Server Example Usage
 
 ### Build the test container image
