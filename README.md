@@ -3,7 +3,48 @@
 The OpenAPI specification for the API is available [here](./doc/api.yaml).
 Note that the api specification may not always be in sync with the implementation.
 
-## HTTP-Server Example Usage
+## HTTP-Server Example Using API
+
+This repository also contains example container definitions that use the container pipeline
+mechanism to spawn a simple HTTP echo server.
+First, build the docker http echo server docker image:
+
+```sh
+docker build -t container-pipeline/http-echo test-containers/http-echo
+```
+
+Then start two container pipeline connectors with the docker socket mounted
+(Don't forget to stop the containers after or subsequent runs will fail).
+
+```sh
+# Replace with socat socket path from old example if needed
+docker_socket=/var/run/docker.sock
+for i in $(seq 2); do
+  docker run \
+    --rm \
+    --name="connector-$i" \
+    -v "$docker_socket":/var/run/docker.sock \
+    -d \
+    container-registry.gitlab.cc-asp.fraunhofer.de/ccit-glue/usage-control/container-pipeline:latest
+  echo "Connector $i IP: $(docker inspect -f '{{ .NetworkSettings.Networks.bridge.IPAddress }}' "connector-$i")"
+done
+```
+
+[This script](doc/api-example.sh) contains the logic to trigger the process.
+The script will eventually be replaced with a web UI.
+
+```sh
+./doc/api-example.sh <Connector 1 IP>:8080 <Connector 2 IP>:8080 test-containers/example-policy.json
+```
+
+The script will print the port the pipeline is reachable on.
+If everything worked, the following call should print `Test`.
+
+```sh
+curl -d Test http://localhost:<Pipeline Port>/echo
+```
+
+## Raw (old) HTTP-Server Example Usage
 
 ### Build the test container image
 
