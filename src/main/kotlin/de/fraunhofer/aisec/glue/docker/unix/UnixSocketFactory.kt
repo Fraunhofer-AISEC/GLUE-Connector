@@ -1,23 +1,20 @@
 package de.fraunhofer.aisec.glue.docker.unix
 
 import java.net.InetAddress
+import java.net.InetSocketAddress
 import java.net.Socket
 import javax.net.SocketFactory
 
 class UnixSocketFactory(private val path: String) : SocketFactory() {
-    private fun createSocketImpl(): Socket {
-        return UnixSocket(path)
-    }
-
     override fun createSocket(): Socket {
-        return createSocketImpl()
+        return HttpUnixSocket(path)
     }
 
     override fun createSocket(
         addr: String?,
         port: Int,
     ): Socket {
-        return createSocketImpl()
+        return HttpUnixSocket(path, InetSocketAddress(addr, port))
     }
 
     override fun createSocket(
@@ -26,14 +23,14 @@ class UnixSocketFactory(private val path: String) : SocketFactory() {
         localAddr: InetAddress?,
         localPort: Int,
     ): Socket {
-        return createSocketImpl()
+        return HttpUnixSocket(path, InetSocketAddress(addr, port))
     }
 
     override fun createSocket(
         addr: InetAddress?,
         port: Int,
     ): Socket {
-        return createSocketImpl()
+        return HttpUnixSocket(path, InetSocketAddress(addr, port))
     }
 
     override fun createSocket(
@@ -42,6 +39,6 @@ class UnixSocketFactory(private val path: String) : SocketFactory() {
         localAddr: InetAddress?,
         localPort: Int,
     ): Socket {
-        return createSocketImpl()
+        return HttpUnixSocket(path, InetSocketAddress(addr, port))
     }
 }

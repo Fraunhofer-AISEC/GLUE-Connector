@@ -40,6 +40,7 @@ dependencies {
     implementation(libs.jakarta.json)
     implementation("fhg.glue.odrl:odrl-parser:1.0-SNAPSHOT")
     implementation(libs.duckdb)
+    implementation(libs.jnr.unixsocket)
 
     // For running example with gradle
     runtimeOnly(libs.slf4j.jdk14)
