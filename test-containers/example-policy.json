@@ -22,6 +22,17 @@
                 "glue:container": [
                   {
                     "@type": "http://fhg.de/glue/Container",
+                    "glue:image": "container-pipeline/proxy",
+                    "glue:hash": "sha256:bc9a24610ef352b0beb58b4065bdaab44bbab1a2a7c22cc423e52b8b932e9f5b",
+                    "glue:parameter": {
+                      "@type": "http://fhg.de/glue/RestParameter",
+                      "glue:url": "http://0.0.0.0:1234/dockerEndpoint?key1=value1",
+                      "glue:httpType": "GET"
+                    },
+                    "glue:allowNetwork": true
+                  },
+                  {
+                    "@type": "http://fhg.de/glue/Container",
                     "glue:image": "container-pipeline/http-echo",
                     "glue:hash": "sha256:b0f253b8653b5d11adac8dd3fa960f3d0ded0e673ace705b802d1ce601553170",
                     "glue:parameter": {

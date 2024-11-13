@@ -1,5 +1,6 @@
 package de.fraunhofer.aisec.glue
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import de.fraunhofer.aisec.glue.Utils.hexEncode
 import de.fraunhofer.aisec.glue.docker.DockerClient
 import de.fraunhofer.aisec.glue.docker.model.ContainerCreateRequest
@@ -14,10 +15,11 @@ import kotlinx.coroutines.sync.withLock
 import java.io.Closeable
 import kotlin.random.Random
 
-class ContainerManager : Closeable {
+//  (k8s) in the future
+class ContainerManager(private val objectMapper: ObjectMapper, dockerClient: DockerClient? = null) : Closeable {
     private val pipelines = mutableMapOf<String, ContainerPipeline>()
     private val pipelineMutex = Mutex()
-    private val dockerClient = DockerClient(System.getenv("DOCKER_SOCKET") ?: "/var/run/docker.sock")
+    private val dockerClient = dockerClient ?: DockerClient(System.getenv("DOCKER_SOCKET") ?: "/var/run/docker.sock")
 
     private fun dockerReqsForPipeline(pipelineDef: GlueContainerPipeline): MutableList<ContainerCreateRequest> {
         return pipelineDef.containers.map { c ->
@@ -33,6 +35,22 @@ class ContainerManager : Closeable {
 
     private fun createPipelineName(): String =
         generateSequence { Random.Default.nextBytes(8).hexEncode() }.first { n -> !pipelines.contains(n) }
+
+    private suspend fun injectConfigs(pipeline: ContainerPipeline) {
+        for (i in pipeline.containers.indices) {
+            val nextAddress = pipeline.containers.getOrNull(i + 1)?.name
+
+            val config =
+                ContainerConfig(
+                    //       If it is not, get the gateway (host) address for any of the containers networks
+                    controller = "TODO",
+                    nextContainer = nextAddress,
+                )
+            pipeline.containers[i].copyToContainer {
+                writeFile("config.json", objectMapper.writeValueAsBytes(config))
+            }
+        }
+    }
 
     suspend fun createPipelineFromAction(
         action: OdrlAction,
@@ -82,10 +100,14 @@ class ContainerManager : Closeable {
 
         pipelineMutex.withLock {
             val pipelineName = createPipelineName()
-            val pipeline = ContainerPipeline.create(
-                createRequests.mapIndexed { i, r -> "pipeline-$pipelineName-$i" to r },
-                dockerClient,
-            )
+            val pipeline =
+                ContainerPipeline.create(
+                    createRequests.mapIndexed { i, r -> "pipeline-$pipelineName-$i" to r },
+                    dockerClient,
+                )
+
+            injectConfigs(pipeline)
+
             pipeline.start()
             pipelines[pipelineName] = pipeline
 
@@ -105,9 +127,10 @@ class ContainerManager : Closeable {
         dockerClient.close()
     }
 
-    suspend fun getPipelineStatus(id: String): Boolean = pipelineMutex.withLock {
-        val pipeline = pipelines[id] ?: return false
+    suspend fun getPipelineStatus(id: String): Boolean =
+        pipelineMutex.withLock {
+            val pipeline = pipelines[id] ?: return false
 
-        return true
-    }
+            return true
+        }
 }
