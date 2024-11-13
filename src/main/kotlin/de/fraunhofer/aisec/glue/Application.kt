@@ -57,7 +57,7 @@ val defaultDependencies by DI.Module {
         singleton {
             jacksonMapperBuilder().addModules(JavaTimeModule(), JsonLDModule(JsonLdOptions())).build()
         }
-    bind<ContainerManager>() with singleton { ContainerManager() }
+    bind<ContainerManager>() with singleton { ContainerManager(instance()) }
     bind<NegotiationManager>() with singleton { NegotiationManager(instance(), instance(), DummyNegotiator()) }
     bind<ContractStore>() with singleton { ContractStore(instance(), instance()) }
     bind<NegotiationController>() with singleton { NegotiationController(instance()) }

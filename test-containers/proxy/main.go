@@ -6,6 +6,7 @@ import (
     "fmt"
     "log"
     "io"
+    "encoding/json"
 )
 
 func proxy(conn net.Conn, proxyAddress string) {
@@ -36,14 +37,29 @@ func proxy(conn net.Conn, proxyAddress string) {
     }
 }
 
+type config struct {
+    // Controller address
+    Controller string `json:"controller"`
+    // The address of the next controller
+    NextContainer string `json:"nextContainer"`
+}
+
 func main() {
-    if len(os.Args) != 3 {
-        fmt.Fprintf(os.Stderr, "Usage: %s <listen port> <proxy address>\n", os.Args[0])
-        os.Exit(1)
+    listenPort := "8080"
+
+    configFile, err := os.Open("/config.json")
+    if err != nil {
+        log.Fatalf("Could not open the config file: %s", err)
     }
 
-    listenPort := os.Args[1]
-    proxyAddress := os.Args[2]
+    var config config
+    err = json.NewDecoder(configFile).Decode(&config)
+    if err != nil {
+        log.Fatalf("Could not parse config: %s", err)
+    }
+    log.Printf("Config: %+v", config)
+
+    proxyAddress := fmt.Sprintf("%s:8080", config.NextContainer)
 
     listenAddress := fmt.Sprintf("0.0.0.0:%s", listenPort)
     log.Printf("Listening for connections on %s", listenAddress)
