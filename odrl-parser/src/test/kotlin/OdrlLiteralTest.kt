@@ -1,75 +1,74 @@
-import fhg.glue.odrl.GlueContainer
-import fhg.glue.odrl.GlueContainerPipeline
-import fhg.glue.odrl.OdrlLiteral
+import fhg.glue.odrl.de.fraunhofer.iosb.odrl.*
+import org.junit.jupiter.api.Assertions.assertFalse
+import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.LocalTime
 import kotlin.test.assertEquals
-import kotlin.test.assertNotEquals
-import kotlin.test.assertTrue
-import kotlin.test.assertFalse
 import kotlin.test.Test
+import kotlin.test.assertTrue
 
 class OdrlLiteralTest {
     @Test
     fun equality() {
-        assertEquals(OdrlLiteral("test"), OdrlLiteral("test"))
-        assertEquals(OdrlLiteral(42), OdrlLiteral(42))
-        assertEquals(OdrlLiteral(true), OdrlLiteral(true))
-        assertEquals(OdrlLiteral(42.4), OdrlLiteral(42.4))
-        val datetime = LocalDateTime.now()
-        assertEquals(OdrlLiteral(datetime), OdrlLiteral(datetime))
-        val stringList = listOf("one", "two", "three")
-        assertEquals(OdrlLiteral(stringList), OdrlLiteral(stringList))
-        val intList = listOf(1, 2, 3)
-        assertEquals(OdrlLiteral(intList), OdrlLiteral(intList))
-        assertEquals(OdrlLiteral("test"), OdrlLiteral("test"))
-    }
+        assertEquals(PrimitiveBoolean(false), PrimitiveBoolean(false))
+        assertEquals(PrimitiveInt(42), PrimitiveInt(42))
+        assertEquals(PrimitiveDouble(42.42), PrimitiveDouble(42.42))
+        assertEquals(PrimitiveString("test"), PrimitiveString("test"))
 
-    @Test
-    fun containerPipelineEquality() {
-        val list1 = GlueContainerPipeline(listOf(GlueContainer("image1", "hash1",), GlueContainer("image2", "hash2",)))
-        val list2 = GlueContainerPipeline(listOf(GlueContainer("image2", "hash2",), GlueContainer("image1", "hash1",)))
-        val list3 = GlueContainerPipeline(listOf(GlueContainer("image1", "hash1",), GlueContainer("image2", "hash2",)))
-        assertEquals(OdrlLiteral(list1), OdrlLiteral(list1))
-        assertEquals(OdrlLiteral(list1), OdrlLiteral(list3))
-        assertEquals(OdrlLiteral(list3), OdrlLiteral(list1))
-        assertNotEquals(OdrlLiteral(list1), OdrlLiteral(list2))
-        assertNotEquals(OdrlLiteral(list2), OdrlLiteral(list1))
+        assertEquals(XmlBoolean(true), XmlBoolean(true))
+        assertEquals<OdrlRightOperand>(XmlBoolean(true), PrimitiveBoolean(true))
+
+        assertEquals(XmlByte(42), XmlByte(42))
+        assertEquals<OdrlRightOperand>(PrimitiveInt(42), XmlByte(42))
+
+        assertEquals(XmlInt(42), XmlInt(42))
+        assertEquals<OdrlRightOperand>(PrimitiveInt(42), XmlInt(42))
+
+        assertEquals(XmlInteger(42), XmlInteger(42))
+        assertEquals<OdrlRightOperand>(PrimitiveInt(42), XmlInteger(42))
+
+        assertEquals(XmlLong(42L), XmlLong(42L))
+        assertEquals<OdrlRightOperand>(XmlLong(42L), PrimitiveInt(42))
+
+        assertEquals(XmlDouble(42.42), XmlDouble(42.42))
+        assertEquals<OdrlRightOperand>(XmlDouble(42.42), PrimitiveDouble(42.42))
+
+        assertEquals(XmlString("test"), XmlString("test"))
+        assertEquals<OdrlRightOperand>(XmlString("test"), PrimitiveString("test"))
+
+        val datetime = LocalDateTime.now()
+        assertEquals(XmlDateTime(datetime), XmlDateTime(datetime))
+        assertEquals(XmlDate(datetime.toLocalDate()), XmlDate(datetime.toLocalDate()))
+        assertEquals(XmlTime(datetime.toLocalTime()), XmlTime(datetime.toLocalTime()))
     }
 
     @Test
     fun comparison() {
         val datetime = LocalDateTime.now()
-        assertTrue(OdrlLiteral(42) <= OdrlLiteral(100))
-        assertTrue(OdrlLiteral(42) > OdrlLiteral(-1))
-        assertTrue(OdrlLiteral(42.4) <= OdrlLiteral(100.4))
-        assertTrue(OdrlLiteral(42.4) > OdrlLiteral(0))
-        assertTrue(OdrlLiteral(datetime) <= OdrlLiteral(LocalDateTime.now()))
-    }
+        assertTrue(PrimitiveInt(100) > PrimitiveInt(42))
+        assertFalse(PrimitiveDouble(42.42) >= PrimitiveDouble(100.0))
 
-    @Test
-    fun crossTypeEquality() {
-        assertTrue(OdrlLiteral(42) == OdrlLiteral("42"))
-        assertTrue(OdrlLiteral("-14") == OdrlLiteral(-14))
-        assertTrue(OdrlLiteral(42.4) == OdrlLiteral("42.4"))
-        assertTrue(OdrlLiteral("-2.1") == OdrlLiteral(-2.1))
-        assertTrue(OdrlLiteral(true) == OdrlLiteral("true"))
-        assertTrue(OdrlLiteral("false") == OdrlLiteral(false))
-        assertTrue(OdrlLiteral(true) == OdrlLiteral(1))
-        assertTrue(OdrlLiteral(0) == OdrlLiteral(false))
-    }
+        assertTrue(XmlByte(42) <= XmlByte(100))
+        assertFalse(XmlByte(42) > XmlByte(100))
+        assertTrue(XmlByte(4242) > PrimitiveInt(100))
 
-    @Test
-    fun listComparison() {
-        val stringList = listOf("one", "two", "three")
-        assertTrue(OdrlLiteral(stringList).hasPart(OdrlLiteral("two")))
-        assertFalse(OdrlLiteral(stringList).hasPart(OdrlLiteral("four")))
-        assertTrue(OdrlLiteral("one").isPartOf(OdrlLiteral(stringList)))
-        assertFalse(OdrlLiteral("six").isPartOf(OdrlLiteral(stringList)))
+        assertTrue(XmlInt(42) <= XmlInteger(100))
+        assertFalse(XmlInteger(42) > PrimitiveInt(100))
 
-        val intList = listOf(1, 2, 3)
-        assertTrue(OdrlLiteral(intList).hasPart(OdrlLiteral(2)))
-        assertFalse(OdrlLiteral(intList).hasPart(OdrlLiteral(4)))
-        assertTrue(OdrlLiteral(1).isPartOf(OdrlLiteral(intList)))
-        assertFalse(OdrlLiteral(6).isPartOf(OdrlLiteral(intList)))
+        assertTrue(XmlLong(42) <= XmlLong(100))
+        assertFalse(XmlLong(42) > PrimitiveInt(100))
+
+        assertTrue(XmlDouble(42.42) <= XmlDouble(100.1))
+        assertTrue(XmlInt(42) < XmlDouble(100.1))
+        assertFalse(XmlFloat(42.0) > XmlDouble(100.42))
+
+        assertTrue(XmlDateTime(datetime) <= XmlDateTime(LocalDateTime.now()))
+        assertFalse(XmlDateTime(datetime) > XmlDateTime(LocalDateTime.now()))
+
+        assertTrue(XmlDate(LocalDate.of(2004, 12, 1)) <= XmlDate(LocalDate.of(2005, 1, 30)))
+        assertFalse(XmlDateTime(LocalDateTime.of(2004, 12, 1, 12, 0 , 0)) > XmlDate(LocalDate.of(2005, 1, 30)))
+
+        assertTrue(XmlTime(LocalTime.of(20, 12, 1)) <= XmlTime(LocalTime.of(20, 12, 30)))
+        assertTrue(XmlTime(LocalTime.of(5, 1, 30)) > XmlDateTime(LocalDateTime.of(2004, 12, 1, 5, 0 , 50)))
     }
 }

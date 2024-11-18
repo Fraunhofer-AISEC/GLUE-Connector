@@ -1,0 +1,37 @@
+{
+  "@context": {
+    "@import": "http://www.w3.org/ns/odrl.jsonld",
+    "glue": "http://fhg.de/glue/",
+
+    "ContainerPipeline": "glue:ContainerPipeline",
+    "containerPipeline": "glue:containerPipeline",
+
+    "Container": "glue:Container",
+    "container": {
+      "@type": "@id",
+      "@id": "glue:container"
+    },
+    "image": "glue:image",
+    "hash": "glue:hash",
+    "allowNetwork": "glue:allowNetwork",
+	"parameter": {
+      "@type": "@id",
+      "@id": "glue:parameter"
+    },
+
+    "Parameter": "glue:Parameter",
+	"value": {
+      "@type": "@id",
+      "@id": "glue:value"
+    },
+
+    "RestParameter": "glue:RestParameter",
+    "httpUrl": "glue:httpUrl",
+    "httpType": "glue:httpType",
+
+    "ParameterPlaceholder": "glue:ParameterPlaceholder",
+    "key": "glue:key",
+
+    "deployPipeline": "glue:deployPipeline"
+  }
+}
