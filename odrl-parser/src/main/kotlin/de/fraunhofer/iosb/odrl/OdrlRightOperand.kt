@@ -1,4 +1,4 @@
-package fhg.glue.odrl.de.fraunhofer.iosb.odrl
+package de.fraunhofer.iosb.odrl
 
 import com.fasterxml.jackson.annotation.*
 import com.fasterxml.jackson.annotation.JsonSubTypes.Type
@@ -7,9 +7,9 @@ import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.fasterxml.jackson.databind.jsontype.TypeSerializer
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
-import fhg.glue.odrl.de.fraunhofer.iosb.odrl.glue.GlueContainerPipeline
-import fhg.glue.odrl.de.fraunhofer.iosb.odrl.glue.GlueIdentifiers
-import fhg.glue.odrl.de.fraunhofer.iosb.odrl.parser.JsonLd
+import de.fraunhofer.iosb.odrl.glue.GlueContainerPipeline
+import de.fraunhofer.iosb.odrl.glue.GlueIdentifiers
+import de.fraunhofer.iosb.odrl.parser.JsonLd
 
 @JsonLd(GlueIdentifiers.CONTEXT)
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type", defaultImpl = OdrlRightOperand::class)

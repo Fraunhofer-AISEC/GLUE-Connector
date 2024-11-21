@@ -1,6 +1,6 @@
-package fhg.glue.odrl.de.fraunhofer.iosb.odrl.evaluator
+package de.fraunhofer.iosb.odrl.evaluator
 
-import fhg.glue.odrl.de.fraunhofer.iosb.odrl.*
+import de.fraunhofer.iosb.odrl.*
 
 class OdrlOperatorEvaluator(
     private val leftOperandEvaluator: OdrlLeftOperandEvaluator = OdrlLeftOperandEvaluator(),

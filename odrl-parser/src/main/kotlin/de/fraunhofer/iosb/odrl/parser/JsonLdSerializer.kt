@@ -1,4 +1,4 @@
-package fhg.glue.odrl.de.fraunhofer.iosb.odrl.parser
+package de.fraunhofer.iosb.odrl.parser
 
 import com.apicatalog.jsonld.JsonLd
 import com.apicatalog.jsonld.JsonLdOptions
@@ -22,7 +22,7 @@ class JsonLdSerializer<T>(
         serializers: SerializerProvider
     ) {
         val jsonDocument = JsonDocument.of(StringReader(mapper.writeValueAsString(value)))
-        val context = clazz.getAnnotation(fhg.glue.odrl.de.fraunhofer.iosb.odrl.parser.JsonLd::class.java).context
+        val context = clazz.getAnnotation(de.fraunhofer.iosb.odrl.parser.JsonLd::class.java).context
         val jsonLdObject = JsonLd.compact(jsonDocument, context).options(options).compactToRelative(false).get()
 
         val jsonLdObjectMap: MutableMap<String, JsonValue> = LinkedHashMap(jsonLdObject)

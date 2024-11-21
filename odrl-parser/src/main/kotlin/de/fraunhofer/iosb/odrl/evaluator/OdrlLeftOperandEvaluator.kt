@@ -1,8 +1,8 @@
-package fhg.glue.odrl.de.fraunhofer.iosb.odrl.evaluator
+package de.fraunhofer.iosb.odrl.evaluator
 
-import fhg.glue.odrl.de.fraunhofer.iosb.odrl.*
-import fhg.glue.odrl.de.fraunhofer.iosb.odrl.glue.GlueContainerPipeline
-import fhg.glue.odrl.de.fraunhofer.iosb.odrl.glue.GlueIdentifiers
+import de.fraunhofer.iosb.odrl.*
+import de.fraunhofer.iosb.odrl.glue.GlueContainerPipeline
+import de.fraunhofer.iosb.odrl.glue.GlueIdentifiers
 import java.time.LocalDateTime
 
 class OdrlLeftOperandEvaluator {

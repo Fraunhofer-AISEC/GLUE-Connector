@@ -1,4 +1,4 @@
-package fhg.glue.odrl.de.fraunhofer.iosb.odrl.evaluator
+package de.fraunhofer.iosb.odrl.evaluator
 
 data class Result(
     val success: Boolean,

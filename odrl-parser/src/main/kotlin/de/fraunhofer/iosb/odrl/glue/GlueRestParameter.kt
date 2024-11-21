@@ -1,7 +1,7 @@
-package fhg.glue.odrl.de.fraunhofer.iosb.odrl.glue
+package de.fraunhofer.iosb.odrl.glue
 
 import com.fasterxml.jackson.annotation.*
-import fhg.glue.odrl.de.fraunhofer.iosb.odrl.parser.JsonLd
+import de.fraunhofer.iosb.odrl.parser.JsonLd
 import java.net.URI
 
 @JsonLd(GlueIdentifiers.CONTEXT)

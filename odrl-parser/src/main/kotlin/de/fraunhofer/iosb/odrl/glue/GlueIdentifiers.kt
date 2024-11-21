@@ -1,6 +1,6 @@
-package fhg.glue.odrl.de.fraunhofer.iosb.odrl.glue
+package de.fraunhofer.iosb.odrl.glue
 
-import fhg.glue.odrl.de.fraunhofer.iosb.odrl.OdrlIdentifiers
+import de.fraunhofer.iosb.odrl.OdrlIdentifiers
 
 object GlueIdentifiers {
     const val CONTEXT = OdrlIdentifiers.CONTEXT

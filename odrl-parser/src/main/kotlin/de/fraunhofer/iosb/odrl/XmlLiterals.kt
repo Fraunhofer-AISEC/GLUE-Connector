@@ -1,4 +1,4 @@
-package fhg.glue.odrl.de.fraunhofer.iosb.odrl
+package de.fraunhofer.iosb.odrl
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonTypeInfo

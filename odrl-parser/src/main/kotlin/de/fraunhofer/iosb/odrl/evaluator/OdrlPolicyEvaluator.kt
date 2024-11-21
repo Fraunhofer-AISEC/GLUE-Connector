@@ -1,9 +1,9 @@
-package fhg.glue.odrl.de.fraunhofer.iosb.odrl.evaluator
+package de.fraunhofer.iosb.odrl.evaluator
 
-import fhg.glue.odrl.de.fraunhofer.iosb.odrl.OdrlAgreement
-import fhg.glue.odrl.de.fraunhofer.iosb.odrl.OdrlException
-import fhg.glue.odrl.de.fraunhofer.iosb.odrl.OdrlOffer
-import fhg.glue.odrl.de.fraunhofer.iosb.odrl.OdrlPolicy
+import de.fraunhofer.iosb.odrl.OdrlAgreement
+import de.fraunhofer.iosb.odrl.OdrlException
+import de.fraunhofer.iosb.odrl.OdrlOffer
+import de.fraunhofer.iosb.odrl.OdrlPolicy
 
 class OdrlPolicyEvaluator(
     private val permissionEvaluator: OdrlPermissionEvaluator = OdrlPermissionEvaluator(),

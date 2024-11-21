@@ -1,14 +1,11 @@
-package fhg.glue.odrl
+package de.fraunhofer.iosb.odrl
 
-import fhg.glue.odrl.de.fraunhofer.iosb.odrl.OdrlAction
-import fhg.glue.odrl.de.fraunhofer.iosb.odrl.OdrlConstraint
-import fhg.glue.odrl.de.fraunhofer.iosb.odrl.OdrlIdentifiers
-import fhg.glue.odrl.de.fraunhofer.iosb.odrl.evaluator.Context
-import fhg.glue.odrl.de.fraunhofer.iosb.odrl.evaluator.OdrlPolicyEvaluator
-import fhg.glue.odrl.de.fraunhofer.iosb.odrl.evaluator.Result
-import fhg.glue.odrl.de.fraunhofer.iosb.odrl.glue.GlueContainerPipeline
-import fhg.glue.odrl.de.fraunhofer.iosb.odrl.glue.GlueIdentifiers
-import fhg.glue.odrl.de.fraunhofer.iosb.odrl.parser.OdrlParser
+import de.fraunhofer.iosb.odrl.evaluator.Context
+import de.fraunhofer.iosb.odrl.evaluator.OdrlPolicyEvaluator
+import de.fraunhofer.iosb.odrl.evaluator.Result
+import de.fraunhofer.iosb.odrl.glue.GlueContainerPipeline
+import de.fraunhofer.iosb.odrl.glue.GlueIdentifiers
+import de.fraunhofer.iosb.odrl.parser.OdrlParser
 import kotlinx.coroutines.runBlocking
 import java.io.BufferedReader
 import kotlin.system.exitProcess

@@ -1,4 +1,4 @@
-package fhg.glue.odrl.de.fraunhofer.iosb.odrl
+package de.fraunhofer.iosb.odrl
 
 object OdrlIdentifiers {
     // ODRL vocabulary: https://www.w3.org/TR/odrl-vocab

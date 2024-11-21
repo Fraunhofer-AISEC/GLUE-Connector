@@ -1,8 +1,8 @@
-package fhg.glue.odrl.de.fraunhofer.iosb.odrl.glue
+package de.fraunhofer.iosb.odrl.glue
 
 import com.fasterxml.jackson.annotation.*
 import com.fasterxml.jackson.annotation.JsonSubTypes.Type
-import fhg.glue.odrl.de.fraunhofer.iosb.odrl.parser.JsonLd
+import de.fraunhofer.iosb.odrl.parser.JsonLd
 
 @JsonLd(GlueIdentifiers.CONTEXT)
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type", defaultImpl = GlueParameter::class)

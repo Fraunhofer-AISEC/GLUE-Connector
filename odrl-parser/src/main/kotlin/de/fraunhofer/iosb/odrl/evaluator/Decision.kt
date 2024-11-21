@@ -1,6 +1,6 @@
-package fhg.glue.odrl.de.fraunhofer.iosb.odrl.evaluator
+package de.fraunhofer.iosb.odrl.evaluator
 
-import fhg.glue.odrl.de.fraunhofer.iosb.odrl.OdrlAction
+import de.fraunhofer.iosb.odrl.OdrlAction
 
 data class Decision(
     val evaluationResult: Result,

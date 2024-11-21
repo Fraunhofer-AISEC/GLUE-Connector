@@ -1,9 +1,9 @@
-package fhg.glue.odrl.de.fraunhofer.iosb.odrl.glue
+package de.fraunhofer.iosb.odrl.glue
 
 import com.fasterxml.jackson.annotation.*
-import fhg.glue.odrl.de.fraunhofer.iosb.odrl.OdrlRightOperand
-import fhg.glue.odrl.de.fraunhofer.iosb.odrl.parser.JsonLd
-import fhg.glue.odrl.de.fraunhofer.iosb.odrl.parser.JsonLdBeanValidator
+import de.fraunhofer.iosb.odrl.OdrlRightOperand
+import de.fraunhofer.iosb.odrl.parser.JsonLd
+import de.fraunhofer.iosb.odrl.parser.JsonLdBeanValidator
 import io.konform.validation.Validation
 import io.konform.validation.ValidationError
 import io.konform.validation.jsonschema.minItems

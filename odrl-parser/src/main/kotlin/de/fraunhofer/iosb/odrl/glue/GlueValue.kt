@@ -1,8 +1,8 @@
-package fhg.glue.odrl.de.fraunhofer.iosb.odrl.glue
+package de.fraunhofer.iosb.odrl.glue
 
 import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonTypeInfo
-import fhg.glue.odrl.de.fraunhofer.iosb.odrl.parser.JsonLd
+import de.fraunhofer.iosb.odrl.parser.JsonLd
 import jakarta.json.Json
 import jakarta.json.JsonValue
 

@@ -1,10 +1,10 @@
-package fhg.glue.odrl.de.fraunhofer.iosb.odrl
+package de.fraunhofer.iosb.odrl
 
 import com.fasterxml.jackson.annotation.*
 import com.fasterxml.jackson.annotation.JsonSubTypes.Type
-import fhg.glue.odrl.de.fraunhofer.iosb.odrl.glue.GlueIdentifiers
-import fhg.glue.odrl.de.fraunhofer.iosb.odrl.parser.JsonLd
-import fhg.glue.odrl.de.fraunhofer.iosb.odrl.parser.JsonLdBeanValidator
+import de.fraunhofer.iosb.odrl.glue.GlueIdentifiers
+import de.fraunhofer.iosb.odrl.parser.JsonLd
+import de.fraunhofer.iosb.odrl.parser.JsonLdBeanValidator
 import io.konform.validation.Validation
 import io.konform.validation.ValidationError
 import java.net.URI

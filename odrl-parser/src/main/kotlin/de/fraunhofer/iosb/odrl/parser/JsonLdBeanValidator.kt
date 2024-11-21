@@ -1,4 +1,4 @@
-package fhg.glue.odrl.de.fraunhofer.iosb.odrl.parser
+package de.fraunhofer.iosb.odrl.parser
 
 import io.konform.validation.ValidationError
 

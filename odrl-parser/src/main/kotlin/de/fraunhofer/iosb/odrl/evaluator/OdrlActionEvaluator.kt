@@ -1,9 +1,9 @@
-package fhg.glue.odrl.de.fraunhofer.iosb.odrl.evaluator
+package de.fraunhofer.iosb.odrl.evaluator
 
-import fhg.glue.odrl.de.fraunhofer.iosb.odrl.OdrlAction
-import fhg.glue.odrl.de.fraunhofer.iosb.odrl.OdrlConstraint
-import fhg.glue.odrl.de.fraunhofer.iosb.odrl.OdrlException
-import fhg.glue.odrl.de.fraunhofer.iosb.odrl.OdrlLogicalConstraint
+import de.fraunhofer.iosb.odrl.OdrlAction
+import de.fraunhofer.iosb.odrl.OdrlConstraint
+import de.fraunhofer.iosb.odrl.OdrlException
+import de.fraunhofer.iosb.odrl.OdrlLogicalConstraint
 
 class OdrlActionEvaluator(
     private val constraintEvaluator: OdrlConstraintEvaluator = OdrlConstraintEvaluator(),

@@ -1,4 +1,4 @@
-package fhg.glue.odrl.de.fraunhofer.iosb.odrl
+package de.fraunhofer.iosb.odrl
 
 object XmlIdentifiers {
     const val BOOLEAN = "http://www.w3.org/2001/XMLSchema#boolean"
