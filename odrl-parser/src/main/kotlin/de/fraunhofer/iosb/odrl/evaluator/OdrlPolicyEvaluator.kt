@@ -10,7 +10,7 @@ class OdrlPolicyEvaluator(
     private val prohibitionEvaluator: OdrlProhibitionEvaluator = OdrlProhibitionEvaluator(),
     private val dutyEvaluator: OdrlDutyEvaluator = OdrlDutyEvaluator(),
 ) {
-    fun evaluate(
+    suspend fun evaluate(
         ctx: Context,
         policy: OdrlPolicy,
         actionCallback: OdrlActionCallback? = null,

@@ -10,7 +10,7 @@ class OdrlDutyEvaluator(
     private val assetEvaluator: OdrlAssetEvaluator = OdrlAssetEvaluator(),
     private val constraintEvaluator: OdrlConstraintEvaluator = OdrlConstraintEvaluator(),
 ) {
-    fun isFulfilled(
+    suspend fun isFulfilled(
         ctx: Context,
         duty: OdrlDuty,
         actionCallback: OdrlActionCallback? = null

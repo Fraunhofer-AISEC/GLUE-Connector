@@ -30,7 +30,7 @@ class OdrlActionEvaluator(
         return Result(true)
     }
 
-    fun exercise(
+    suspend fun exercise(
         ctx: Context,
         action: OdrlAction,
         actionCallback: OdrlActionCallback? = null

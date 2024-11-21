@@ -11,7 +11,7 @@ class OdrlPermissionEvaluator(
     private val constraintEvaluator: OdrlConstraintEvaluator = OdrlConstraintEvaluator(),
     private val dutyEvaluator: OdrlDutyEvaluator = OdrlDutyEvaluator(),
 ) {
-    fun isAllowed(
+    suspend fun isAllowed(
         ctx: Context,
         permission: OdrlPermission,
         actionCallback: OdrlActionCallback? = null

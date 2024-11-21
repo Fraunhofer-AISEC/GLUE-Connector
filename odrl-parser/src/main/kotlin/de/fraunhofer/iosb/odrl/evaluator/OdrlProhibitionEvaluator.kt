@@ -18,13 +18,13 @@ class OdrlProhibitionEvaluator(
         // Action has to match
         var result = actionEvaluator.matches(ctx, prohibition.action)
         if (!result.success)
-            return Result(result, "${prohibition.action} does not match");
+            return Result(result, "${prohibition.action} does not match")
 
         // Target has to match, if existing
         if (prohibition.target != null) {
             result = assetEvaluator.matches(ctx, prohibition.target)
             if (!result.success)
-                return Result(result, "${prohibition.target} does not match");
+                return Result(result, "${prohibition.target} does not match")
         } else {
             throw OdrlException("Invalid $prohibition: Expected property 'target'")
         }
@@ -38,13 +38,13 @@ class OdrlProhibitionEvaluator(
                     else -> throw OdrlException("Invalid $c: Expected type 'OdrlConstraint' or 'OdrlLogicalConstraint'")
                 }
             if (!result.success)
-                return Result(result, "$c is not satisfied");
+                return Result(result, "$c is not satisfied")
         }
 
-        return Result(true); // This prohibition disallows context |ctx|
+        return Result(true) // This prohibition disallows context |ctx|
     }
 
-    fun isNotInfringed(
+    suspend fun isNotInfringed(
         ctx: Context,
         prohibition: OdrlProhibition,
         actionCallback: OdrlActionCallback? = null,
@@ -55,7 +55,7 @@ class OdrlProhibitionEvaluator(
             for (r in prohibition.remedy) {
                 val result = dutyEvaluator.isFulfilled(ctx, r, actionCallback)
                 if (!result.success)
-                    return Result(result, "$r is not fulfilled");
+                    return Result(result, "$r is not fulfilled")
             }
         }
 

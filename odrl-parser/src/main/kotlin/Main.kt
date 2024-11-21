@@ -9,6 +9,7 @@ import fhg.glue.odrl.de.fraunhofer.iosb.odrl.evaluator.Result
 import fhg.glue.odrl.de.fraunhofer.iosb.odrl.glue.GlueContainerPipeline
 import fhg.glue.odrl.de.fraunhofer.iosb.odrl.glue.GlueIdentifiers
 import fhg.glue.odrl.de.fraunhofer.iosb.odrl.parser.OdrlParser
+import kotlinx.coroutines.runBlocking
 import java.io.BufferedReader
 import kotlin.system.exitProcess
 
@@ -53,38 +54,40 @@ fun onActionCallback(action: OdrlAction): Result {
 }
 
 fun main() {
-    val p = OdrlParser()
-    val e = OdrlPolicyEvaluator()
+    runBlocking {
+        val p = OdrlParser()
+        val e = OdrlPolicyEvaluator()
 
-    var policy = p.readOdrlPolicy(loadFileOrDie("/policy-example-1.json"))
-    var context = Context("http://www.w3.org/ns/odrl/2/play", "http://example.com/game:9090")
-    println("Evaluating $policy on $context")
-    var decision = e.evaluate(context, policy)
-    println("Decision of policy-example-1.json is $decision (should be: ALLOW)")
+        var policy = p.readOdrlPolicy(loadFileOrDie("/policy-example-1.json"))
+        var context = Context("http://www.w3.org/ns/odrl/2/play", "http://example.com/game:9090")
+        println("Evaluating $policy on $context")
+        var decision = e.evaluate(context, policy)
+        println("Decision of policy-example-1.json is $decision (should be: ALLOW)")
 
-    policy = p.readOdrlPolicy(loadFileOrDie("/policy-example-2.json"))
-    context = Context("http://www.w3.org/ns/odrl/2/distribute", "http://example.com/DataModel1")
-    println("\nEvaluating $policy on $context")
-    decision = e.evaluate(context, policy)
-    println("Decision of policy-example-2.json is $decision (should be: DENY)")
-    println("Detailed decision reasoning: ${decision.evaluationResult.failureReasoning}")
+        policy = p.readOdrlPolicy(loadFileOrDie("/policy-example-2.json"))
+        context = Context("http://www.w3.org/ns/odrl/2/distribute", "http://example.com/DataModel1")
+        println("\nEvaluating $policy on $context")
+        decision = e.evaluate(context, policy)
+        println("Decision of policy-example-2.json is $decision (should be: DENY)")
+        println("Detailed decision reasoning: ${decision.evaluationResult.failureReasoning}")
 
-    policy = p.readOdrlPolicy(loadFileOrDie("/policy-example-3.json"))
-    context = Context("http://www.w3.org/ns/odrl/2/use", "http://dataowner.com/document:1234")
-    println("\nEvaluating $policy on $context")
-    decision = e.evaluate(context, policy, { onActionCallback(it) })
-    println("Decision of policy-example-3.json when USING asset is $decision (should be: ALLOW)")
+        policy = p.readOdrlPolicy(loadFileOrDie("/policy-example-3.json"))
+        context = Context("http://www.w3.org/ns/odrl/2/use", "http://dataowner.com/document:1234")
+        println("\nEvaluating $policy on $context")
+        decision = e.evaluate(context, policy, { onActionCallback(it) })
+        println("Decision of policy-example-3.json when USING asset is $decision (should be: ALLOW)")
 
-    context = Context("http://www.w3.org/ns/odrl/2/distribute", "http://dataowner.com/document:1234")
-    println("\nEvaluating $policy on $context")
-    decision = e.evaluate(context, policy, { onActionCallback(it) })
-    println("Decision of policy-example-3.json when DISTRIBUTING asset is $decision (should be: ALLOW)")
+        context = Context("http://www.w3.org/ns/odrl/2/distribute", "http://dataowner.com/document:1234")
+        println("\nEvaluating $policy on $context")
+        decision = e.evaluate(context, policy, { onActionCallback(it) })
+        println("Decision of policy-example-3.json when DISTRIBUTING asset is $decision (should be: ALLOW)")
 
-    // policy-example-4.json only works with glue-odrl.jsonld in the file system root (e.g. C:\)
-    /*
-    policy = p.readOdrlPolicy(loadFileOrDie("/policy-example-4.json"))
-    println("\nEvaluating $policy on $context")
-    decision = e.evaluate(context, policy, { onActionCallback(it) })
-    println("Decision of policy-example-4.json when DISTRIBUTING asset is $decision (should be: ALLOW)")
-     */
+        // policy-example-4.json only works with glue-odrl.jsonld in the file system root (e.g. C:\)
+        /*
+        policy = p.readOdrlPolicy(loadFileOrDie("/policy-example-4.json"))
+        println("\nEvaluating $policy on $context")
+        decision = e.evaluate(context, policy, { onActionCallback(it) })
+        println("Decision of policy-example-4.json when DISTRIBUTING asset is $decision (should be: ALLOW)")
+         */
+    }
 }
