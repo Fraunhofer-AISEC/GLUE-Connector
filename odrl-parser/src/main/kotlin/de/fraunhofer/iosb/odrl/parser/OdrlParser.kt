@@ -28,6 +28,10 @@ class OdrlParser(val mapper: ObjectMapper = ObjectMapper()) {
         return mapper.readValue(r, OdrlPolicy::class.java);
     }
 
+    fun convertToOdrlPolicy(value: Any): OdrlPolicy {
+        return mapper.convertValue(value, OdrlPolicy::class.java)
+    }
+
     fun writeOdrlPolicy(policy: OdrlPolicy): String {
         return mapper.writeValueAsString(policy)
     }
