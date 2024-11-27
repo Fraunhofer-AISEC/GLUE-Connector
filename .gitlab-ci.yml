@@ -1,11 +1,23 @@
 image: eclipse-temurin:21
 
 stages:
-  - jib_build
+  - build
+  - test
 
 variables:
   GIT_SUBMODULE_STRATEGY: recursive
+  # Instruct Testcontainers to use the daemon of DinD, use port 2375 for non-tls connections.
+  DOCKER_HOST: "tcp://docker:2375"
+  # Instruct Docker not to start over TLS.
+  DOCKER_TLS_CERTDIR: ""
+  # Improve performance with overlayfs.
+  DOCKER_DRIVER: overlay2
 
+# DinD service is required for Testcontainers
+services:
+  - name: docker:dind
+    # explicitly disable tls to avoid docker startup interruption
+    command: ["--tls=false"]
 
 before_script:
 #  - echo `pwd` # debug
@@ -19,11 +31,16 @@ cache:
 
 
 jib_build:
-  stage: jib_build
+  stage: build
   script:
     - ./gradlew jib -Djib.to.auth.username=${CI_REGISTRY_USER} -Djib.to.auth.password=${CI_REGISTRY_PASSWORD} -Djib.to.image=${CI_REGISTRY_IMAGE}:latest
   tags:
       - asprunner
+container_test:
+  image: gradle:5.0
+  stage: test
+  script: ./gradlew test
+
 
 after_script:
   - echo "End CI"
