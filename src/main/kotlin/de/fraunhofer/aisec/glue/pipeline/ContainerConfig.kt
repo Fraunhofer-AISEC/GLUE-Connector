@@ -1,4 +1,4 @@
-package de.fraunhofer.aisec.glue
+package de.fraunhofer.aisec.glue.pipeline
 
 /**
  * The configuration object that is injected into every pipeline container at `/config.json`.
