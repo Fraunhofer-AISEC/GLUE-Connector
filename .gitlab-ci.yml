@@ -40,6 +40,8 @@ container_test:
   image: gradle:5.0
   stage: test
   script: ./gradlew test
+  tags:
+      - asprunner
 
 
 after_script:
