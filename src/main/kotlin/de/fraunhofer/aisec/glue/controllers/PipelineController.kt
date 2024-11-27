@@ -1,11 +1,14 @@
 package de.fraunhofer.aisec.glue.controllers
 
-import de.fraunhofer.aisec.glue.ContainerManager
 import de.fraunhofer.aisec.glue.ContractStore
 import de.fraunhofer.aisec.glue.models.pipeline.PipelineCreateRequest
 import de.fraunhofer.aisec.glue.models.pipeline.PipelineCreateResponse
+import de.fraunhofer.aisec.glue.pipeline.PipelineManager
+import de.fraunhofer.iosb.odrl.OdrlConstraint
+import de.fraunhofer.iosb.odrl.OdrlIdentifiers
 import de.fraunhofer.iosb.odrl.evaluator.Context
 import de.fraunhofer.iosb.odrl.evaluator.OdrlPolicyEvaluator
+import de.fraunhofer.iosb.odrl.glue.GlueContainerPipeline
 import de.fraunhofer.iosb.odrl.glue.GlueIdentifiers
 import io.ktor.http.*
 import io.ktor.server.auth.*
@@ -22,7 +25,7 @@ import kotlin.coroutines.coroutineContext
  * This controller provides an interface for other connectors to manage container pipelines associated with their
  * policies.
  */
-class PipelineController(private val contractStore: ContractStore, private val containerManager: ContainerManager) :
+class PipelineController(private val contractStore: ContractStore, private val pipelineManager: PipelineManager) :
     Controller {
     override fun Route.registerRoutes() {
         authenticate {
@@ -62,23 +65,39 @@ class PipelineController(private val contractStore: ContractStore, private val c
                                 GlueIdentifiers.DEPLOY_PIPELINE -> {
                                     // Since the action callback is not marked with suspend, we have to resort to this
                                     launch {
-                                        val (name, pipeline) =
-                                            containerManager.createPipelineFromAction(
-                                                action,
-                                                publishPorts =
-                                                    listOf(
-                                                        DEFAULT_PORT,
-                                                    ),
-                                            )
+                                        val pipelineDefs =
+                                            action.refinement.filter { r ->
+                                                if (r is OdrlConstraint) {
+                                                    r.leftOperand.uid.toString() == GlueIdentifiers.HAS_CONTAINER_PIPELINE &&
+                                                            r.operator.uid.toString() == OdrlIdentifiers.EQ
+                                                } else {
+                                                    false
+                                                }
+                                            }.map { it as OdrlConstraint }
+
+                                        if (pipelineDefs.isEmpty()) {
+                                            throw Exception("A pipeline deploy action does not contain a pipeline definition")
+                                        }
+                                        if (pipelineDefs.size > 1) {
+                                            throw Exception("A pipeline deploy action contains multiple pipeline definitions")
+                                        }
+
+                                        val pipelineDef =
+                                            pipelineDefs[0].rightOperand.firstOrNull { it is GlueContainerPipeline }
+                                                ?: throw Exception(
+                                                    "Unexpected right operand type for container pipeline constraint",
+                                                )
+
+                                        val pipeline = pipelineManager.createPipeline(pipelineDef)
+
+                                        // If not, the container pipeline might not report the port correctly
 
                                         // Find the exposed port for the first container
-                                        val containerDetails = pipeline.containers[0].inspect()
+                                        val containerDetails = pipeline.getContainerInfo(0)!!
                                         pipelineCreateChannel.trySend(
                                             PipelineCreateResponse(
-                                                name,
-                                                containerDetails.networkSettings?.ports?.get(DEFAULT_PORT)
-                                                    ?.get(0)?.hostPort?.toInt()
-                                                    ?: throw RuntimeException("Error getting port"),
+                                                pipeline.name,
+                                                containerDetails.ports[0].hostPort.toInt(),
                                             ),
                                         )
                                     }
@@ -102,7 +121,7 @@ class PipelineController(private val contractStore: ContractStore, private val c
                     val principal = call.principal<UserIdPrincipal>()
                     val id = call.parameters["id"]!!
 
-                    val status = containerManager.getPipelineStatus(id)
+                    val status = pipelineManager.getPipelineStatus(id)
                     // Currently this only checks if the pipeline exists
                     call.respond(if (status) HttpStatusCode.OK else HttpStatusCode.NotFound)
                 }
@@ -111,7 +130,7 @@ class PipelineController(private val contractStore: ContractStore, private val c
                     val principal = call.principal<UserIdPrincipal>()
                     val id = call.parameters["id"]!!
 
-                    val found = containerManager.deletePipeline(id)
+                    val found = pipelineManager.deletePipeline(id)
                     call.respond(if (found) HttpStatusCode.OK else HttpStatusCode.NotFound)
                 }
             }
