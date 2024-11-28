@@ -4,21 +4,6 @@ stages:
   - build
   - test
 
-variables:
-  GIT_SUBMODULE_STRATEGY: recursive
-  # Instruct Testcontainers to use the daemon of DinD, use port 2375 for non-tls connections.
-  DOCKER_HOST: "tcp://docker:2375"
-  # Instruct Docker not to start over TLS.
-  DOCKER_TLS_CERTDIR: ""
-  # Improve performance with overlayfs.
-  DOCKER_DRIVER: overlay2
-
-# DinD service is required for Testcontainers
-services:
-  - name: docker:dind
-    # explicitly disable tls to avoid docker startup interruption
-    command: ["--tls=false"]
-
 before_script:
 #  - echo `pwd` # debug
 #  - echo "$CI_BUILD_NAME, $CI_BUILD_REF_NAME $CI_BUILD_STAGE" # debug
@@ -57,11 +42,10 @@ kaniko-http-echo-build:
   tags:
     - asprunner
 
-
 container_test:
-  image: gradle:5.0
+  image: $CI_REGISTRY_IMAGE/http-echo
   stage: test
-  script: ./gradlew test
+#  script: ./execute
   tags:
       - asprunner
 
