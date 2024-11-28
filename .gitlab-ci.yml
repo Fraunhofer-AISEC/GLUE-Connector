@@ -45,10 +45,8 @@ kaniko-http-echo-build:
 container_test:
   image: $CI_REGISTRY_IMAGE/http-echo
   stage: test
-#  script: ./execute
   tags:
       - asprunner
-
 
 after_script:
   - echo "End CI"
