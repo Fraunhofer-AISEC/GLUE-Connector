@@ -4,21 +4,6 @@ stages:
   - build
   - test
 
-variables:
-  GIT_SUBMODULE_STRATEGY: recursive
-  # Instruct Testcontainers to use the daemon of DinD, use port 2375 for non-tls connections.
-  DOCKER_HOST: "tcp://docker:2375"
-  # Instruct Docker not to start over TLS.
-  DOCKER_TLS_CERTDIR: ""
-  # Improve performance with overlayfs.
-  DOCKER_DRIVER: overlay2
-
-# DinD service is required for Testcontainers
-services:
-  - name: docker:dind
-    # explicitly disable tls to avoid docker startup interruption
-    command: ["--tls=false"]
-
 before_script:
 #  - echo `pwd` # debug
 #  - echo "$CI_BUILD_NAME, $CI_BUILD_REF_NAME $CI_BUILD_STAGE" # debug
@@ -30,16 +15,37 @@ cache:
     - .gradle/caches
 
 
-jib_build:
+jib_container_pipeline_build:
   stage: build
   script:
     - ./gradlew jib -Djib.to.auth.username=${CI_REGISTRY_USER} -Djib.to.auth.password=${CI_REGISTRY_PASSWORD} -Djib.to.image=${CI_REGISTRY_IMAGE}:latest
   tags:
       - asprunner
+
+kaniko-http-echo-build:
+  variables:
+    DOCKERFILE: "Dockerfile"
+    DOCKER_IMAGE: $CI_REGISTRY_IMAGE/http-echo
+  stage: build
+  image:
+    name: gcr.io/kaniko-project/executor:debug
+    entrypoint: [ "" ]
+  before_script:
+    - mkdir -p /kaniko/.docker
+    - echo "{\"auths\":{\"$CI_REGISTRY\":{\"username\":\"$CI_REGISTRY_USER\",\"password\":\"$CI_REGISTRY_PASSWORD\"}}}" > /kaniko/.docker/config.json
+  script:
+    - /kaniko/executor
+      --context test-containers/http-echo
+      --dockerfile $DOCKERFILE
+      --destination $DOCKER_IMAGE:latest
+    - rm -rf /kaniko/0
+  tags:
+    - asprunner
+
 container_test:
-  image: gradle:5.0
+  image: $CI_REGISTRY_IMAGE/http-echo
   stage: test
-  script: ./gradlew test
+  script: ./execute
   tags:
       - asprunner
 
