@@ -1,6 +1,6 @@
 FROM golang:1.22 AS builder
 WORKDIR /src
-COPY . .
+COPY test-containers/http-echo/ .
 RUN CGO_ENABLED=0 go build -trimpath -ldflags=-buildid= .
 
 FROM scratch
