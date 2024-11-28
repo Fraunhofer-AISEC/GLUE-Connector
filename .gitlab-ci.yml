@@ -49,10 +49,13 @@ kaniko-http-echo-build:
     - mkdir -p /kaniko/.docker
     - echo "{\"auths\":{\"$CI_REGISTRY\":{\"username\":\"$CI_REGISTRY_USER\",\"password\":\"$CI_REGISTRY_PASSWORD\"}}}" > /kaniko/.docker/config.json
   script:
-    - echo "The script of $CI_JOB_NAME should override the extended '.kaniko publish' job"; exit 1
+    - /kaniko/executor
+      --context $CI_PROJECT_DIR
+      --dockerfile $DOCKERFILE
+      --destination $DOCKER_IMAGE:latest
+    - rm -rf /kaniko/0
   tags:
     - asprunner
-
 
 
 container_test:
