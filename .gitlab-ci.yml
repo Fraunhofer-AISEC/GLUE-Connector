@@ -14,7 +14,6 @@ cache:
     - .gradle/wrapper
     - .gradle/caches
 
-
 jib_container_pipeline_build:
   stage: build
   script:
@@ -24,7 +23,7 @@ jib_container_pipeline_build:
 
 kaniko-http-echo-build:
   variables:
-    DOCKERFILE: "Dockerfile"
+    DOCKERFILE: "testcontainers/http-echo/Dockerfile"
     DOCKER_IMAGE: $CI_REGISTRY_IMAGE/http-echo
   stage: build
   image:
