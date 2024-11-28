@@ -23,7 +23,7 @@ jib_container_pipeline_build:
 
 kaniko-http-echo-build:
   variables:
-    DOCKERFILE: "testcontainers/http-echo/Dockerfile"
+    DOCKERFILE: testcontainers/http-echo/Dockerfile
     DOCKER_IMAGE: $CI_REGISTRY_IMAGE/http-echo
   stage: build
   image:
