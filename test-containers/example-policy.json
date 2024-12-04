@@ -23,7 +23,7 @@
                   {
                     "@type": "http://fhg.de/glue/Container",
                     "glue:image": "container-pipeline/proxy",
-                    "glue:hash": "sha256:bc9a24610ef352b0beb58b4065bdaab44bbab1a2a7c22cc423e52b8b932e9f5b",
+                    "glue:hash": "sha256:a4531b520e7053a1b43894e83d4bd53d9f350706c51e27fbc1aa54b4f2999890",
                     "glue:parameter": {
                       "@type": "http://fhg.de/glue/RestParameter",
                       "glue:url": "http://0.0.0.0:1234/dockerEndpoint?key1=value1",
@@ -34,7 +34,7 @@
                   {
                     "@type": "http://fhg.de/glue/Container",
                     "glue:image": "container-pipeline/http-echo",
-                    "glue:hash": "sha256:b0f253b8653b5d11adac8dd3fa960f3d0ded0e673ace705b802d1ce601553170",
+                    "glue:hash": "sha256:1853980d5d73c3d1468fd86adeb1c3bc9ca5b32c96c661febfcce29720dba66f",
                     "glue:parameter": {
                       "@type": "http://fhg.de/glue/RestParameter",
                       "glue:url": "http://0.0.0.0:1234/dockerEndpoint?key1=value1",

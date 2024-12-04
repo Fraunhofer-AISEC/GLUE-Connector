@@ -1,11 +1,9 @@
 package main
 
 import (
-	"fmt"
 	"io"
 	"log"
 	"net/http"
-	"os"
 )
 
 func echo(w http.ResponseWriter, r *http.Request) {
@@ -15,13 +13,8 @@ func echo(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-    if len(os.Args) != 2 {
-		fmt.Fprintf(os.Stderr, "Usage: %0 <listen address>")
-	}
-
-	listenAddress := os.Args[1]
-	log.Printf("Starting echo server on %s", listenAddress)
+	log.Printf("Starting echo server on port 8080")
 
 	http.HandleFunc("/echo", echo)
-	log.Fatal(http.ListenAndServe(listenAddress, http.DefaultServeMux))
+	log.Fatal(http.ListenAndServe("0.0.0.0:8080", http.DefaultServeMux))
 }
