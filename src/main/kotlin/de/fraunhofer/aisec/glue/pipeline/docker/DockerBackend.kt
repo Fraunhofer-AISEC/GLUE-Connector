@@ -142,7 +142,10 @@ class DockerBackend(
     }
 
     override suspend fun getConnectorIp(relativeTo: ContainerInfo): String {
-        TODO("Not yet implemented")
+        val container = dockerClient.containers.get(relativeTo.name).inspect()
+        // If the container is in no network, then this will be null
+        return container.networkSettings?.networks?.values?.firstOrNull()?.gateway
+            ?: throw IllegalStateException("Container ${relativeTo.name} is not networked")
     }
 
     companion object {

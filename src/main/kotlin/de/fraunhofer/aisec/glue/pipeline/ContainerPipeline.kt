@@ -20,9 +20,6 @@ abstract class ContainerPipeline(val name: String) : Closeable {
      */
     abstract suspend fun getContainerInfo(): List<ContainerInfo>
 
-    // TODO: Either provide extra information to inject or integrate this into the create function.
-    //       As-is, the values for the config are backend-specific, so this provides little value.
-
     /**
      * Inject a configuration file into the container.
      */

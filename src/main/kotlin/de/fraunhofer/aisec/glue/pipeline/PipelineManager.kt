@@ -29,8 +29,9 @@ class PipelineManager(
                 val next = containerInfo.getOrNull(i + 1)?.name
 
                 pipeline.injectConfig(i, ContainerConfig(
-                    controller = "TODO: Figure out how networking should work", // backend.getConnectorIp(current)
+                    controller = backend.getConnectorIp(current),
                     nextContainer = next,
+                    parameters = pipelineSpec.containers[i].parameters,
                 ))
             }
 
@@ -46,6 +47,7 @@ class PipelineManager(
                 // TODO: Allow for a timeout on stop before removing and consider errors
                 pipeline.stop()
                 pipeline.remove()
+                // Note: We are not calling close here since that just invokes stop and remove in the background.
             } != null
         }
 
