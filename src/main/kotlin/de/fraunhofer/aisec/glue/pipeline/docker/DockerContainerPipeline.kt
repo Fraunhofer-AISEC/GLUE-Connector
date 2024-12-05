@@ -10,7 +10,11 @@ import de.fraunhofer.aisec.glue.pipeline.ContainerConfig
 import de.fraunhofer.aisec.glue.pipeline.ContainerInfo
 import de.fraunhofer.aisec.glue.pipeline.ContainerPipeline
 import de.fraunhofer.aisec.glue.pipeline.ContainerPort
+import io.ktor.client.plugins.*
+import io.ktor.http.*
 import kotlinx.coroutines.*
+import org.slf4j.LoggerFactory
+import java.util.concurrent.atomic.AtomicBoolean
 
 class DockerContainerPipeline internal constructor(
     name: String,
@@ -18,11 +22,7 @@ class DockerContainerPipeline internal constructor(
     val containers: List<Container>,
     val networks: List<Network>,
 ) : ContainerPipeline(name) {
-    override fun close() {
-        CoroutineScope(Dispatchers.Default).launch {
-            remove()
-        }
-    }
+    private val closed = AtomicBoolean(false)
 
     override suspend fun start() {
         for (container in containers) {
@@ -36,7 +36,16 @@ class DockerContainerPipeline internal constructor(
                 container.stop()
             }
         } catch (e: TimeoutCancellationException) {
-            container.kill()
+            LOG.warn("Could not stop container ${container.name} within timeout")
+            try {
+                container.kill()
+            } catch (e: ClientRequestException) {
+                // Sometimes, the container gets stopped while we try to kill it during the timeout.
+                // In that case, we get an exception here.
+                if (e.response.status != HttpStatusCode.Conflict) {
+                    throw e
+                }
+            }
         }
     }
 
@@ -50,13 +59,33 @@ class DockerContainerPipeline internal constructor(
         }
     }
 
-    override suspend fun remove() {
+    private suspend fun removeImpl() {
         for (container in containers) {
-            container.remove(deleteVolumes = true, force = true)
+            container.runCatching {
+                remove(deleteVolumes = true, force = true)
+            }.onFailure { e ->
+                LOG.error("Could not remove container ${container.name}", e)
+            }
         }
 
         for (network in networks) {
-            network.remove()
+            network.runCatching {
+                remove()
+            }.onFailure { e ->
+                LOG.error("Could not remove network ${network.name}", e)
+            }
+        }
+    }
+
+    override suspend fun remove() {
+        if (closed.compareAndSet(false, true)) {
+            removeImpl()
+        }
+    }
+
+    override fun close() {
+        if (closed.compareAndSet(false, true)) {
+            runBlocking { removeImpl() }
         }
     }
 
@@ -118,5 +147,9 @@ class DockerContainerPipeline internal constructor(
         containers[index].copyToContainer {
             writeFile("config.json", objectMapper.writeValueAsBytes(config))
         }
+    }
+
+    companion object {
+        private val LOG = LoggerFactory.getLogger(DockerContainerPipeline::class.java)
     }
 }
