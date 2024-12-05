@@ -12,6 +12,8 @@ import de.fraunhofer.aisec.glue.pipeline.Backend
 import de.fraunhofer.aisec.glue.pipeline.ContainerInfo
 import de.fraunhofer.aisec.glue.pipeline.ContainerPipeline
 import fhg.glue.odrl.GlueContainerPipeline
+import java.io.File
+import java.net.InetAddress
 
 class DockerBackend(
     private val objectMapper: ObjectMapper,
@@ -22,6 +24,26 @@ class DockerBackend(
         InetUtil.getSubnets(InetUtil.parseInet4Address("10.1.0.0"), 16, subnetLen)
             .map { a -> "${a.hostAddress}/$subnetLen" }
             .iterator()
+
+    // Note: This is an implementation detail of docker that should not be relied upon.
+    // Unfortunately, we don't have much of a choice.
+    // TODO: Investigate the possibility of creating our own marker (e.g. a file or env var) with jib
+    private val selfContainer: Container? by lazy {
+        if (File("/.dockerenv").exists()) {
+            // Docker
+            // This normally works fine, but can fail if the container has a different hostname set.
+            // It may be better to fall back to get the PTR records for the local IP as one of the names is always the
+            // container id (unless of course a different dns is used, but then the whole networking of this system will
+            // fail anyway).
+            Container(dockerClient, InetAddress.getLocalHost().hostName)
+        } else if (File("/run/.containerenv").exists()) {
+            // Podman
+            Container(dockerClient, InetAddress.getLocalHost().hostName)
+        } else {
+            // No container
+            null
+        }
+    }
 
     private fun convertPipeline(
         id: String,
@@ -85,6 +107,8 @@ class DockerBackend(
                 networks.add(network)
                 network.connect(c[0])
                 network.connect(c[1])
+                // We always want to have the container pipeline reachable
+                selfContainer?.let { self -> network.connect(self) }
             }
         } catch (e: Exception) {
             networks.forEach { n -> n.runCatching { remove() } }
@@ -144,8 +168,19 @@ class DockerBackend(
     override suspend fun getConnectorIp(relativeTo: ContainerInfo): String {
         val container = dockerClient.containers.get(relativeTo.name).inspect()
         // If the container is in no network, then this will be null
-        return container.networkSettings?.networks?.values?.firstOrNull()?.gateway
-            ?: throw IllegalStateException("Container ${relativeTo.name} is not networked")
+        val containerNetworks = container.networkSettings?.networks
+            ?: throw IllegalStateException("Container ${relativeTo.name} is in no networks")
+        val address =
+            if (selfContainer != null) {
+                val selfInspect = selfContainer!!.inspect()
+                // Note: This may be O(n^2), but containerNetworks has length at most 2, so 2 calls for every network
+                val sharedNetworks = selfInspect.networkSettings?.networks?.filter { (k, _) -> k in containerNetworks }
+                // Return the ip address of the self container in the shared network
+                sharedNetworks?.values?.firstOrNull()?.ipAddress
+            } else {
+                containerNetworks.values.firstOrNull()?.gateway
+            }
+        return address ?: throw IllegalStateException("No shared address exists with container ${relativeTo.name}")
     }
 
     companion object {
