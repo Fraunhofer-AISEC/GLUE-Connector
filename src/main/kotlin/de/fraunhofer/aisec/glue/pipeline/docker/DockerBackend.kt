@@ -12,12 +12,13 @@ import de.fraunhofer.aisec.glue.pipeline.Backend
 import de.fraunhofer.aisec.glue.pipeline.ContainerInfo
 import de.fraunhofer.aisec.glue.pipeline.ContainerPipeline
 import fhg.glue.odrl.GlueContainerPipeline
+import org.slf4j.LoggerFactory
 import java.io.File
 import java.net.InetAddress
 
 class DockerBackend(
     private val objectMapper: ObjectMapper,
-    private val dockerClient: DockerClient = createDockerClient()
+    private val dockerClient: DockerClient = createDockerClient(),
 ) : Backend {
     private val subnetLen = 29
     private val subnets =
@@ -161,8 +162,9 @@ class DockerBackend(
     override suspend fun getConnectorIp(relativeTo: ContainerInfo): String {
         val container = dockerClient.containers.get(relativeTo.name).inspect()
         // If the container is in no network, then this will be null
-        val containerNetworks = container.networkSettings?.networks
-            ?: throw IllegalStateException("Container ${relativeTo.name} is in no networks")
+        val containerNetworks =
+            container.networkSettings?.networks
+                ?: throw IllegalStateException("Container ${relativeTo.name} is in no networks")
         val address =
             if (selfContainer != null) {
                 val selfInspect = selfContainer!!.inspect()
@@ -177,9 +179,14 @@ class DockerBackend(
     }
 
     companion object {
+        private val LOG = LoggerFactory.getLogger(DockerBackend::class.java)
+
         fun createDockerClient(): DockerClient {
-            val socketPath = System.getenv("DOCKER_SOCKET") ?: "/var/run/docker.sock"
-            return DockerClient(socketPath)
+            // Keep the DOCKER_SOCKET environment variable around for now for backward compatibility
+            return System.getenv("DOCKER_SOCKET")?.let { s ->
+                LOG.warn("Using the DOCKER_SOCKET variable is deprecated. Please use the standard DOCKER_HOST instead")
+                DockerClient(s)
+            } ?: DockerClient.fromEnv()
         }
     }
 }

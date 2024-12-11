@@ -20,7 +20,7 @@ class Network internal constructor(private val client: DockerClient, val name: S
                     ),
             )
 
-        client.httpClient.post("${DockerClient.BASE_URL}/networks/$name/connect") {
+        client.httpClient.post(client.endpoint("networks/$name/connect")) {
             setBody(args)
             contentType(ContentType.Application.Json)
         }
@@ -36,14 +36,14 @@ class Network internal constructor(private val client: DockerClient, val name: S
                 "Force" to force,
             )
 
-        client.httpClient.post("${DockerClient.BASE_URL}/networks/$name/disconnect") {
+        client.httpClient.post(client.endpoint("networks/$name/disconnect")) {
             setBody(args)
             contentType(ContentType.Application.Json)
         }
     }
 
     suspend fun remove() {
-        client.httpClient.delete("${DockerClient.BASE_URL}/networks/$name")
+        client.httpClient.delete(client.endpoint("networks/$name"))
     }
 
     companion object {
