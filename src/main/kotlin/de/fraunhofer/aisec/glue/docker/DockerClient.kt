@@ -15,6 +15,7 @@ import io.ktor.http.*
 import io.ktor.serialization.jackson.*
 import org.slf4j.LoggerFactory
 import java.io.Closeable
+import java.net.URI
 import java.nio.file.Path
 
 class DockerClient(internal val httpClient: HttpClient, private val baseUrl: Url) : Closeable {
@@ -171,9 +172,9 @@ class DockerClient(internal val httpClient: HttpClient, private val baseUrl: Url
 
         fun fromEnv(): DockerClient {
             val envVar = System.getenv("DOCKER_HOST") ?: "unix:///var/run/docker.sock"
-            val url = Url(envVar)
+            val uri = URI(envVar)
 
-            return when (url.protocol.name) {
+            return when (uri.scheme) {
                 // Note: http and https are actually not supported by docker but its more intuitive to allow them as
                 // docker over tcp uses http(s) internally
                 "tcp" -> {
@@ -186,7 +187,7 @@ class DockerClient(internal val httpClient: HttpClient, private val baseUrl: Url
 
                         val (sslContext, trustManager) = TLSHelper.loadDockerTLSParams(certDir)
                         val dockerBaseUrl =
-                            URLBuilder(url).apply {
+                            URLBuilder(uri.toString()).apply {
                                 protocol = URLProtocol("https", 0)
                                 // This looks a bit ugly, but should work to assign the correct default port for the docker
                                 // https protocol. If we use ktor's default mechanism then we'll have problems with port 443
@@ -210,7 +211,7 @@ class DockerClient(internal val httpClient: HttpClient, private val baseUrl: Url
                         )
                     } else {
                         val dockerBaseUrl =
-                            URLBuilder(url).apply {
+                            URLBuilder(uri.toString()).apply {
                                 protocol = URLProtocol("http", 0)
                                 if (port == 0) {
                                     port = 2375
@@ -226,13 +227,13 @@ class DockerClient(internal val httpClient: HttpClient, private val baseUrl: Url
                     }
                 }
                 "unix" -> {
-                    LOG.info("Using docker engine unix socket at ${url.encodedPath}")
+                    LOG.info("Using docker engine unix socket at ${uri.path}")
                     DockerClient(
                         HttpClient(OkHttp) {
                             defaultConfig()
                             engine {
                                 config {
-                                    socketFactory(UnixSocketFactory(url.encodedPath))
+                                    socketFactory(UnixSocketFactory(uri.path))
                                 }
                             }
                         },
@@ -240,7 +241,7 @@ class DockerClient(internal val httpClient: HttpClient, private val baseUrl: Url
                     )
                 }
 
-                else -> throw IllegalArgumentException("Protocol ${url.protocol.name} is not supported")
+                else -> throw IllegalArgumentException("Protocol ${uri.scheme} is not supported")
             }
         }
     }
