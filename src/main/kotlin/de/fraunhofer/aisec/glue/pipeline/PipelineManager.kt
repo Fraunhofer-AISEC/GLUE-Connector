@@ -3,14 +3,14 @@ package de.fraunhofer.aisec.glue.pipeline
 import com.fasterxml.jackson.databind.ObjectMapper
 import de.fraunhofer.aisec.glue.Utils.hexEncode
 import de.fraunhofer.aisec.glue.pipeline.docker.DockerBackend
-import fhg.glue.odrl.GlueContainerPipeline
+import de.fraunhofer.iosb.odrl.glue.GlueContainerPipeline
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlin.random.Random
 
 class PipelineManager(
     private val objectMapper: ObjectMapper,
-    private val backend: Backend = DockerBackend(objectMapper)
+    private val backend: Backend = DockerBackend(objectMapper),
 ) {
     private val pipelines = mutableMapOf<String, ContainerPipeline>()
     private val pipelineMutex = Mutex()
@@ -28,11 +28,14 @@ class PipelineManager(
                 val current = containerInfo[i]
                 val next = containerInfo.getOrNull(i + 1)?.name
 
-                pipeline.injectConfig(i, ContainerConfig(
-                    controller = backend.getConnectorIp(current),
-                    nextContainer = next,
-                    parameters = pipelineSpec.containers[i].parameters,
-                ))
+                pipeline.injectConfig(
+                    i,
+                    ContainerConfig(
+                        controller = backend.getConnectorIp(current),
+                        nextContainer = next,
+                        parameters = pipelineSpec.container[i].parameter,
+                    ),
+                )
             }
 
             pipeline.start()

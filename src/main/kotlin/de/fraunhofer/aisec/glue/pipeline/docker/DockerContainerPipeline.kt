@@ -145,7 +145,10 @@ class DockerContainerPipeline internal constructor(
         return containers.indices.map { i -> getContainerInfo(i)!! }
     }
 
-    override suspend fun injectConfig(index: Int, config: ContainerConfig) {
+    override suspend fun injectConfig(
+        index: Int,
+        config: ContainerConfig,
+    ) {
         containers[index].copyToContainer {
             writeFile("config.json", objectMapper.writeValueAsBytes(config))
         }

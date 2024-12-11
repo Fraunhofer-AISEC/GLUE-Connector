@@ -10,6 +10,7 @@ abstract class ContainerPipeline(val name: String) : Closeable {
     abstract suspend fun remove()
 
     // TODO: Split this up into info and status and cache info
+
     /**
      * Get up-to-date info on the container at the specified index.
      */
@@ -23,5 +24,8 @@ abstract class ContainerPipeline(val name: String) : Closeable {
     /**
      * Inject a configuration file into the container.
      */
-    abstract suspend fun injectConfig(index: Int, config: ContainerConfig)
+    abstract suspend fun injectConfig(
+        index: Int,
+        config: ContainerConfig,
+    )
 }

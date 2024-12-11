@@ -1,6 +1,6 @@
 package de.fraunhofer.aisec.glue.pipeline
 
-import fhg.glue.odrl.GlueContainerPipeline
+import de.fraunhofer.iosb.odrl.glue.GlueContainerPipeline
 
 /**
  * This interface abstracts over all possible backends that a container pipeline may have.

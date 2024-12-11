@@ -70,7 +70,7 @@ class PipelineController(private val contractStore: ContractStore, private val p
                                             action.refinement.filter { r ->
                                                 if (r is OdrlConstraint) {
                                                     r.leftOperand.uid.toString() == GlueIdentifiers.HAS_CONTAINER_PIPELINE &&
-                                                            r.operator.uid.toString() == OdrlIdentifiers.EQ
+                                                        r.operator.uid.toString() == OdrlIdentifiers.EQ
                                                 } else {
                                                     false
                                                 }
@@ -85,7 +85,7 @@ class PipelineController(private val contractStore: ContractStore, private val p
                                         }
 
                                         val pipelineDef =
-                                            pipelineDefs[0].rightOperand.firstOrNull { it is GlueContainerPipeline }
+                                            pipelineDefs[0].rightOperand.firstOrNull() as? GlueContainerPipeline
                                                 ?: throw Exception(
                                                     "Unexpected right operand type for container pipeline constraint",
                                                 )

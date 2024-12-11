@@ -11,7 +11,7 @@ import de.fraunhofer.aisec.glue.docker.model.PortBinding
 import de.fraunhofer.aisec.glue.pipeline.Backend
 import de.fraunhofer.aisec.glue.pipeline.ContainerInfo
 import de.fraunhofer.aisec.glue.pipeline.ContainerPipeline
-import fhg.glue.odrl.GlueContainerPipeline
+import de.fraunhofer.iosb.odrl.glue.GlueContainerPipeline
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.net.InetAddress
@@ -50,7 +50,7 @@ class DockerBackend(
         id: String,
         pipelineDef: GlueContainerPipeline,
     ): MutableList<ContainerCreateRequest> {
-        return pipelineDef.containers.map { c ->
+        return pipelineDef.container.map { c ->
             // TODO: Provide configurable defaults for other parameters
             //       We probably should persist this to the point where we inject the config
             ContainerCreateRequest(
@@ -58,7 +58,7 @@ class DockerBackend(
                 hostConfig =
                     HostConfig(
                         // TODO: In case allowNetwork is true, use an isolated bridge instead of the default bridge
-                        networkMode = if (c.allowNetwork) "bridge" else "none",
+                        networkMode = if (c.allowNetwork == true) "bridge" else "none",
                     ),
                 // Attach labels to the containers so we can recover running pipelines if we crash and/or restart
                 labels =
