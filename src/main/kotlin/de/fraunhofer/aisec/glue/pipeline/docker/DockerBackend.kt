@@ -180,7 +180,10 @@ class DockerBackend(
                 // Return the ip address of the self container in the shared network
                 sharedNetworks?.values?.firstOrNull()?.ipAddress
             } else {
-                containerNetworks.values.firstOrNull()?.gateway
+                // The docker network properties are unfortunately only initialized after the container has started.
+                containerNetworks.keys.firstOrNull()?.let { network ->
+                    dockerClient.networks.get(network).inspect().ipam?.config?.get(0)?.gateway
+                }
             }
         return address ?: throw IllegalStateException("No shared address exists with container ${relativeTo.name}")
     }
