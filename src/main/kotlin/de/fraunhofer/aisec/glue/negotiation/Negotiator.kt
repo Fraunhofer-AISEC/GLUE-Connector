@@ -1,6 +1,6 @@
 package de.fraunhofer.aisec.glue.negotiation
 
-import fhg.glue.odrl.OdrlPolicy
+import de.fraunhofer.iosb.odrl.OdrlPolicy
 
 interface Negotiator {
     /**

@@ -1,0 +1,30 @@
+{
+  "@context": {
+    "rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+    "rdfs": "http://www.w3.org/2000/01/rdf-schema#",
+    "xs": "http://www.w3.org/2001/XMLSchema#",
+    "odrl": "http://www.w3.org/ns/odrl/2/"
+  },
+  "@id": "https://www.aisec.fraunhofer.com/odrl-distribute-to-printer",
+  "@type": "odrl:Policy",
+  "odrl:permission": {
+    "@type": "odrl:Permission",
+    "odrl:target": "http://example.com/DataModel1",
+    "odrl:assignee": "http://example.com/intermediaryParty",
+    "odrl:action": "http://www.w3.org/ns/odrl/2/distribute",
+    "odrl:constraint": [
+      {
+        "@type": "odrl:Constraint",
+        "odrl:leftOperand": "http://www.w3.org/ns/odrl/2/dateTime",
+        "odrl:operator": "http://www.w3.org/ns/odrl/2/lt",
+        "odrl:rightOperand": {
+          "@value": "2015-12-31",
+          "@type": "xs:date"
+        },
+        "odrl:dataType": {
+          "@id": "xs:date"
+        }
+      }
+    ]
+  }
+}

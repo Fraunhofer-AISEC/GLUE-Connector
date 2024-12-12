@@ -1,0 +1,103 @@
+{
+  "@context": "file:/glue-odrl.jsonld",
+  "@id": "http://dataowner.com/policy:1234",
+  "permission": [
+    {
+      "target": "http://dataowner.com/document:1234",
+      "assigner": "http://dataowner.com/org",
+      "assignee": "http://dataconsumer.com/org",
+      "action": "use",
+      "constraint": [
+        {
+          "leftOperand": "dateTime",
+          "operator": "lteq",
+          "rightOperand": {
+            "@value": "2025-12-21",
+            "@type": "xsd:date"
+          }
+        }
+      ],
+      "duty": {
+        "action": {
+          "@id": "http://fhg.de/glue/deployPipeline",
+          "refinement": [
+            {
+              "leftOperand": "containerPipeline",
+              "operator": "eq",
+              "rightOperand": {
+                "@type": "ContainerPipeline",
+                "container": [
+                  {
+                    "@type": "Container",
+                    "image": "test/container1",
+                    "hash": "364a4787748a98c1c28085d4154a06c3a9be9a67c0b08a56b3f69fa8fabf172e",
+                    "allowNetwork": true,
+                    "parameter": {
+                      "@type": "RestParameter",
+                      "httpType": "GET",
+                      "httpUrl": "http://0.0.0.0:1234/dockerEndpoint?key1=value1"
+                    }
+                  },
+                  {
+                    "@type": "Container",
+                    "image": "test/container2",
+                    "hash": "ac924fdd26993b2ad157e3512c4a36ad293491f6eb8d268d6d4e1bf1c5c307ad"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "target": "http://dataowner.com/document:1234",
+      "assigner": "http://dataowner.com/org",
+      "assignee": "http://dataconsumer.com/org",
+      "action": "distribute",
+      "duty": {
+        "action": {
+          "@id": "http://www.w3.org/ns/odrl/2/nextPolicy",
+          "refinement": [
+            {
+              "leftOperand": "containerPipeline",
+              "operator": "eq",
+              "rightOperand": {
+                "@type": "ContainerPipeline",
+                "container": {
+                  "@type": "Container",
+                  "image": "test/policyCompiler",
+                  "hash": "5e7ef9594b0b96c5f591dc9d3462943e340941c770e5e3885a1864b998de016f",
+                  "parameter": [
+                    {
+                      "@type": "RestParameter",
+                      "httpUrl": "http://0.0.0.0:1234/dockerEndpoint",
+                      "httpType": "POST",
+                      "value": {
+                        "@context": "http://www.w3.org/ns/odrl.jsonld",
+                        "@type": "Policy",
+                        "uid": "http://dataowner.com/policy:987",
+                        "permission": [
+                          {
+                            "target": "http://dataowner.com/document:1234",
+                            "assigner": "http://dataconsumer.com/org",
+                            "assignee": "http://fhg.de/glue/ParameterPlaceholder?key=nextDataReceiverUid",
+                            "action": "use",
+                            "constraint": {
+                              "@type": "http://fhg.de/glue/ParameterPlaceholder",
+                              "key": "nextDataReceiverConstraint"
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
