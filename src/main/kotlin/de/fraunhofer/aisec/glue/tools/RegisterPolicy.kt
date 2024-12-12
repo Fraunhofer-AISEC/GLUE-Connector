@@ -101,23 +101,25 @@ fun main(args: Array<String>) {
             val server =
                 embeddedServer(
                     Netty,
-                    applicationEngineEnvironment {
-                        module {
-                            configureAuthentication()
-                            configureSerialization()
-                            routing {
-                                NegotiationController(negotiationManager).apply { registerRoutes() }
-                            }
-                        }
+                    environment = applicationEnvironment {
+                        config = MapApplicationConfig()
+                    },
+                    configure = {
                         connector {
                             host = localHost
                             port = 0
                         }
-                        config = MapApplicationConfig()
                     },
+                    module = {
+                        configureAuthentication()
+                        configureSerialization()
+                        routing {
+                            NegotiationController(negotiationManager).apply { registerRoutes() }
+                        }
+                    }
                 ).start(wait = false)
 
-            addressChan.send(server.resolvedConnectors().first().run { "http://$host:$port" })
+            addressChan.send(server.engine.resolvedConnectors().first().run { "http://$host:$port" })
             closeChan.receive()
 
             server.stop()

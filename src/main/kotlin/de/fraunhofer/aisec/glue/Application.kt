@@ -2,6 +2,7 @@ package de.fraunhofer.aisec.glue
 
 import com.apicatalog.jsonld.JsonLdOptions
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.datatype.jsonp.JSONPModule
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.jacksonMapperBuilder
 import de.fraunhofer.aisec.glue.controllers.Controller
@@ -54,7 +55,7 @@ val defaultDependencies by DI.Module {
         }
     bind<ObjectMapper>() with
         singleton {
-            jacksonMapperBuilder().addModules(JavaTimeModule(), JsonLDModule(JsonLdOptions())).build()
+            jacksonMapperBuilder().addModules(JavaTimeModule(), JsonLDModule(JsonLdOptions()), JSONPModule()).build()
         }
     bind<ContainerManager>() with singleton { ContainerManager(instance()) }
     bind<NegotiationManager>() with singleton { NegotiationManager(instance(), instance(), DummyNegotiator()) }
