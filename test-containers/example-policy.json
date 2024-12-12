@@ -26,7 +26,7 @@
                     "glue:hash": "sha256:a4531b520e7053a1b43894e83d4bd53d9f350706c51e27fbc1aa54b4f2999890",
                     "glue:parameter": {
                       "@type": "http://fhg.de/glue/RestParameter",
-                      "glue:url": "http://0.0.0.0:1234/dockerEndpoint?key1=value1",
+                      "glue:httpUrl": "http://0.0.0.0:1234/dockerEndpoint?key1=value1",
                       "glue:httpType": "GET"
                     },
                     "glue:allowNetwork": true
@@ -37,7 +37,7 @@
                     "glue:hash": "sha256:1853980d5d73c3d1468fd86adeb1c3bc9ca5b32c96c661febfcce29720dba66f",
                     "glue:parameter": {
                       "@type": "http://fhg.de/glue/RestParameter",
-                      "glue:url": "http://0.0.0.0:1234/dockerEndpoint?key1=value1",
+                      "glue:httpUrl": "http://0.0.0.0:1234/dockerEndpoint?key1=value1",
                       "glue:httpType": "GET"
                     },
                     "glue:allowNetwork": true
@@ -80,9 +80,12 @@
                   "glue:parameter": [
                     {
                       "@type": "http://fhg.de/glue/RestParameter",
-                      "glue:url": "http://0.0.0.0:1234/dockerEndpoint",
+                      "glue:httpUrl": "http://0.0.0.0:1234/dockerEndpoint",
                       "glue:httpType": "POST",
-                      "glue:httpBody": "{\"key1\":\"value1\",\"key2\":\"value2\"}"
+                      "glue:value": {
+                        "key": "value",
+                        "placeholder": "http://fhg.de/glue/ParameterPlaceholder?key=computedPlaceholder"
+                      }
                     }
                   ]
                 }

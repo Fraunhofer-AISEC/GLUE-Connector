@@ -4,10 +4,10 @@ import de.fraunhofer.aisec.glue.ContainerManager
 import de.fraunhofer.aisec.glue.ContractStore
 import de.fraunhofer.aisec.glue.models.pipeline.PipelineCreateRequest
 import de.fraunhofer.aisec.glue.models.pipeline.PipelineCreateResponse
-import fhg.glue.odrl.Context
-import fhg.glue.odrl.GlueOdrlIdentifiers
+import de.fraunhofer.iosb.odrl.evaluator.OdrlPolicyEvaluator
+import de.fraunhofer.iosb.odrl.evaluator.Context
+import de.fraunhofer.iosb.odrl.glue.GlueIdentifiers
 import io.ktor.http.*
-import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
@@ -58,9 +58,9 @@ class PipelineController(private val contractStore: ContractStore, private val c
                     val pipelineCreateChannel = Channel<PipelineCreateResponse>(1)
 
                     withContext(coroutineContext) {
-                        contract.evaluate(Context(req.action ?: "TODO: Default action?", req.target)) { action ->
-                            when (action.uid) {
-                                GlueOdrlIdentifiers.DEPLOY_PIPELINE -> {
+                        OdrlPolicyEvaluator().evaluate(Context(req.action ?: "TODO: Default action?", req.target), contract) { action ->
+                            when (action.uid.toString()) {
+                                GlueIdentifiers.DEPLOY_PIPELINE -> {
                                     // Since the action callback is not marked with suspend, we have to resort to this
                                     launch {
                                         val (name, pipeline) =

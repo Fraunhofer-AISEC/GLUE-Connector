@@ -8,7 +8,7 @@ import de.fraunhofer.aisec.glue.models.negotiation.ContractNegotiation
 import de.fraunhofer.aisec.glue.models.negotiation.ContractOfferMessage
 import de.fraunhofer.aisec.glue.models.negotiation.ContractRequestMessage
 import de.fraunhofer.aisec.glue.models.negotiation.NegotiationState
-import fhg.glue.odrl.OdrlPolicy
+import de.fraunhofer.iosb.odrl.OdrlPolicy
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*

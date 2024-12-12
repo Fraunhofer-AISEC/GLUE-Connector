@@ -2,9 +2,10 @@ package de.fraunhofer.aisec.glue
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.introspect.NopAnnotationIntrospector
 import com.fasterxml.jackson.module.kotlin.readValue
 import de.fraunhofer.aisec.glue.negotiation.NegotiationManager
-import fhg.glue.odrl.OdrlPolicy
+import de.fraunhofer.iosb.odrl.OdrlPolicy
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -26,7 +27,7 @@ class ContractStore(
         // Since the ODRL types use generics, we need to preserve types where needed
         activateDefaultTyping(
             polymorphicTypeValidator,
-            ObjectMapper.DefaultTyping.NON_CONCRETE_AND_ARRAYS,
+            ObjectMapper.DefaultTyping.NON_FINAL,
             JsonTypeInfo.As.PROPERTY
         )
     }
@@ -118,15 +119,15 @@ class ContractStore(
         transaction {
             val serialized = objectMapper.writeValueAsString(contract)
 
-            addContractStmt.setString(1, contract.uid)
+            addContractStmt.setString(1, contract.uid.toString())
             addContractStmt.setString(2, serialized)
             addContractStmt.execute()
 
-            for (p in contract.permissions) {
+            for (p in contract.permission) {
                 // TODO: What do we do if there is no target?
-                addLookupStmt.setString(1, p.target?.uid ?: continue)
-                addLookupStmt.setString(2, p.action.uid)
-                addLookupStmt.setString(3, contract.uid)
+                addLookupStmt.setString(1, p.target?.uid?.toString() ?: continue)
+                addLookupStmt.setString(2, p.action.uid.toString())
+                addLookupStmt.setString(3, contract.uid.toString())
                 addLookupStmt.addBatch()
             }
             addLookupStmt.executeBatch()

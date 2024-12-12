@@ -6,10 +6,12 @@ import de.fraunhofer.aisec.glue.docker.DockerClient
 import de.fraunhofer.aisec.glue.docker.model.ContainerCreateRequest
 import de.fraunhofer.aisec.glue.docker.model.HostConfig
 import de.fraunhofer.aisec.glue.docker.model.PortBinding
-import fhg.glue.odrl.GlueContainerPipeline
-import fhg.glue.odrl.GlueOdrlIdentifiers
-import fhg.glue.odrl.OdrlAction
-import fhg.glue.odrl.OdrlIdentifiers
+import de.fraunhofer.iosb.odrl.OdrlAction
+import de.fraunhofer.iosb.odrl.OdrlConstraint
+import de.fraunhofer.iosb.odrl.OdrlIdentifiers
+import de.fraunhofer.iosb.odrl.OdrlLogicalConstraint
+import de.fraunhofer.iosb.odrl.glue.GlueContainerPipeline
+import de.fraunhofer.iosb.odrl.glue.GlueIdentifiers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.io.Closeable
@@ -23,7 +25,7 @@ class ContainerManager(private val objectMapper: ObjectMapper, dockerClient: Doc
     private val dockerClient = dockerClient ?: DockerClient(System.getenv("DOCKER_SOCKET") ?: "/var/run/docker.sock")
 
     private fun dockerReqsForPipeline(pipelineDef: GlueContainerPipeline): MutableList<ContainerCreateRequest> {
-        return pipelineDef.containers.map { c ->
+        return pipelineDef.container.map { c ->
             // TODO: Provide configurable defaults for other parameters
             // TODO: Insert c.params as a config map of some kind (probably a ro module with a single file)
             ContainerCreateRequest(
@@ -31,7 +33,7 @@ class ContainerManager(private val objectMapper: ObjectMapper, dockerClient: Doc
                 hostConfig =
                     HostConfig(
                         // TODO: In case allowNetwork is true, use an isolated bridge instead of the default bridge
-                        networkMode = if (c.allowNetwork) "bridge" else "none",
+                        networkMode = if (c.allowNetwork == true) "bridge" else "none",
                     ),
             )
         }.toMutableList()
@@ -61,12 +63,16 @@ class ContainerManager(private val objectMapper: ObjectMapper, dockerClient: Doc
         action: OdrlAction,
         publishPorts: List<String> = emptyList(),
     ): Pair<String, ContainerPipeline> {
-        assert(action.uid == GlueOdrlIdentifiers.DEPLOY_PIPELINE) { "Only deploy pipeline actions are allowed" }
+        assert(action.uid.toString() == GlueIdentifiers.DEPLOY_PIPELINE) { "Only deploy pipeline actions are allowed" }
 
         val pipelineDefs =
-            action.refinements.filter { r ->
-                r.leftOperand.uid == GlueOdrlIdentifiers.HAS_CONTAINER_PIPELINE && r.operator.operator == OdrlIdentifiers.EQ
-            }
+            action.refinement.filter { r ->
+                when (r) {
+                    is OdrlConstraint -> (r.leftOperand.uid.toString() == GlueIdentifiers.HAS_CONTAINER_PIPELINE && r.operator.uid.toString() == OdrlIdentifiers.EQ)
+                    is OdrlLogicalConstraint -> TODO("Implement pipeline extraction from logical constraints?")
+                    else -> throw IllegalStateException("Constraints of type ${r.javaClass.name} not supported")
+                }
+            }.map { r -> r as OdrlConstraint }
 
         if (pipelineDefs.isEmpty()) {
             throw Exception("A pipeline deploy action does not contain a pipeline definition")
@@ -77,7 +83,7 @@ class ContainerManager(private val objectMapper: ObjectMapper, dockerClient: Doc
         }
 
         val pipelineDef =
-            pipelineDefs[0].rightOperand.value as? GlueContainerPipeline ?: throw Exception(
+            pipelineDefs[0].rightOperand[0] as? GlueContainerPipeline ?: throw Exception(
                 "Unexpected right operand type for container pipeline constraint",
             )
         val createRequests = dockerReqsForPipeline(pipelineDef)

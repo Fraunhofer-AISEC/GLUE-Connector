@@ -5,9 +5,9 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.module.kotlin.convertValue
 import de.fraunhofer.aisec.glue.models.negotiation.*
-import fhg.glue.odrl.OdrlException
-import fhg.glue.odrl.OdrlPolicy
-import fhg.glue.odrl.OdrlPolicyParser
+import de.fraunhofer.iosb.odrl.OdrlException
+import de.fraunhofer.iosb.odrl.OdrlPolicy
+import de.fraunhofer.iosb.odrl.parser.OdrlParser
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -122,7 +122,7 @@ class Negotiation(
     private fun completeNegotiation() {
         LOG.debug("Negotiation completed")
         // The non-null assertion here is safe since the negotiation may only be completed with a contract
-        completed.complete(OdrlPolicyParser().parse(currentPolicy!!))
+        completed.complete(OdrlParser().convertToOdrlPolicy(currentPolicy!!))
     }
 
     /**
@@ -152,7 +152,7 @@ class Negotiation(
 
         val parsedPolicy =
             try {
-                OdrlPolicyParser().parse(req.offer)
+                OdrlParser().convertToOdrlPolicy(req.offer)
             } catch (e: OdrlException) {
                 responseCallback(false)
                 return
@@ -237,7 +237,7 @@ class Negotiation(
 
         val parsedPolicy =
             try {
-                OdrlPolicyParser().parse(req.offer)
+                OdrlParser().convertToOdrlPolicy(req.offer)
             } catch (e: OdrlException) {
                 responseCallback(false)
                 return
@@ -398,13 +398,13 @@ class Negotiation(
 
             val agreement =
                 try {
-                    OdrlPolicyParser().parse(req.agreement)
+                    OdrlParser().convertToOdrlPolicy(req.agreement)
                 } catch (e: OdrlException) {
                     responseCallback(false)
                     return
                 }
 
-            val parsedPolicy = OdrlPolicyParser().parse(currentPolicy!!)
+            val parsedPolicy = OdrlParser().convertToOdrlPolicy(currentPolicy!!)
 
             // If the provider tries to send a (semantically) different agreement, reject and terminate the negotiation.
             // We leave the semantics to the negotiator :)
