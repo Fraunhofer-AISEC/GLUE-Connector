@@ -16,6 +16,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.slf4j.LoggerFactory
+import kotlin.coroutines.coroutineContext
 
 /**
  * This controller provides an interface for other connectors to manage container pipelines associated with their

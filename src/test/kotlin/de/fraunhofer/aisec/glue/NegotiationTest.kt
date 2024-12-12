@@ -30,7 +30,7 @@ import io.ktor.server.auth.*
 import io.ktor.server.config.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
-import io.ktor.server.plugins.callloging.*
+import io.ktor.server.plugins.calllogging.*
 import io.ktor.server.request.*
 import io.ktor.server.routing.*
 import io.ktor.server.testing.*
@@ -227,7 +227,7 @@ class NegotiationTest {
                     validate { creds -> UserIdPrincipal(creds.name) }
                 }
             }
-            install(Routing) {
+            routing {
                 controller.apply { registerRoutes() }
             }
         }
@@ -434,19 +434,23 @@ class NegotiationTest {
             val consumerNegotiationManager = NegotiationManager(testClient, objectMapper, DummyNegotiator())
             val consumerController = NegotiationController(consumerNegotiationManager)
 
-            fun appEnv(
-                role: String,
-                controller: NegotiationController,
-            ) = applicationEngineEnvironment {
-                module {
+            fun testServer(role: String, controller: NegotiationController) = embeddedServer(
+                Netty,
+                environment = applicationEnvironment {
+                    config = MapApplicationConfig("ktor.deployment.parallelism" to "1")
+                },
+                configure = {
+                    connector {
+                        host = "localhost"
+                        port = 0
+                    }
+                },
+                module = {
                     configureSerialization()
                     install(Authentication) {
                         basic {
                             validate { creds -> UserIdPrincipal(creds.name) }
                         }
-                    }
-                    install(Routing) {
-                        controller.apply { registerRoutes() }
                     }
                     install(CallLogging) {
                         level = Level.INFO
@@ -454,23 +458,17 @@ class NegotiationTest {
                             "$role: ${call.request.httpMethod.value} ${call.request.path()} - ${call.response.status()}"
                         }
                     }
+                    routing {
+                        controller.apply { registerRoutes() }
+                    }
                 }
-                connector {
-                    host = "localhost"
-                    port = 0
-                }
-                developmentMode = true
-                config =
-                    MapApplicationConfig(
-                        "ktor.deployment.parallelism" to "1",
-                    )
-            }
+            )
 
-            val provider = embeddedServer(Netty, appEnv("provider", providerController)).start(false)
-            val providerAddress = provider.resolvedConnectors().first().run { "http://$host:$port" }
+            val provider = testServer("provider", providerController).start(false)
+            val providerAddress = provider.engine.resolvedConnectors().first().run { "http://$host:$port" }
 
-            val consumer = embeddedServer(Netty, appEnv("consumer", consumerController)).start(false)
-            val consumerAddress = consumer.resolvedConnectors().first().run { "http://$host:$port" }
+            val consumer = testServer("consumer", consumerController).start(false)
+            val consumerAddress = consumer.engine.resolvedConnectors().first().run { "http://$host:$port" }
 
             // This indirectly checks if the consumer side negotiation completed successfully
             val negotiatedPolicy =
