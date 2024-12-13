@@ -2,9 +2,6 @@ package de.fraunhofer.aisec.glue
 
 import com.apicatalog.jsonld.JsonLdOptions
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.datatype.jsonp.JSONPModule
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
-import com.fasterxml.jackson.module.kotlin.jacksonMapperBuilder
 import de.fraunhofer.aisec.glue.controllers.Controller
 import de.fraunhofer.aisec.glue.controllers.NegotiationController
 import de.fraunhofer.aisec.glue.controllers.PipelineController
@@ -15,6 +12,7 @@ import de.fraunhofer.aisec.glue.negotiation.DummyNegotiator
 import de.fraunhofer.aisec.glue.negotiation.NegotiationManager
 import de.fraunhofer.aisec.glue.plugins.configureAuthentication
 import de.fraunhofer.aisec.glue.plugins.configureSerialization
+import de.fraunhofer.iosb.odrl.parser.OdrlParser
 import io.ktor.client.*
 import io.ktor.client.engine.okhttp.*
 import io.ktor.client.plugins.auth.*
@@ -53,10 +51,7 @@ val defaultDependencies by DI.Module {
                 }
             }
         }
-    bind<ObjectMapper>() with
-        singleton {
-            jacksonMapperBuilder().addModules(JavaTimeModule(), JsonLDModule(JsonLdOptions()), JSONPModule()).build()
-        }
+    bind<ObjectMapper>() with singleton { OdrlParser().mapper }
     bind<ContainerManager>() with singleton { ContainerManager(instance()) }
     bind<NegotiationManager>() with singleton { NegotiationManager(instance(), instance(), DummyNegotiator()) }
     bind<ContractStore>() with singleton { ContractStore(instance(), instance()) }

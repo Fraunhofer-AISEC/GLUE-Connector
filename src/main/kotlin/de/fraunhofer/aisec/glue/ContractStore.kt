@@ -1,8 +1,6 @@
 package de.fraunhofer.aisec.glue
 
-import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.databind.introspect.NopAnnotationIntrospector
 import com.fasterxml.jackson.module.kotlin.readValue
 import de.fraunhofer.aisec.glue.negotiation.NegotiationManager
 import de.fraunhofer.iosb.odrl.OdrlPolicy
@@ -21,17 +19,8 @@ import java.sql.SQLException
 
 class ContractStore(
     private val negotiationManager: NegotiationManager,
-    mapper: ObjectMapper,
+    private val objectMapper: ObjectMapper,
 ) : Closeable {
-    private val objectMapper = mapper.copy().apply {
-        // Since the ODRL types use generics, we need to preserve types where needed
-        activateDefaultTyping(
-            polymorphicTypeValidator,
-            ObjectMapper.DefaultTyping.NON_FINAL,
-            JsonTypeInfo.As.PROPERTY
-        )
-    }
-
     // Currently this is just backed by an in-memory DB
     private val connection = DriverManager.getConnection("jdbc:duckdb:")
     private val connectionMutex = Mutex()
