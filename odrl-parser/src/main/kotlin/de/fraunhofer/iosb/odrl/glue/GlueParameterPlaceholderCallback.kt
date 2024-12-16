@@ -1,7 +1,7 @@
 package de.fraunhofer.iosb.odrl.de.fraunhofer.iosb.odrl.glue
 
-import jakarta.json.JsonValue
+import com.fasterxml.jackson.databind.JsonNode
 
 fun interface GlueParameterPlaceholderCallback {
-    suspend fun getPlaceholderValue(key: String): JsonValue
+    suspend fun getPlaceholderValue(key: String): JsonNode
 }

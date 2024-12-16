@@ -1,11 +1,12 @@
-import com.fasterxml.jackson.core.type.TypeReference
+import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.node.BooleanNode
+import com.fasterxml.jackson.databind.node.NullNode
+import com.fasterxml.jackson.databind.node.TextNode
 import de.fraunhofer.iosb.odrl.*
 import de.fraunhofer.iosb.odrl.de.fraunhofer.iosb.odrl.glue.GlueParameterPlaceholderCallback
 import de.fraunhofer.iosb.odrl.glue.*
 import de.fraunhofer.iosb.odrl.parser.OdrlParser
-import jakarta.json.Json
-import jakarta.json.JsonValue
 import kotlinx.coroutines.runBlocking
 import java.time.LocalDate
 import kotlin.test.BeforeTest
@@ -23,45 +24,44 @@ class GlueValueProcessorTest {
         processor = GlueValueProcessor()
         callback = GlueParameterPlaceholderCallback {
             when (it) {
-                "testKeyString" -> Json.createValue("testValue")
-                "testKeyBool" -> JsonValue.TRUE
+                "testKeyString" -> TextNode.valueOf("testValue")
+                "testKeyBool" -> BooleanNode.valueOf(true)
                 "nextDataReceiverUid" -> getTestNextDataReceiverUid()
                 "nextDataReceiverConstraint" -> getTestNextDataReceiverConstraint()
-                else -> JsonValue.NULL
+                else -> NullNode.getInstance()
             }
         }
     }
 
-    private fun getTestNextDataReceiverUid(): JsonValue {
-        return Json.createValue("http://nextdataowner.com/")
+    private fun getTestNextDataReceiverUid(): TextNode {
+        return TextNode.valueOf("http://nextdataowner.com/")
     }
 
-    private fun getTestNextDataReceiverConstraint(): JsonValue {
-        val s = mapper.writeValueAsString(
+    private fun getTestNextDataReceiverConstraint(): JsonNode {
+        return mapper.convertValue(
             OdrlConstraint(
                 null,
                 OdrlLeftOperand("dateTime"),
                 OdrlOperator("lt"),
                 listOf(XmlDate(LocalDate.of(2035, 12, 31)))
-            )
+            ),
+            JsonNode::class.java
         )
-        val typeRef = object : TypeReference<HashMap<String, Any?>>() {}
-        return Json.createObjectBuilder(mapper.readValue(s, typeRef)).build()
     }
 
     @Test
     fun testPrimitiveParameterReplacement() {
-        val v = GlueValue.create("http://fhg.de/glue/ParameterPlaceholder?key=testKeyString")
+        val v = GlueValue.create(TextNode.valueOf("http://fhg.de/glue/ParameterPlaceholder?key=testKeyString"))
         runBlocking {
-            assertEquals(GlueValue.create("testValue"), processor.resolvePlaceholders(v, callback))
+            assertEquals(GlueValue.create(TextNode.valueOf("testValue")), processor.resolvePlaceholders(v, callback))
         }
     }
 
     @Test
     fun testComplexParameterReplacement() {
-        val v = GlueValue.create(mapOf(Pair("@type", GlueIdentifiers.PARAMETER_PLACEHOLDER), Pair(GlueIdentifiers.KEY, "testKeyBool")))
+        val v = GlueValue.create(mapper.convertValue(GlueParameterPlaceholder("testKeyBool"), JsonNode::class.java))
         runBlocking {
-            assertEquals(GlueValue.create(true), processor.resolvePlaceholders(v, callback))
+            assertEquals(GlueValue.create(BooleanNode.valueOf(true)), processor.resolvePlaceholders(v, callback))
         }
     }
 
@@ -93,12 +93,10 @@ class GlueValueProcessorTest {
         val param = mapper.readValue(s, GlueRestParameter::class.java)
         runBlocking {
             val v = processor.resolvePlaceholders(param.value!!, callback)
-            val permission = v.jsonValue.asJsonObject()[OdrlIdentifiers.HAS_PERMISSION]!!.asJsonObject()
-            val nextDataReceiverUid = permission[OdrlIdentifiers.ASSIGNEE]!!.asJsonObject()["@id"]
-            val nextDataReceiverConstraint = permission[OdrlIdentifiers.HAS_CONSTRAINT]
+            val nextDataReceiverUid = v.jsonNode.findValue(OdrlIdentifiers.ASSIGNEE).get("@id")
+            val nextDataReceiverConstraint = v.jsonNode.findValue(OdrlIdentifiers.HAS_CONSTRAINT)
             assertEquals(getTestNextDataReceiverUid(), nextDataReceiverUid)
             assertEquals(getTestNextDataReceiverConstraint(), nextDataReceiverConstraint)
         }
     }
-
 }
