@@ -13,6 +13,7 @@ import org.ktorm.dsl.batchInsert
 import org.ktorm.dsl.eq
 import org.ktorm.entity.*
 import org.slf4j.LoggerFactory
+import java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor
 
 class ContractStore(
     private val negotiationManager: NegotiationManager,
@@ -103,9 +104,11 @@ class ContractStore(
         ioAsync { connection.contracts.map { it.contract } }
 
     suspend inline fun <T> ioAsync(crossinline block: suspend CoroutineScope.() -> T): T =
-        withContext(Dispatchers.IO) { block() }
+        withContext(LOOM_DISPATCHER) { block() }
 
     companion object {
+        // see https://kt.academy/article/dispatcher-for-backend#why-loom-dispatcher-is-a-perfect-choice--but-only-once-it-gets-stable
+        val LOOM_DISPATCHER = newVirtualThreadPerTaskExecutor().asCoroutineDispatcher()
         private val LOG = LoggerFactory.getLogger(ContractStore::class.java)
     }
 }

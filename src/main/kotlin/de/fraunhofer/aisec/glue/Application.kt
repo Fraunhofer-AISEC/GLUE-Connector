@@ -20,6 +20,7 @@ import io.ktor.client.plugins.auth.providers.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.serialization.jackson.*
 import io.ktor.server.application.*
+import io.ktor.server.netty.EngineMain
 import io.ktor.server.routing.*
 import org.kodein.di.*
 import org.kodein.type.jvmType
@@ -30,7 +31,7 @@ fun main(args: Array<String>) {
         it.level = java.util.logging.Level.ALL
         it.handlers.forEach { h -> h.level = java.util.logging.Level.ALL }
     }
-    io.ktor.server.netty.EngineMain.main(args)
+    EngineMain.main(args)
 }
 
 val defaultDependencies by DI.Module {
