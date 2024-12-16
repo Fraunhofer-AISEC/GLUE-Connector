@@ -1,16 +1,17 @@
 package de.fraunhofer.aisec.glue
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import de.fraunhofer.aisec.glue.tables.Contract
+import de.fraunhofer.aisec.glue.negotiation.NegotiationManager
 import de.fraunhofer.aisec.glue.tables.Contracts
 import de.fraunhofer.aisec.glue.tables.Lookups
-import de.fraunhofer.aisec.glue.negotiation.NegotiationManager
 import de.fraunhofer.iosb.odrl.OdrlPolicy
 import kotlinx.coroutines.*
 import org.apache.commons.dbcp2.BasicDataSource
 import org.ktorm.database.Database
 import org.ktorm.dsl.batchInsert
 import org.ktorm.dsl.eq
+import org.ktorm.dsl.insert
+import org.ktorm.dsl.isNull
 import org.ktorm.entity.*
 import org.slf4j.LoggerFactory
 import java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor
@@ -71,10 +72,10 @@ class ContractStore(
     suspend fun addContract(contract: OdrlPolicy): Unit =
         ioAsync {
             connection.useTransaction {
-                connection.contracts.add(Contract {
-                    this.id = contract.uid.toString()
-                    this.contract = contract
-                })
+                connection.insert(contractsTable) {
+                    set(it.id, contract.uid.toString())
+                    set(it.contract, contract)
+                }
                 connection.batchInsert(lookupsTable) {
                     for (p in contract.permission) {
                         val targetUid = p.target?.uid?.toString() ?: continue
@@ -88,25 +89,22 @@ class ContractStore(
             }
         }
 
-    suspend fun getContract(id: String): OdrlPolicy? =
-        ioAsync { connection.contracts.find { it.id eq id }?.contract }
+    suspend fun getContract(id: String): OdrlPolicy? = ioAsync { connection.contracts.find { it.id eq id }?.contract }
 
     suspend fun getContract(
         target: String,
-        action: String,
+        action: String? = null,
     ): List<OdrlPolicy> =
         ioAsync {
             connection.lookups
                 .filter { it.target eq target }
-                .filter { it.action eq action }
+                .filter { action?.let { a -> it.action eq a } ?: it.action.isNull() }
                 .map { it.contract.contract }
         }
 
-    suspend fun contracts(): List<OdrlPolicy> =
-        ioAsync { connection.contracts.map { it.contract } }
+    suspend fun contracts(): List<OdrlPolicy> = ioAsync { connection.contracts.map { it.contract } }
 
-    suspend inline fun <T> ioAsync(crossinline block: suspend CoroutineScope.() -> T): T =
-        withContext(LOOM_DISPATCHER) { block() }
+    suspend inline fun <T> ioAsync(crossinline block: suspend CoroutineScope.() -> T): T = withContext(LOOM_DISPATCHER) { block() }
 
     companion object {
         // see https://kt.academy/article/dispatcher-for-backend#why-loom-dispatcher-is-a-perfect-choice--but-only-once-it-gets-stable

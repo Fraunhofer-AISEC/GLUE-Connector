@@ -434,11 +434,15 @@ class NegotiationTest {
             val consumerNegotiationManager = NegotiationManager(testClient, objectMapper, DummyNegotiator())
             val consumerController = NegotiationController(consumerNegotiationManager)
 
-            fun testServer(role: String, controller: NegotiationController) = embeddedServer(
+            fun testServer(
+                role: String,
+                controller: NegotiationController,
+            ) = embeddedServer(
                 Netty,
-                environment = applicationEnvironment {
-                    config = MapApplicationConfig("ktor.deployment.parallelism" to "1")
-                },
+                environment =
+                    applicationEnvironment {
+                        config = MapApplicationConfig("ktor.deployment.parallelism" to "1")
+                    },
                 configure = {
                     connector {
                         host = "localhost"
@@ -461,7 +465,7 @@ class NegotiationTest {
                     routing {
                         controller.apply { registerRoutes() }
                     }
-                }
+                },
             )
 
             val provider = testServer("provider", providerController).start(false)

@@ -68,7 +68,11 @@ class ContainerManager(private val objectMapper: ObjectMapper, dockerClient: Doc
         val pipelineDefs =
             action.refinement.filter { r ->
                 when (r) {
-                    is OdrlConstraint -> (r.leftOperand.uid.toString() == GlueIdentifiers.HAS_CONTAINER_PIPELINE && r.operator.uid.toString() == OdrlIdentifiers.EQ)
+                    is OdrlConstraint -> (
+                        r.leftOperand.uid.toString() == GlueIdentifiers.HAS_CONTAINER_PIPELINE &&
+                            r.operator.uid.toString() == OdrlIdentifiers.EQ
+                    )
+
                     is OdrlLogicalConstraint -> TODO("Implement pipeline extraction from logical constraints?")
                     else -> throw IllegalStateException("Constraints of type ${r.javaClass.name} not supported")
                 }

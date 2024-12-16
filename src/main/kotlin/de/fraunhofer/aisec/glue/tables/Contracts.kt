@@ -9,6 +9,7 @@ import org.ktorm.schema.varchar
 
 class Contracts(objectMapper: ObjectMapper) : Table<Contract>("contracts") {
     val id = varchar("id").primaryKey().bindTo { it.id }
-    val contract = json<OdrlPolicy>("contract", objectMapper.copy().registerModules(KtormModule()))
-        .bindTo { it.contract }
+    val contract =
+        json<OdrlPolicy>("contract", objectMapper.copy().registerModules(KtormModule()))
+            .bindTo { it.contract }
 }
