@@ -8,5 +8,5 @@ data class RemotePipelineStatusResponse(
     /** The local ID of the remote pipeline */
     val localId: String,
     /** The status message returned by the remote connector */
-    val remote: PipelineCreateResponse
+    val remote: PipelineCreateResponse,
 )

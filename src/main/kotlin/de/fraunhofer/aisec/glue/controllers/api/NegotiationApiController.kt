@@ -6,7 +6,6 @@ import de.fraunhofer.aisec.glue.models.api.NegotiationCreationRequest
 import de.fraunhofer.aisec.glue.models.api.NegotiationInfoResponse
 import de.fraunhofer.aisec.glue.negotiation.NegotiationManager
 import io.ktor.http.*
-import io.ktor.server.application.*
 import io.ktor.server.plugins.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
@@ -20,17 +19,18 @@ class NegotiationApiController(private val negotiationManager: NegotiationManage
         route("/api/negotiations") {
             // List all negotiations that are currently ongoing on the connector
             get {
-                val negotiations = negotiationManager.getNegotiations()
-                    .map { negotiation ->
-                        val state = negotiation.getStateMessage()
-                        NegotiationInfoResponse(
-                            role = negotiation.role,
-                            peer = negotiation.peerIdentity ?: "unknown",
-                            providerPid = state.providerPid,
-                            consumerPid = state.consumerPid,
-                            state = state.state
-                        )
-                    }
+                val negotiations =
+                    negotiationManager.getNegotiations()
+                        .map { negotiation ->
+                            val state = negotiation.getStateMessage()
+                            NegotiationInfoResponse(
+                                role = negotiation.role,
+                                peer = negotiation.peerIdentity ?: "unknown",
+                                providerPid = state.providerPid,
+                                consumerPid = state.consumerPid,
+                                state = state.state,
+                            )
+                        }
 
                 call.respond(negotiations)
             }
@@ -44,16 +44,17 @@ class NegotiationApiController(private val negotiationManager: NegotiationManage
                 val callbackUrl = URLBuilder(originUrl).appendPathSegments("negotiations").build()
                 //  the url and protocol version is derived.
                 //  For not, it is just the URL with some simple parsing.
-                val peerUrl = run {
-                    val address = if (req.peer.contains("://")) req.peer else "http://${req.peer}"
-                    val builder = URLBuilder(address)
+                val peerUrl =
+                    run {
+                        val address = if (req.peer.contains("://")) req.peer else "http://${req.peer}"
+                        val builder = URLBuilder(address)
 
-                    if (builder.pathSegments.isEmpty()) {
-                        builder.path("negotiations")
+                        if (builder.pathSegments.isEmpty()) {
+                            builder.path("negotiations")
+                        }
+
+                        builder.build()
                     }
-
-                    builder.build()
-                }
 
                 val negotiationFuture = negotiationManager.startNegotiation(peerUrl, callbackUrl, req.contractRequest)
 
@@ -77,5 +78,4 @@ class NegotiationApiController(private val negotiationManager: NegotiationManage
             }
         }
     }
-
 }

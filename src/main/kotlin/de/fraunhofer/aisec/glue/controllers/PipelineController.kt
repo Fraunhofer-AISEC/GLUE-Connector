@@ -4,8 +4,8 @@ import de.fraunhofer.aisec.glue.ContainerManager
 import de.fraunhofer.aisec.glue.ContractStore
 import de.fraunhofer.aisec.glue.models.pipeline.PipelineCreateRequest
 import de.fraunhofer.aisec.glue.models.pipeline.PipelineCreateResponse
-import de.fraunhofer.iosb.odrl.evaluator.OdrlPolicyEvaluator
 import de.fraunhofer.iosb.odrl.evaluator.Context
+import de.fraunhofer.iosb.odrl.evaluator.OdrlPolicyEvaluator
 import de.fraunhofer.iosb.odrl.glue.GlueIdentifiers
 import io.ktor.http.*
 import io.ktor.server.auth.*
@@ -66,9 +66,9 @@ class PipelineController(private val contractStore: ContractStore, private val c
                                             containerManager.createPipelineFromAction(
                                                 action,
                                                 publishPorts =
-                                                listOf(
-                                                    DEFAULT_PORT,
-                                                ),
+                                                    listOf(
+                                                        DEFAULT_PORT,
+                                                    ),
                                             )
 
                                         // Find the exposed port for the first container
@@ -78,8 +78,8 @@ class PipelineController(private val contractStore: ContractStore, private val c
                                                 name,
                                                 containerDetails.networkSettings?.ports?.get(DEFAULT_PORT)
                                                     ?.get(0)?.hostPort?.toInt()
-                                                    ?: throw RuntimeException("Error getting port")
-                                            )
+                                                    ?: throw RuntimeException("Error getting port"),
+                                            ),
                                         )
                                     }
                                     true

@@ -15,14 +15,15 @@ object Utils {
         return builder.toString()
     }
 
-    fun <T> identity(value: T) = value
-
     /**
      * Get the base url that a request has been made against.
      * This is useful when we want to find out the exact point our API is reachable from, provided all reverse proxies
      * in front of us set the correct forwarding headers.
      */
-    fun baseUrlForOrigin(origin: RequestConnectionPoint, backtrack: Int): Url {
+    fun baseUrlForOrigin(
+        origin: RequestConnectionPoint,
+        backtrack: Int,
+    ): Url {
         val segments = origin.uri.split('/').dropLast(backtrack)
         val protocol = URLProtocol.createOrDefault(origin.scheme)
         val builder =

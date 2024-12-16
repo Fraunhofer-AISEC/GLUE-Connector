@@ -58,16 +58,17 @@ fun main(args: Array<String>) {
         exitProcess(1)
     }
 
-    val connectorUrl = run {
-        val address = if (connectorAddress.contains("://")) connectorAddress else "http://$connectorAddress"
-        val builder = URLBuilder(address)
+    val connectorUrl =
+        run {
+            val address = if (connectorAddress.contains("://")) connectorAddress else "http://$connectorAddress"
+            val builder = URLBuilder(address)
 
-        if (builder.pathSegments.isEmpty()) {
-            builder.path("negotiations")
+            if (builder.pathSegments.isEmpty()) {
+                builder.path("negotiations")
+            }
+
+            builder.build()
         }
-
-        builder.build()
-    }
 
     val policy: JsonNode =
         if (policyPath == "-") {
@@ -101,9 +102,10 @@ fun main(args: Array<String>) {
             val server =
                 embeddedServer(
                     Netty,
-                    environment = applicationEnvironment {
-                        config = MapApplicationConfig()
-                    },
+                    environment =
+                        applicationEnvironment {
+                            config = MapApplicationConfig()
+                        },
                     configure = {
                         connector {
                             host = localHost
@@ -116,7 +118,7 @@ fun main(args: Array<String>) {
                         routing {
                             NegotiationController(negotiationManager).apply { registerRoutes() }
                         }
-                    }
+                    },
                 ).start(wait = false)
 
             addressChan.send(server.engine.resolvedConnectors().first().run { "http://$host:$port" })

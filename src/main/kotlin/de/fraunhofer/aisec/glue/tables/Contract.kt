@@ -5,6 +5,7 @@ import org.ktorm.entity.Entity
 
 interface Contract : Entity<Contract> {
     companion object : Entity.Factory<Contract>()
-    var id: String
+
+    val id: String
     var contract: OdrlPolicy
 }
