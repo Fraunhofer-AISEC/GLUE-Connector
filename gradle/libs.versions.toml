@@ -14,6 +14,8 @@ jakarta-json = "2.0.1"
 jib = "3.4.3"
 duckdb = "1.1.1"
 jnr-unixsocket = "0.38.23"
+ktorm = "4.1.1"
+dbcp2 = "2.13.0"
 
 [libraries]
 
@@ -45,6 +47,9 @@ titaniumJsonLd = { group = "com.apicatalog", name = "titanium-json-ld", version.
 jakarta-json = { group = "org.glassfish", name = "jakarta.json", version.ref = "jakarta-json" }
 duckdb = { group = "org.duckdb", name = "duckdb_jdbc", version.ref = "duckdb" }
 jnr-unixsocket = { group = "com.github.jnr", name = "jnr-unixsocket", version.ref = "jnr-unixsocket" }
+ktorm-core = { group = "org.ktorm", name = "ktorm-core", version.ref = "ktorm" }
+ktorm-jackson = { group = "org.ktorm", name = "ktorm-jackson", version.ref = "ktorm" }
+dbcp = { group = "org.apache.commons", name = "commons-dbcp2", version.ref = "dbcp2" }
 
 [plugins]
 kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

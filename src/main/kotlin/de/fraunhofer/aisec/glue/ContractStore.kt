@@ -1,37 +1,38 @@
 package de.fraunhofer.aisec.glue
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
+import de.fraunhofer.aisec.glue.tables.Contract
+import de.fraunhofer.aisec.glue.tables.Contracts
+import de.fraunhofer.aisec.glue.tables.Lookups
 import de.fraunhofer.aisec.glue.negotiation.NegotiationManager
 import de.fraunhofer.iosb.odrl.OdrlPolicy
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
+import org.apache.commons.dbcp2.BasicDataSource
+import org.ktorm.database.Database
+import org.ktorm.dsl.batchInsert
+import org.ktorm.dsl.eq
+import org.ktorm.entity.*
 import org.slf4j.LoggerFactory
-import java.io.Closeable
-import java.sql.DriverManager
-import java.sql.PreparedStatement
-import java.sql.ResultSet
-import java.sql.SQLException
 
 class ContractStore(
     private val negotiationManager: NegotiationManager,
-    private val objectMapper: ObjectMapper,
-) : Closeable {
+    objectMapper: ObjectMapper,
+) {
     // Currently this is just backed by an in-memory DB
-    private val connection = DriverManager.getConnection("jdbc:duckdb:")
-    private val connectionMutex = Mutex()
+    private val dataSource by lazy {
+        BasicDataSource().apply {
+            driverClassName = "org.duckdb.DuckDBDriver"
+            url = "jdbc:duckdb:"
+        }
+    }
 
-    // We use prepared statements more or less only to have an easy guard against SQL injections ;)
-    // The reduced SQL parsing overhead is a nice but unintentional side effect.
-    private val addContractStmt: PreparedStatement
-    private val addLookupStmt: PreparedStatement
-    private val getContractStmt: PreparedStatement
-    private val getLookupStmt: PreparedStatement
-    private val getAllContractsStmt: PreparedStatement
+    private val connection: Database
+        get() = Database.connect(dataSource)
+
+    val contractsTable = Contracts(objectMapper)
+    val Database.contracts get() = this.sequenceOf(contractsTable)
+    val lookupsTable = Lookups(contractsTable)
+    val Database.lookups get() = this.sequenceOf(lookupsTable)
 
     init {
         // TODO: Invert this so the negotiation manager saves contracts
@@ -41,159 +42,70 @@ class ContractStore(
         }
 
         // TODO: Once we use a real store, this part should be in some migrations
-        val initStmt = connection.createStatement()
-        initStmt.addBatch(
-            """
-            CREATE TABLE contracts(
-                id VARCHAR PRIMARY KEY,
-                contract JSON,
-            )
-            """.trimIndent(),
-        )
-        initStmt.addBatch(
-            """
-            CREATE TABLE lookup(
-                target VARCHAR,
-                action VARCHAR,
-                contract VARCHAR,
-                PRIMARY KEY (target, action, contract),
-                FOREIGN KEY (contract) REFERENCES contracts(id),
-            )
-            """.trimIndent(),
-        )
-        initStmt.executeBatch()
-
-        // Since we use multiple prepared statements, we have to handle transactions manually
-        connection.autoCommit = false
-
-        addContractStmt =
-            connection.prepareStatement(
+        dataSource.connection.use {
+            val initStmt = it.createStatement()
+            initStmt.addBatch(
                 """
-                INSERT INTO contracts
-                VALUES ($1, $2)
+                CREATE TABLE contracts(
+                    id VARCHAR PRIMARY KEY,
+                    contract JSON,
+                )
                 """.trimIndent(),
             )
-        addLookupStmt =
-            connection.prepareStatement(
+            initStmt.addBatch(
                 """
-                INSERT INTO lookup
-                VALUES ($1, $2, $3)
+                CREATE TABLE lookup(
+                    target VARCHAR,
+                    action VARCHAR,
+                    contract VARCHAR,
+                    PRIMARY KEY (target, action, contract),
+                    FOREIGN KEY (contract) REFERENCES contracts(id),
+                )
                 """.trimIndent(),
             )
-        getContractStmt =
-            connection.prepareStatement(
-                """
-                SELECT contract
-                FROM contracts
-                WHERE id = $1
-                """.trimIndent(),
-            )
-        getLookupStmt =
-            connection.prepareStatement(
-                """
-                SELECT c.contract
-                FROM contracts c, lookup l
-                WHERE c.id = l.contract AND l.target = $1 AND ($2 IS NULL OR l.action = $2)
-                """.trimIndent(),
-            )
-        getAllContractsStmt =
-            connection.prepareStatement(
-                """
-                SELECT contract FROM contracts
-                """.trimIndent(),
-            )
+            initStmt.executeBatch()
+        }
     }
 
     suspend fun addContract(contract: OdrlPolicy): Unit =
-        transaction {
-            val serialized = objectMapper.writeValueAsString(contract)
-
-            addContractStmt.setString(1, contract.uid.toString())
-            addContractStmt.setString(2, serialized)
-            addContractStmt.execute()
-
-            for (p in contract.permission) {
-                // TODO: What do we do if there is no target?
-                addLookupStmt.setString(1, p.target?.uid?.toString() ?: continue)
-                addLookupStmt.setString(2, p.action.uid.toString())
-                addLookupStmt.setString(3, contract.uid.toString())
-                addLookupStmt.addBatch()
-            }
-            addLookupStmt.executeBatch()
-        }
-
-    // Quick and dirty adapter to make working with the JDBC resultSet nicer
-    private fun ResultSet.rows(): Sequence<ResultSet> =
-        sequence {
-            while (next()) {
-                yield(this@rows)
+        ioAsync {
+            connection.useTransaction {
+                connection.contracts.add(Contract {
+                    this.id = contract.uid.toString()
+                    this.contract = contract
+                })
+                connection.batchInsert(lookupsTable) {
+                    for (p in contract.permission) {
+                        val targetUid = p.target?.uid?.toString() ?: continue
+                        item {
+                            set(it.target, targetUid)
+                            set(it.action, p.action.uid.toString())
+                            set(it.contract, contract.uid.toString())
+                        }
+                    }
+                }
             }
         }
 
     suspend fun getContract(id: String): OdrlPolicy? =
-        transaction {
-            getContractStmt.setString(1, id)
-            getContractStmt.executeQuery().use { result ->
-                result.rows()
-                    .map { r -> r.getString("contract") }
-                    .map { c -> objectMapper.readValue<OdrlPolicy>(c) }
-                    // Note: Due to the primary key constraint, there can be at most one item here
-                    .firstOrNull()
-            }
-        }
+        ioAsync { connection.contracts.find { it.id eq id }?.contract }
 
     suspend fun getContract(
         target: String,
-        action: String?,
+        action: String,
     ): List<OdrlPolicy> =
-        transaction {
-            getLookupStmt.setString(1, target)
-            getLookupStmt.setString(2, action)
-            getLookupStmt.executeQuery().use { result ->
-                result.rows()
-                    .map { r -> r.getString("contract") }
-                    .map{ c -> objectMapper.readValue<OdrlPolicy>(c) }
-                    // We have to do eager evaluation here since we want to close the result set within this function
-                    .toList()
-            }
+        ioAsync {
+            connection.lookups
+                .filter { it.target eq target }
+                .filter { it.action eq action }
+                .map { it.contract.contract }
         }
 
     suspend fun contracts(): List<OdrlPolicy> =
-        transaction {
-            getAllContractsStmt.executeQuery().use { result ->
-                result.rows()
-                    .map { r -> r.getString("contract") }
-                    .map { c -> objectMapper.readValue<OdrlPolicy>(c) }
-                    .toList()
-            }
-        }
+        ioAsync { connection.contracts.map { it.contract } }
 
-    override fun close() {
-        try {
-            addContractStmt.close()
-            addLookupStmt.close()
-            getContractStmt.close()
-            getLookupStmt.close()
-            getAllContractsStmt.close()
-            connection.close()
-        } catch (e: SQLException) {
-            LOG.error("Could not close the contract store properly", e)
-        }
-    }
-
-    private suspend fun <T> transaction(action: suspend () -> T): T =
-        connectionMutex.withLock {
-            return withContext(Dispatchers.IO) {
-                try {
-                    val result = action()
-                    connection.commit()
-                    result
-                } catch (e: Throwable) {
-                    connection.rollback()
-                    throw e
-                }
-            }
-        }
+    suspend inline fun <T> ioAsync(crossinline block: suspend CoroutineScope.() -> T): T =
+        withContext(Dispatchers.IO) { block() }
 
     companion object {
         private val LOG = LoggerFactory.getLogger(ContractStore::class.java)
