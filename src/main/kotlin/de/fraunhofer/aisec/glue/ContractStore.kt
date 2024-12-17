@@ -12,7 +12,10 @@ import org.ktorm.dsl.batchInsert
 import org.ktorm.dsl.eq
 import org.ktorm.dsl.insert
 import org.ktorm.dsl.isNull
-import org.ktorm.entity.*
+import org.ktorm.entity.filter
+import org.ktorm.entity.find
+import org.ktorm.entity.map
+import org.ktorm.entity.sequenceOf
 import org.slf4j.LoggerFactory
 import java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor
 
@@ -24,7 +27,7 @@ class ContractStore(
     private val dataSource by lazy {
         BasicDataSource().apply {
             driverClassName = "org.duckdb.DuckDBDriver"
-            url = "jdbc:duckdb:"
+            url = "jdbc:duckdb::memory:contract_store"
         }
     }
 
