@@ -2,8 +2,8 @@
 
 set -e
 
-./gradlew shadowJar jibDockerBuild
-! docker stop connector
+./gradlew jibDockerBuild
+docker stop connector || true
 docker run --rm --name connector -v /var/run/docker.sock:/var/run/docker.sock -d uc-container-orchestration:1.0-SNAPSHOT
 host_connector_ip="$(docker inspect -f '{{ .NetworkSettings.Networks.bridge.Gateway }}' "connector")"
 docker_connector_ip="$(docker inspect -f '{{ .NetworkSettings.Networks.bridge.IPAddress }}' "connector")"

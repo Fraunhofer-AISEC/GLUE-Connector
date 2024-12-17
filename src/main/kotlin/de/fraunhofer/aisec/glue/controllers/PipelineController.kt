@@ -57,7 +57,9 @@ class PipelineController(private val contractStore: ContractStore, private val p
                     // Note: We have to initialize this here
                     val pipelineCreateChannel = Channel<PipelineCreateResponse>(1)
 
-                    OdrlPolicyEvaluator().evaluate(Context(req.action ?: "TODO: Default action?", req.target), contract,
+                    OdrlPolicyEvaluator().evaluate(
+                        Context(req.action ?: "TODO: Default action?", req.target),
+                        contract,
                         actionCallback = { action ->
                             when (action.uid.toString()) {
                                 GlueIdentifiers.DEPLOY_PIPELINE -> {
@@ -65,7 +67,7 @@ class PipelineController(private val contractStore: ContractStore, private val p
                                         action.refinement.filter { r ->
                                             if (r is OdrlConstraint) {
                                                 r.leftOperand.uid.toString() == GlueIdentifiers.HAS_CONTAINER_PIPELINE &&
-                                                        r.operator.uid.toString() == OdrlIdentifiers.EQ
+                                                    r.operator.uid.toString() == OdrlIdentifiers.EQ
                                             } else {
                                                 false
                                             }
@@ -104,7 +106,8 @@ class PipelineController(private val contractStore: ContractStore, private val p
                                     Result(true)
                                 }
                             }
-                        })
+                        },
+                    )
 
 
                     // Now the container pipeline is set up, return the pipeline ID and port to the caller

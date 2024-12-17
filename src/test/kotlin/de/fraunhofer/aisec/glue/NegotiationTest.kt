@@ -438,13 +438,11 @@ class NegotiationTest {
                     }
                 }
 
-
             val providerContractStore = mockk<ContractStore>()
             coJustRun { providerContractStore.addContract(any()) }
 
             val providerNegotiationManager = NegotiationManager(testClient, objectMapper, DummyNegotiator(), providerContractStore)
             val providerController = NegotiationController(providerNegotiationManager)
-
 
             val consumerContractStore = mockk<ContractStore>()
             coJustRun { consumerContractStore.addContract(any()) }

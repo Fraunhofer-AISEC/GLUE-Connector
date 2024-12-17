@@ -1,10 +1,7 @@
-import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
-
 plugins {
     alias(libs.plugins.kotlin)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ktor)
-    alias(libs.plugins.shadow)
     alias(libs.plugins.spotless)
     alias(libs.plugins.jib)
     application
@@ -63,13 +60,10 @@ tasks.jar {
     }
 }
 
-tasks.withType<ShadowJar> {
-    archiveFileName.set("${project.name}-${project.version}.jar")
-}
-
 tasks.test {
     useJUnitPlatform()
 }
+
 kotlin {
     jvmToolchain(21)
 }

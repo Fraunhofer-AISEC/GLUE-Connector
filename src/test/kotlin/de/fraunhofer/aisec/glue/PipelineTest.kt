@@ -241,8 +241,9 @@ class PipelineTest {
                 ),
             )
 
-        private val testContract = File("test-containers/example-policy.json").reader().use { r ->
-            OdrlParser().readOdrlPolicy(r)
-        }
+        private val testContract =
+            File("test-containers/example-policy.json").reader().use { r ->
+                OdrlParser().readOdrlPolicy(r)
+            }
     }
 }
