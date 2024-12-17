@@ -56,8 +56,8 @@ val defaultDependencies by DI.Module {
         }
     bind<ObjectMapper>() with singleton { OdrlParser().mapper }
     bind<PipelineManager>() with singleton { PipelineManager(instance()) }
-    bind<NegotiationManager>() with singleton { NegotiationManager(instance(), instance(), DummyNegotiator()) }
-    bind<ContractStore>() with singleton { ContractStore(instance(), instance()) }
+    bind<ContractStore>() with singleton { ContractStore(instance()) }
+    bind<NegotiationManager>() with singleton { NegotiationManager(instance(), instance(), DummyNegotiator(), instance()) }
     bind<NegotiationController>() with singleton { NegotiationController(instance()) }
     bind<PipelineController>() with singleton { PipelineController(instance(), instance()) }
     bind<NegotiationApiController>() with singleton { NegotiationApiController(instance()) }

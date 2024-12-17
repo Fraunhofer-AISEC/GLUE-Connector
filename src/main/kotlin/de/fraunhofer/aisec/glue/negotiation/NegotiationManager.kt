@@ -3,6 +3,7 @@ package de.fraunhofer.aisec.glue.negotiation
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.convertValue
+import de.fraunhofer.aisec.glue.ContractStore
 import de.fraunhofer.aisec.glue.jsonld.AsJsonLd.Companion.convertFromJsonLd
 import de.fraunhofer.aisec.glue.models.negotiation.ContractNegotiation
 import de.fraunhofer.aisec.glue.models.negotiation.ContractOfferMessage
@@ -16,7 +17,6 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -28,15 +28,13 @@ class NegotiationManager(
     private val httpClient: HttpClient,
     private val objectMapper: ObjectMapper,
     private val defaultNegotiator: Negotiator,
+    private val contractStore: ContractStore,
 ) {
     private val pidMutex = Mutex()
     private val assignedIds = mutableSetOf<String>()
     private val providerNegotiation = ConcurrentHashMap<String, Negotiation>()
     private val consumerNegotiations = ConcurrentHashMap<String, Negotiation>()
     private val pendingConsumerNegotiations = ConcurrentHashMap<String, MutableSharedFlow<Negotiation?>>()
-
-    private val negotiatedContractsFlow = MutableSharedFlow<OdrlPolicy>()
-    val negotiatedContracts = negotiatedContractsFlow.asSharedFlow()
 
     /**
      * Start a negotiation by sending the provided contract request to the provider.
@@ -300,7 +298,7 @@ class NegotiationManager(
     ) {
         try {
             val policy = negotiation.completed.await()
-            negotiatedContractsFlow.emit(policy)
+            contractStore.addContract(policy)
         } catch (e: Exception) {
             // TODO: More context (ids, identities)
             LOG.info("Policy negotiation completed exceptionally", e)

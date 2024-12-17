@@ -1,11 +1,12 @@
 package de.fraunhofer.aisec.glue
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import de.fraunhofer.aisec.glue.negotiation.NegotiationManager
 import de.fraunhofer.aisec.glue.tables.Contracts
 import de.fraunhofer.aisec.glue.tables.Lookups
 import de.fraunhofer.iosb.odrl.OdrlPolicy
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.withContext
 import org.apache.commons.dbcp2.BasicDataSource
 import org.ktorm.database.Database
 import org.ktorm.dsl.batchInsert
@@ -20,7 +21,6 @@ import org.slf4j.LoggerFactory
 import java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor
 
 class ContractStore(
-    private val negotiationManager: NegotiationManager,
     objectMapper: ObjectMapper,
 ) {
     // Currently this is just backed by an in-memory DB
@@ -40,14 +40,8 @@ class ContractStore(
     val Database.lookups get() = this.sequenceOf(lookupsTable)
 
     init {
-        // TODO: Invert this so the negotiation manager saves contracts
-        //  This also allows for better testing and getting policies from other sources
-        CoroutineScope(Dispatchers.Default).launch {
-            negotiationManager.negotiatedContracts.collect(::addContract)
-        }
-
         // TODO: Once we use a real store, this part should be in some migrations
-        dataSource.connection.use {
+        connection.useConnection {
             val initStmt = it.createStatement()
             initStmt.addBatch(
                 """
