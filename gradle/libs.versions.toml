@@ -1,8 +1,7 @@
 [versions]
-kotlin = "1.9.21"
+kotlin = "2.1.0"
 ktor = "3.0.2"
 kotlinx-coroutines = "1.9.0"
-shadow = "8.3.3"
 spotless = "6.25.0"
 slf4j = "2.0.10"
 okhttp = "4.12.0"
@@ -18,7 +17,6 @@ ktorm = "4.1.1"
 dbcp2 = "2.13.0"
 
 [libraries]
-
 slf4j-api = { group = "org.slf4j", name = "slf4j-api", version.ref = "slf4j" }
 slf4j-jdk14 = { group = "org.slf4j", name = "slf4j-jdk14", version.ref = "slf4j" }
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
@@ -55,6 +53,5 @@ dbcp = { group = "org.apache.commons", name = "commons-dbcp2", version.ref = "db
 kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 ktor = { id = "io.ktor.plugin", version.ref = "ktor" }
-shadow = { id ="com.gradleup.shadow",  version.ref="shadow" }
 spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
 jib = { id = "com.google.cloud.tools.jib", version.ref = "jib" }
