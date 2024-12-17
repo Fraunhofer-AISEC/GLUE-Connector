@@ -1,9 +1,16 @@
 package de.fraunhofer.aisec.glue.docker
 
+import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.*
+import de.fraunhofer.aisec.glue.docker.model.Network as NetworkInspectResult
 
 class Network internal constructor(private val client: DockerClient, val name: String) {
+    suspend fun inspect(): NetworkInspectResult {
+        val resp = client.httpClient.get(client.endpoint("networks/$name"))
+        return resp.body<NetworkInspectResult>()
+    }
+
     suspend fun connect(
         container: Container,
         address: String? = null,
@@ -20,7 +27,7 @@ class Network internal constructor(private val client: DockerClient, val name: S
                     ),
             )
 
-        client.httpClient.post("${DockerClient.BASE_URL}/networks/$name/connect") {
+        client.httpClient.post(client.endpoint("networks/$name/connect")) {
             setBody(args)
             contentType(ContentType.Application.Json)
         }
@@ -36,14 +43,14 @@ class Network internal constructor(private val client: DockerClient, val name: S
                 "Force" to force,
             )
 
-        client.httpClient.post("${DockerClient.BASE_URL}/networks/$name/disconnect") {
+        client.httpClient.post(client.endpoint("networks/$name/disconnect")) {
             setBody(args)
             contentType(ContentType.Application.Json)
         }
     }
 
     suspend fun remove() {
-        client.httpClient.delete("${DockerClient.BASE_URL}/networks/$name")
+        client.httpClient.delete(client.endpoint("networks/$name"))
     }
 
     companion object {
