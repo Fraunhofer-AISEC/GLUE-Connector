@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.jacksonMapperBuilder
 import com.fasterxml.jackson.module.kotlin.readValue
+import de.fraunhofer.aisec.glue.ContractStore
 import de.fraunhofer.aisec.glue.controllers.NegotiationController
 import de.fraunhofer.aisec.glue.jsonld.JsonLDModule
 import de.fraunhofer.aisec.glue.negotiation.DummyNegotiator
@@ -93,7 +94,7 @@ fun main(args: Array<String>) {
                     }
                 }
             }
-        val negotiationManager = NegotiationManager(httpClient, objectMapper, DummyNegotiator(true))
+        val negotiationManager = NegotiationManager(httpClient, objectMapper, DummyNegotiator(true), ContractStore(objectMapper))
 
         val closeChan = Channel<Unit>()
         val addressChan = Channel<String>()
