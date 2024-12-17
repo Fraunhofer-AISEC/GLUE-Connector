@@ -8,6 +8,7 @@ import de.fraunhofer.iosb.odrl.OdrlConstraint
 import de.fraunhofer.iosb.odrl.OdrlIdentifiers
 import de.fraunhofer.iosb.odrl.evaluator.Context
 import de.fraunhofer.iosb.odrl.evaluator.OdrlPolicyEvaluator
+import de.fraunhofer.iosb.odrl.evaluator.Result
 import de.fraunhofer.iosb.odrl.glue.GlueContainerPipeline
 import de.fraunhofer.iosb.odrl.glue.GlueIdentifiers
 import io.ktor.http.*
@@ -60,56 +61,57 @@ class PipelineController(private val contractStore: ContractStore, private val p
                     val pipelineCreateChannel = Channel<PipelineCreateResponse>(1)
 
                     withContext(coroutineContext) {
-                        OdrlPolicyEvaluator().evaluate(Context(req.action ?: "TODO: Default action?", req.target), contract) { action ->
-                            when (action.uid.toString()) {
-                                GlueIdentifiers.DEPLOY_PIPELINE -> {
-                                    // Since the action callback is not marked with suspend, we have to resort to this
-                                    launch {
-                                        val pipelineDefs =
-                                            action.refinement.filter { r ->
-                                                if (r is OdrlConstraint) {
-                                                    r.leftOperand.uid.toString() == GlueIdentifiers.HAS_CONTAINER_PIPELINE &&
-                                                        r.operator.uid.toString() == OdrlIdentifiers.EQ
-                                                } else {
-                                                    false
-                                                }
-                                            }.map { it as OdrlConstraint }
+                        OdrlPolicyEvaluator().evaluate(Context(req.action ?: "TODO: Default action?", req.target), contract,
+                            actionCallback = { action ->
+                                when (action.uid.toString()) {
+                                    GlueIdentifiers.DEPLOY_PIPELINE -> {
+                                        // Since the action callback is not marked with suspend, we have to resort to this
+                                        launch {
+                                            val pipelineDefs =
+                                                action.refinement.filter { r ->
+                                                    if (r is OdrlConstraint) {
+                                                        r.leftOperand.uid.toString() == GlueIdentifiers.HAS_CONTAINER_PIPELINE &&
+                                                                r.operator.uid.toString() == OdrlIdentifiers.EQ
+                                                    } else {
+                                                        false
+                                                    }
+                                                }.map { it as OdrlConstraint }
 
-                                        if (pipelineDefs.isEmpty()) {
-                                            throw Exception("A pipeline deploy action does not contain a pipeline definition")
+                                            if (pipelineDefs.isEmpty()) {
+                                                throw Exception("A pipeline deploy action does not contain a pipeline definition")
+                                            }
+                                            if (pipelineDefs.size > 1) {
+                                                throw Exception("A pipeline deploy action contains multiple pipeline definitions")
+                                            }
+
+                                            val pipelineDef =
+                                                pipelineDefs[0].rightOperand.firstOrNull() as? GlueContainerPipeline
+                                                    ?: throw Exception(
+                                                        "Unexpected right operand type for container pipeline constraint",
+                                                    )
+
+                                            val pipeline = pipelineManager.createPipeline(pipelineDef)
+
+                                            // If not, the container pipeline might not report the port correctly
+
+                                            // Find the exposed port for the first container
+                                            val containerDetails = pipeline.getContainerInfo(0)!!
+                                            pipelineCreateChannel.trySend(
+                                                PipelineCreateResponse(
+                                                    pipeline.name,
+                                                    containerDetails.ports[0].hostPort.toInt(),
+                                                ),
+                                            )
                                         }
-                                        if (pipelineDefs.size > 1) {
-                                            throw Exception("A pipeline deploy action contains multiple pipeline definitions")
-                                        }
-
-                                        val pipelineDef =
-                                            pipelineDefs[0].rightOperand.firstOrNull() as? GlueContainerPipeline
-                                                ?: throw Exception(
-                                                    "Unexpected right operand type for container pipeline constraint",
-                                                )
-
-                                        val pipeline = pipelineManager.createPipeline(pipelineDef)
-
-                                        // If not, the container pipeline might not report the port correctly
-
-                                        // Find the exposed port for the first container
-                                        val containerDetails = pipeline.getContainerInfo(0)!!
-                                        pipelineCreateChannel.trySend(
-                                            PipelineCreateResponse(
-                                                pipeline.name,
-                                                containerDetails.ports[0].hostPort.toInt(),
-                                            ),
-                                        )
+                                        Result(true)
                                     }
-                                    true
+                                    // We don't know how to handle this action...
+                                    else -> {
+                                        LOG.warn("Action ${action.uid} is not handled yet, ignoring for now...")
+                                        Result(true)
+                                    }
                                 }
-                                // We don't know how to handle this action...
-                                else -> {
-                                    LOG.warn("Action ${action.uid} is not handled yet, ignoring for now...")
-                                    true
-                                }
-                            }
-                        }
+                            })
                     }
 
 
