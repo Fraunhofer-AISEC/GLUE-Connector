@@ -17,10 +17,7 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.slf4j.LoggerFactory
-import kotlin.coroutines.coroutineContext
 
 /**
  * This controller provides an interface for other connectors to manage container pipelines associated with their
@@ -61,61 +58,56 @@ class PipelineController(private val contractStore: ContractStore, private val p
                     // Note: We have to initialize this here
                     val pipelineCreateChannel = Channel<PipelineCreateResponse>(1)
 
-                    withContext(coroutineContext) {
-                        OdrlPolicyEvaluator().evaluate(Context(req.action ?: "TODO: Default action?", req.target), contract,
-                            actionCallback = { action ->
-                                when (action.uid.toString()) {
-                                    GlueIdentifiers.DEPLOY_PIPELINE -> {
-                                        // Since the action callback is not marked with suspend, we have to resort to this
-                                        launch {
-                                            val pipelineDefs =
-                                                action.refinement.filter { r ->
-                                                    if (r is OdrlConstraint) {
-                                                        r.leftOperand.uid.toString() == GlueIdentifiers.HAS_CONTAINER_PIPELINE &&
-                                                                r.operator.uid.toString() == OdrlIdentifiers.EQ
-                                                    } else {
-                                                        false
-                                                    }
-                                                }.map { it as OdrlConstraint }
-
-                                            if (pipelineDefs.isEmpty()) {
-                                                throw Exception("A pipeline deploy action does not contain a pipeline definition")
+                    OdrlPolicyEvaluator().evaluate(Context(req.action ?: "TODO: Default action?", req.target), contract,
+                        actionCallback = { action ->
+                            when (action.uid.toString()) {
+                                GlueIdentifiers.DEPLOY_PIPELINE -> {
+                                    val pipelineDefs =
+                                        action.refinement.filter { r ->
+                                            if (r is OdrlConstraint) {
+                                                r.leftOperand.uid.toString() == GlueIdentifiers.HAS_CONTAINER_PIPELINE &&
+                                                        r.operator.uid.toString() == OdrlIdentifiers.EQ
+                                            } else {
+                                                false
                                             }
-                                            // TODO: Is there a case where this could be fine (i.e. if further constraints exist)?
-                                            if (pipelineDefs.size > 1) {
-                                                throw Exception("A pipeline deploy action contains multiple pipeline definitions")
-                                            }
+                                        }.map { it as OdrlConstraint }
 
-                                            val pipelineDef =
-                                                pipelineDefs[0].rightOperand.firstOrNull() as? GlueContainerPipeline
-                                                    ?: throw Exception(
-                                                        "Unexpected right operand type for container pipeline constraint",
-                                                    )
+                                    if (pipelineDefs.isEmpty()) {
+                                        throw Exception("A pipeline deploy action does not contain a pipeline definition")
+                                    }
+                                    // TODO: Is there a case where this could be fine (i.e. if further constraints exist)?
+                                    if (pipelineDefs.size > 1) {
+                                        throw Exception("A pipeline deploy action contains multiple pipeline definitions")
+                                    }
 
-                                            val pipeline = pipelineManager.createPipeline(pipelineDef)
-
-                                            // TODO: Wait until the containers are up/healthy using docker API
-                                            // If not, the container pipeline might not report the port correctly
-
-                                            // Find the exposed port for the first container
-                                            val containerDetails = pipeline.getContainerInfo(0)!!
-                                            pipelineCreateChannel.trySend(
-                                                PipelineCreateResponse(
-                                                    pipeline.name,
-                                                    containerDetails.ports[0].hostPort.toInt(),
-                                                ),
+                                    val pipelineDef =
+                                        pipelineDefs[0].rightOperand.firstOrNull() as? GlueContainerPipeline
+                                            ?: throw Exception(
+                                                "Unexpected right operand type for container pipeline constraint",
                                             )
-                                        }
-                                        Result(true)
-                                    }
-                                    // We don't know how to handle this action...
-                                    else -> {
-                                        LOG.warn("Action ${action.uid} is not handled yet, ignoring for now...")
-                                        Result(true)
-                                    }
+
+                                    val pipeline = pipelineManager.createPipeline(pipelineDef)
+
+                                    // TODO: Wait until the containers are up/healthy using docker API
+                                    // If not, the container pipeline might not report the port correctly
+
+                                    // Find the exposed port for the first container
+                                    val containerDetails = pipeline.getContainerInfo(0)!!
+                                    pipelineCreateChannel.trySend(
+                                        PipelineCreateResponse(
+                                            pipeline.name,
+                                            containerDetails.ports[0].hostPort.toInt(),
+                                        ),
+                                    )
+                                    Result(true)
                                 }
-                            })
-                    }
+                                // We don't know how to handle this action...
+                                else -> {
+                                    LOG.warn("Action ${action.uid} is not handled yet, ignoring for now...")
+                                    Result(true)
+                                }
+                            }
+                        })
 
                     // TODO: Make sure that a pipeline was actually created
 
