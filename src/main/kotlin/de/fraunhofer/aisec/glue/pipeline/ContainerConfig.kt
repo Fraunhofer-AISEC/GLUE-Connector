@@ -1,4 +1,6 @@
-package de.fraunhofer.aisec.glue
+package de.fraunhofer.aisec.glue.pipeline
+
+import de.fraunhofer.iosb.odrl.glue.GlueParameter
 
 /**
  * The configuration object that is injected into every pipeline container at `/config.json`.
@@ -11,7 +13,12 @@ data class ContainerConfig(
     /**
      * The address or hostname the next container is reachable on or null if this is the last container in the pipeline.
      * For now, this is just the name of the container.
-     *       Alternatively, we can also add a port to the config that we just expect the container to listen on.
      */
     val nextContainer: String?,
+    /**
+     * The values of all arguments from the policy as specified by its parameters.
+     * Parameters will be identified by their full ODRL/JsonLD types with the namespace expanded.
+     */
+    val parameters: List<GlueParameter>,
+    //       We probably don't need to include the parameters to expand since it should know that already
 )

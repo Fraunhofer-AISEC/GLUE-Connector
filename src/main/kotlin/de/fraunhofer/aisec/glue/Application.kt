@@ -10,6 +10,7 @@ import de.fraunhofer.aisec.glue.controllers.api.RemotePipelineApiController
 import de.fraunhofer.aisec.glue.jsonld.JsonLDModule
 import de.fraunhofer.aisec.glue.negotiation.DummyNegotiator
 import de.fraunhofer.aisec.glue.negotiation.NegotiationManager
+import de.fraunhofer.aisec.glue.pipeline.PipelineManager
 import de.fraunhofer.aisec.glue.plugins.configureAuthentication
 import de.fraunhofer.aisec.glue.plugins.configureSerialization
 import de.fraunhofer.iosb.odrl.parser.OdrlParser
@@ -53,9 +54,9 @@ val defaultDependencies by DI.Module {
             }
         }
     bind<ObjectMapper>() with singleton { OdrlParser().mapper }
-    bind<ContainerManager>() with singleton { ContainerManager(instance()) }
-    bind<NegotiationManager>() with singleton { NegotiationManager(instance(), instance(), DummyNegotiator()) }
-    bind<ContractStore>() with singleton { ContractStore(instance(), instance()) }
+    bind<PipelineManager>() with singleton { PipelineManager(instance()) }
+    bind<ContractStore>() with singleton { ContractStore(instance()) }
+    bind<NegotiationManager>() with singleton { NegotiationManager(instance(), instance(), DummyNegotiator(), instance()) }
     bind<NegotiationController>() with singleton { NegotiationController(instance()) }
     bind<PipelineController>() with singleton { PipelineController(instance(), instance()) }
     bind<NegotiationApiController>() with singleton { NegotiationApiController(instance()) }

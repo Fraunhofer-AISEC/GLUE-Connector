@@ -34,10 +34,11 @@ import io.ktor.server.plugins.calllogging.*
 import io.ktor.server.request.*
 import io.ktor.server.routing.*
 import io.ktor.server.testing.*
+import io.mockk.coJustRun
+import io.mockk.coVerify
+import io.mockk.mockk
 import jakarta.json.JsonObject
-import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.slf4j.event.Level
 import java.io.File
@@ -89,7 +90,10 @@ class NegotiationTest {
                         }
                     }
                 }
-            val negotiationManager = NegotiationManager(httpClient, objectMapper, DummyNegotiator(true))
+            val contractStore = mockk<ContractStore>()
+            coJustRun { contractStore.addContract(any()) }
+
+            val negotiationManager = NegotiationManager(httpClient, objectMapper, DummyNegotiator(true), contractStore)
 
             val contractRequest =
                 ContractRequestMessage(
@@ -128,6 +132,10 @@ class NegotiationTest {
 
             assertTrue(negotiation.completed.isCompleted)
             val result = negotiation.completed.await()
+
+            // Verify that the returned and stored policies are the same
+            coVerify { contractStore.addContract(result) }
+
         }
 
     @Test
@@ -154,7 +162,9 @@ class NegotiationTest {
                         }
                     }
                 }
-            val negotiationManager = NegotiationManager(httpClient, objectMapper, DummyNegotiator())
+            val contractStore = mockk<ContractStore>()
+            coJustRun { contractStore.addContract(any()) }
+            val negotiationManager = NegotiationManager(httpClient, objectMapper, DummyNegotiator(), contractStore)
 
             val contractOffer =
                 ContractOfferMessage(
@@ -210,6 +220,8 @@ class NegotiationTest {
 
             assertTrue(negotiation.completed.isCompleted)
             val result = negotiation.completed.await()
+
+            coVerify { contractStore.addContract(result) }
         }
 
     private fun ApplicationTestBuilder.configureTestApp(controller: Controller) {
@@ -263,7 +275,8 @@ class NegotiationTest {
                         }
                     }
                 }
-            val negotiationManager = NegotiationManager(httpClient, objectMapper, DummyNegotiator())
+            val contractStore = ContractStore(objectMapper)
+            val negotiationManager = NegotiationManager(httpClient, objectMapper, DummyNegotiator(), contractStore)
             val controller = NegotiationController(negotiationManager)
 
             configureTestApp(controller)
@@ -335,7 +348,9 @@ class NegotiationTest {
                         }
                     }
                 }
-            val negotiationManager = NegotiationManager(httpClient, objectMapper, DummyNegotiator())
+            val contractStore = mockk<ContractStore>()
+            coJustRun { contractStore.addContract(any()) }
+            val negotiationManager = NegotiationManager(httpClient, objectMapper, DummyNegotiator(), contractStore)
             val controller = NegotiationController(negotiationManager)
 
             configureTestApp(controller)
@@ -423,11 +438,18 @@ class NegotiationTest {
                     }
                 }
 
-            val providerNegotiationManager = NegotiationManager(testClient, objectMapper, DummyNegotiator())
-            val providerNegotiationFuture = async { providerNegotiationManager.negotiatedContracts.first() }
+
+            val providerContractStore = mockk<ContractStore>()
+            coJustRun { providerContractStore.addContract(any()) }
+
+            val providerNegotiationManager = NegotiationManager(testClient, objectMapper, DummyNegotiator(), providerContractStore)
             val providerController = NegotiationController(providerNegotiationManager)
 
-            val consumerNegotiationManager = NegotiationManager(testClient, objectMapper, DummyNegotiator())
+
+            val consumerContractStore = mockk<ContractStore>()
+            coJustRun { consumerContractStore.addContract(any()) }
+
+            val consumerNegotiationManager = NegotiationManager(testClient, objectMapper, DummyNegotiator(), consumerContractStore)
             val consumerController = NegotiationController(consumerNegotiationManager)
 
             fun testServer(
@@ -479,8 +501,8 @@ class NegotiationTest {
                     null,
                 ).await()
 
-            // Check if the provider-side negotiation completed successfully as well (if not, this will time out)
-            providerNegotiationFuture.await()
+            coVerify { providerContractStore.addContract(negotiatedPolicy) }
+            coVerify { consumerContractStore.addContract(negotiatedPolicy) }
         }
 
 

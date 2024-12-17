@@ -15,36 +15,40 @@ import io.ktor.http.*
 import io.ktor.serialization.jackson.*
 import org.slf4j.LoggerFactory
 import java.io.Closeable
+import java.net.URI
+import java.nio.file.Path
 
-class DockerClient(dockerSocket: String = "/var/run/docker.sock") : Closeable {
-    internal val httpClient =
-        HttpClient(OkHttp) {
-            expectSuccess = true
-            engine {
-                config {
-                    socketFactory(UnixSocketFactory(dockerSocket))
+class DockerClient(internal val httpClient: HttpClient, private val baseUrl: Url) : Closeable {
+    /**
+     * Docker constructor for backward compatibility only.
+     * Please prefer [fromEnv] to ensure that different environments are picked up correctly.
+     */
+    constructor(dockerSocket: String = "/var/lib/docker.sock") :
+        this(
+            HttpClient(OkHttp) {
+                defaultConfig()
+                engine {
+                    config {
+                        socketFactory(UnixSocketFactory(dockerSocket))
+                    }
                 }
-            }
-            install(ContentNegotiation) {
-                jackson(streamRequestBody = false) {
-                    setSerializationInclusion(JsonInclude.Include.NON_NULL)
-                    // Docker can apparently include fields from newer protocol revisions, which we should ignore
-                    configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-                }
-            }
-            install(HttpTimeout) {
-                // The docker daemon will wait for some time before killing a container if it refuses to stop
-                // If 30s is too long, the application will need to enforce its own timeout
-                socketTimeoutMillis = 30000
-            }
-        }
+            },
+            UNIX_BASE_URL,
+        )
+
+    /**
+     * Convert a relative URL path to an absolute URL suitable for this docker client.
+     */
+    internal fun endpoint(path: String): Url {
+        return URLBuilder(baseUrl).appendEncodedPathSegments(path).build()
+    }
 
     override fun close() {
         httpClient.close()
     }
 
     suspend fun ping() {
-        httpClient.head("$BASE_URL/_ping")
+        httpClient.head(endpoint("_ping"))
     }
 
     inner class Containers {
@@ -85,7 +89,7 @@ class DockerClient(dockerSocket: String = "/var/run/docker.sock") : Closeable {
             name: String,
             req: ContainerCreateRequest,
         ): Container {
-            httpClient.post("$BASE_URL/containers/create") {
+            httpClient.post(endpoint("containers/create")) {
                 parameter("name", name)
                 setBody(req)
                 contentType(ContentType.Application.Json)
@@ -129,7 +133,7 @@ class DockerClient(dockerSocket: String = "/var/run/docker.sock") : Closeable {
                         ),
                 )
 
-            httpClient.post("$BASE_URL/networks/create") {
+            httpClient.post(endpoint("networks/create")) {
                 setBody(args)
                 contentType(ContentType.Application.Json)
             }
@@ -146,6 +150,99 @@ class DockerClient(dockerSocket: String = "/var/run/docker.sock") : Closeable {
 
     companion object {
         private val LOG = LoggerFactory.getLogger(DockerClient::class.java)
-        internal const val BASE_URL = "http://localhost/v1.43"
+
+        private const val API_VERSION = "v1.43"
+        private val UNIX_BASE_URL = Url("http://localhost/$API_VERSION")
+
+        private val defaultConfig: HttpClientConfig<OkHttpConfig>.() -> Unit = {
+            expectSuccess = true
+            install(ContentNegotiation) {
+                jackson(streamRequestBody = false) {
+                    setSerializationInclusion(JsonInclude.Include.NON_NULL)
+                    // Docker can apparently include fields from newer protocol revisions, which we should ignore
+                    configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+                }
+            }
+            install(HttpTimeout) {
+                // The docker daemon will wait for some time before killing a container if it refuses to stop
+                // If 30s is too long, the application will need to enforce its own timeout
+                socketTimeoutMillis = 30000
+            }
+        }
+
+        fun fromEnv(): DockerClient {
+            val envVar = System.getenv("DOCKER_HOST") ?: "unix:///var/run/docker.sock"
+            val uri = URI(envVar)
+
+            return when (uri.scheme) {
+                // Note: http and https are actually not supported by docker but its more intuitive to allow them as
+                // docker over tcp uses http(s) internally
+                "tcp" -> {
+                    val tlsVerify = System.getenv("DOCKER_TLS_VERIFY")
+                    if (tlsVerify != null && tlsVerify != "") {
+                        val certDir =
+                            System.getenv(
+                                "DOCKER_CERT_PATH",
+                            ) ?: Path.of(System.getProperty("user.home"), ".docker").toString()
+
+                        val (sslContext, trustManager) = TLSHelper.loadDockerTLSParams(certDir)
+                        val dockerBaseUrl =
+                            URLBuilder(uri.toString()).apply {
+                                protocol = URLProtocol("https", 0)
+                                // This looks a bit ugly, but should work to assign the correct default port for the docker
+                                // https protocol. If we use ktor's default mechanism then we'll have problems with port 443
+                                if (port == 0) {
+                                    port = 2376
+                                }
+                                appendPathSegments(API_VERSION)
+                            }.build()
+
+                        LOG.info("Using docker engine TLS socket at $dockerBaseUrl with certificates from $certDir")
+                        DockerClient(
+                            HttpClient(OkHttp) {
+                                defaultConfig()
+                                engine {
+                                    config {
+                                        sslSocketFactory(sslContext.socketFactory, trustManager)
+                                    }
+                                }
+                            },
+                            dockerBaseUrl,
+                        )
+                    } else {
+                        val dockerBaseUrl =
+                            URLBuilder(uri.toString()).apply {
+                                protocol = URLProtocol("http", 0)
+                                if (port == 0) {
+                                    port = 2375
+                                }
+                                appendPathSegments(API_VERSION)
+                            }.build()
+                        LOG.info("Using docker engine TCP socket at $dockerBaseUrl")
+                        // Plain HTTP should only be used locally for testing and when unix is not available
+                        DockerClient(
+                            HttpClient(OkHttp, defaultConfig),
+                            dockerBaseUrl,
+                        )
+                    }
+                }
+                "unix" -> {
+                    LOG.info("Using docker engine unix socket at ${uri.path}")
+                    DockerClient(
+                        HttpClient(OkHttp) {
+                            defaultConfig()
+                            engine {
+                                config {
+                                    socketFactory(UnixSocketFactory(uri.path))
+                                }
+                            }
+                        },
+                        UNIX_BASE_URL,
+                    )
+                }
+
+                else -> throw IllegalArgumentException("Protocol ${uri.scheme} is not supported")
+            }
+        }
     }
 }

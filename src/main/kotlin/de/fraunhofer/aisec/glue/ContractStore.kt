@@ -1,30 +1,33 @@
 package de.fraunhofer.aisec.glue
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import de.fraunhofer.aisec.glue.negotiation.NegotiationManager
 import de.fraunhofer.aisec.glue.tables.Contracts
 import de.fraunhofer.aisec.glue.tables.Lookups
 import de.fraunhofer.iosb.odrl.OdrlPolicy
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.withContext
 import org.apache.commons.dbcp2.BasicDataSource
 import org.ktorm.database.Database
 import org.ktorm.dsl.batchInsert
 import org.ktorm.dsl.eq
 import org.ktorm.dsl.insert
 import org.ktorm.dsl.isNull
-import org.ktorm.entity.*
+import org.ktorm.entity.filter
+import org.ktorm.entity.find
+import org.ktorm.entity.map
+import org.ktorm.entity.sequenceOf
 import org.slf4j.LoggerFactory
 import java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor
 
 class ContractStore(
-    private val negotiationManager: NegotiationManager,
     objectMapper: ObjectMapper,
 ) {
     // Currently this is just backed by an in-memory DB
     private val dataSource by lazy {
         BasicDataSource().apply {
             driverClassName = "org.duckdb.DuckDBDriver"
-            url = "jdbc:duckdb:"
+            url = "jdbc:duckdb::memory:contract_store"
         }
     }
 
@@ -37,12 +40,7 @@ class ContractStore(
     val Database.lookups get() = this.sequenceOf(lookupsTable)
 
     init {
-        //  This also allows for better testing and getting policies from other sources
-        CoroutineScope(Dispatchers.Default).launch {
-            negotiationManager.negotiatedContracts.collect(::addContract)
-        }
-
-        dataSource.connection.use {
+        connection.useConnection {
             val initStmt = it.createStatement()
             initStmt.addBatch(
                 """
