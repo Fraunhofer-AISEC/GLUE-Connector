@@ -133,7 +133,7 @@ class DockerClient(internal val httpClient: HttpClient, private val baseUrl: Url
                         ),
                 )
 
-            httpClient.post("$baseUrl/networks/create") {
+            httpClient.post(endpoint("networks/create")) {
                 setBody(args)
                 contentType(ContentType.Application.Json)
             }
