@@ -42,7 +42,7 @@ data class NetworkSettings(
     val linkLocalIPv6PrefixLen: Int? = null,
     // PortMap describes the mapping of container ports to host ports, using the container's port-number and protocol as key in the format `<port>/<protocol>`, for example, `80/udp`.  If a container's port is mapped for multiple protocols, separate entries are added to the mapping table.
     @JsonProperty("Ports")
-    val ports: Map<String, List<PortBinding>>? = null,
+    val ports: Map<String, List<PortBinding>?>? = null,
     // SandboxKey identifies the sandbox
     @JsonProperty("SandboxKey")
     val sandboxKey: String? = null,
