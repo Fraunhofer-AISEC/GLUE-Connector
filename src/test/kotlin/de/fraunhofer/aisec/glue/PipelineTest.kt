@@ -36,7 +36,7 @@ import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
-import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Duration.Companion.hours
 
 class PipelineTest {
     // Baseline test to check if the PipelineManager still behaves as it should
@@ -185,9 +185,9 @@ class PipelineTest {
 
     @Test
     fun `Test the docker-based pipeline implementation`() =
-        runTest(timeout = 30.seconds) {
+        runTest(timeout = 30.hours) {
             // TODO: Fix this in CI
-            return@runTest
+            //return@runTest
 
             // Since we do real io calls, we cannot use the virtual time provided by the kotlin coroutines test runner.
             // We don't want to use runBlocking, as it does not have the nice coroutine dumps os runTest, so here we are...
