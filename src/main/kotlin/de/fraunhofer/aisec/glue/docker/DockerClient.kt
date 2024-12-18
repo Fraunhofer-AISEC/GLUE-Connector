@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.DeserializationFeature
 import de.fraunhofer.aisec.glue.docker.model.ContainerCreateRequest
 import de.fraunhofer.aisec.glue.docker.model.HostConfig
+import de.fraunhofer.aisec.glue.docker.model.NetworkCreateRequest
 import de.fraunhofer.aisec.glue.docker.model.PortBinding
 import de.fraunhofer.aisec.glue.docker.unix.UnixSocketFactory
 import io.ktor.client.*
@@ -141,6 +142,16 @@ class DockerClient(internal val httpClient: HttpClient, private val baseUrl: Url
             }
 
             return Network(this@DockerClient, name)
+        }
+
+
+        suspend fun create(req: NetworkCreateRequest): Network {
+            httpClient.post(endpoint("networks/create")) {
+                setBody(req)
+                contentType(ContentType.Application.Json)
+            }
+
+            return Network(this@DockerClient, req.name)
         }
 
         fun get(name: String): Network {
