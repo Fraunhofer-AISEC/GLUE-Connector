@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import de.fraunhofer.aisec.glue.jsonld.BoxedStringDeserializer
 import de.fraunhofer.aisec.glue.jsonld.JsonLDType
+import de.fraunhofer.iosb.odrl.OdrlOffer
 
 @JsonLDType
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type")
@@ -20,5 +21,5 @@ data class ContractRequestMessage(
     @JsonDeserialize(using = BoxedStringDeserializer::class)
     val callbackAddress: String,
     @JsonProperty("${Namespaces.DSPACE}/offer")
-    val offer: JsonNode,
+    val offer: OdrlOffer,
 )

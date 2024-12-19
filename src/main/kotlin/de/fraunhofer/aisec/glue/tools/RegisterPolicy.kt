@@ -12,6 +12,7 @@ import de.fraunhofer.aisec.glue.negotiation.DummyNegotiator
 import de.fraunhofer.aisec.glue.negotiation.NegotiationManager
 import de.fraunhofer.aisec.glue.plugins.configureAuthentication
 import de.fraunhofer.aisec.glue.plugins.configureSerialization
+import de.fraunhofer.iosb.odrl.OdrlOffer
 import io.ktor.client.*
 import io.ktor.client.engine.okhttp.*
 import io.ktor.client.plugins.auth.*
@@ -71,7 +72,7 @@ fun main(args: Array<String>) {
             builder.build()
         }
 
-    val policy: JsonNode =
+    val policy: OdrlOffer =
         if (policyPath == "-") {
             System.`in`
         } else {

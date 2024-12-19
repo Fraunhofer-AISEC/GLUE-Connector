@@ -1,14 +1,12 @@
 package de.fraunhofer.aisec.glue.negotiation
 
-import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.convertValue
 import de.fraunhofer.aisec.glue.ContractStore
-import de.fraunhofer.aisec.glue.jsonld.AsJsonLd.Companion.convertFromJsonLd
 import de.fraunhofer.aisec.glue.models.negotiation.ContractNegotiation
 import de.fraunhofer.aisec.glue.models.negotiation.ContractOfferMessage
 import de.fraunhofer.aisec.glue.models.negotiation.ContractRequestMessage
 import de.fraunhofer.aisec.glue.models.negotiation.NegotiationState
+import de.fraunhofer.iosb.odrl.OdrlOffer
 import de.fraunhofer.iosb.odrl.OdrlPolicy
 import io.ktor.client.*
 import io.ktor.client.call.*
@@ -45,7 +43,7 @@ class NegotiationManager(
     suspend fun startNegotiation(
         provider: Url,
         callbackUrl: Url,
-        request: JsonNode,
+        odrlRequest: OdrlOffer,
         negotiator: Negotiator? = null,
     ): Deferred<OdrlPolicy> {
         val consumerPid = newProcessId()
@@ -53,7 +51,6 @@ class NegotiationManager(
 
         //       automatic jsonld serialization.
         //       Maybe we can get away with setting the base to the ODRL namespace.
-        val odrlRequest = objectMapper.convertValue<JsonNode>(request)
         val contractRequestMessage =
             ContractRequestMessage(
                 providerPid = null,
@@ -100,7 +97,6 @@ class NegotiationManager(
             }
         }
 
-        val expandedPolicy = objectMapper.convertFromJsonLd<JsonNode>(request)
         val policyFuture = CompletableDeferred<OdrlPolicy>()
 
         // Create the final negotiation object now that we have all the information required.
@@ -110,7 +106,7 @@ class NegotiationManager(
             NegotiationImpl(
                 state = NegotiationState.REQUESTED,
                 peerIdentity = null,
-                currentPolicy = expandedPolicy,
+                currentPolicy = odrlRequest,
                 role = NegotiationImpl.Role.CONSUMER,
                 ownPid = consumerPid,
                 peerPid = deserializedResponse.providerPid,
