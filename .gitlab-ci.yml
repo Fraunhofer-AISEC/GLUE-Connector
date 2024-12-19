@@ -12,8 +12,6 @@ before_script:
 variables:
   GIT_SUBMODULE_STRATEGY: recursive
 
-
-
 cache:
   paths:
     - .gradle/wrapper
@@ -47,12 +45,20 @@ kaniko-http-echo-build:
     - asprunner
 
 container_test:
-  image: $CI_REGISTRY_IMAGE/http-echo
+  image: $CI_REGISTRY_IMAGE/container-pipeline:latest
+  services:
+    - name: $CI_REGISTRY_IMAGE/http-echo
+      command: [ "/http-echo" ]
+    - name: $CI_REGISTRY_IMAGE/container-pipeline:latest
+      alias: connector1
+      command: [ "/execute" ]
+    - name: $CI_REGISTRY_IMAGE/container-pipeline:latest
+      alias: connector2
+      command: [ "/execute" ]
   stage: test
   script: ./execute
   tags:
       - asprunner
-
 
 after_script:
   - echo "End CI"
