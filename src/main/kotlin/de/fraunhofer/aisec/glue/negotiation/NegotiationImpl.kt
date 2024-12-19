@@ -1,11 +1,11 @@
 package de.fraunhofer.aisec.glue.negotiation
 
-import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.databind.node.ObjectNode
-import com.fasterxml.jackson.module.kotlin.convertValue
 import de.fraunhofer.aisec.glue.models.negotiation.*
-import de.fraunhofer.iosb.odrl.OdrlException
+import de.fraunhofer.iosb.odrl.OdrlAgreement
+import de.fraunhofer.iosb.odrl.OdrlOffer
+import de.fraunhofer.iosb.odrl.OdrlParty
+import de.fraunhofer.iosb.odrl.OdrlPolicy
 import de.fraunhofer.iosb.odrl.parser.OdrlParser
 import io.ktor.client.*
 import io.ktor.client.request.*
@@ -14,14 +14,12 @@ import io.ktor.http.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.slf4j.LoggerFactory
-import java.time.Instant
-import java.time.format.DateTimeFormatter
 
 class NegotiationImpl(
     var state: NegotiationState,
     // TODO: Don't save this as string and don't make it nullable or mutable
     var peerIdentity: String?,
-    var currentPolicy: JsonNode?,
+    var currentPolicy: OdrlPolicy? = null,
     val role: Role,
     val ownPid: String,
     val peerPid: String,
@@ -136,22 +134,12 @@ class NegotiationImpl(
             return
         }
 
-        val parsedPolicy =
-            try {
-                OdrlParser().convertToOdrlPolicy(req.offer)
-            } catch (e: OdrlException) {
-                responseCallback(false)
-                return
-            }
-
         responseCallback(true)
 
-        val (ok, counter) = negotiator.evaluateRequest(parsedPolicy)
+        val (ok, counter) = negotiator.evaluateRequest(req.offer)
 
         if (!ok) {
             if (counter != null) {
-                val convertedCounter = objectMapper.convertValue<JsonNode>(counter)
-
                 if (!terminateOnError(
                         sendMessage(
                             "$peerPid/offers",
@@ -159,7 +147,7 @@ class NegotiationImpl(
                                 providerPid = ownPid,
                                 consumerPid = peerPid,
                                 callbackAddress = ownEndpoint.toString(),
-                                offer = convertedCounter,
+                                offer = counter,
                             ),
                         ),
                     )
@@ -167,7 +155,7 @@ class NegotiationImpl(
                     return
                 }
                 // TODO: This will not work
-                currentPolicy = convertedCounter
+                currentPolicy = counter
                 state = NegotiationState.OFFERED
                 return
             } else {
@@ -176,6 +164,9 @@ class NegotiationImpl(
             }
         }
 
+        // TODO: Fill in true assigner here
+        val agreement = req.offer.toAgreement(objectMapper, OdrlParty())
+
         // We have accepted the contract as is, tell the consumer and anyone waiting for this contract negotiation
         if (!terminateOnError(
                 sendMessage(
@@ -183,8 +174,7 @@ class NegotiationImpl(
                     ContractAgreementMessage(
                         providerPid = ownPid,
                         consumerPid = peerPid,
-                        // TODO: Properly convert to ODRL agreement before encoding (see processAgree)
-                        agreement = req.offer,
+                        agreement = agreement,
                         callbackAddress = ownEndpoint.toString(),
                     ),
                 ),
@@ -192,7 +182,7 @@ class NegotiationImpl(
         ) {
             return
         }
-        currentPolicy = req.offer
+        currentPolicy = agreement
         state = NegotiationState.AGREED
     }
 
@@ -218,21 +208,12 @@ class NegotiationImpl(
             return
         }
 
-        val parsedPolicy =
-            try {
-                OdrlParser().convertToOdrlPolicy(req.offer)
-            } catch (e: OdrlException) {
-                responseCallback(false)
-                return
-            }
-
         responseCallback(true)
 
-        val (ok, newReq) = negotiator.evaluateOffer(parsedPolicy)
+        val (ok, newOffer) = negotiator.evaluateOffer(req.offer)
 
         if (!ok) {
-            if (newReq != null) {
-                val convertedNewReq = objectMapper.convertValue<JsonNode>(newReq)
+            if (newOffer != null) {
 
                 sendMessage(
                     "$peerPid/request",
@@ -240,11 +221,11 @@ class NegotiationImpl(
                         providerPid = peerPid,
                         consumerPid = ownPid,
                         callbackAddress = ownEndpoint.toString(),
-                        offer = convertedNewReq,
+                        offer = newOffer,
                     ),
                 )
                 state = NegotiationState.REQUESTED
-                currentPolicy = convertedNewReq
+                currentPolicy = newOffer
                 return
             } else {
                 terminateNegotiation("errPolicyFailure", "No counteroffer can be computed for this request")
@@ -281,14 +262,9 @@ class NegotiationImpl(
 
             state = NegotiationState.ACCEPTED
 
-            val now = Instant.now()
-            val formatted = DateTimeFormatter.ISO_INSTANT.format(now)
-            // TODO: We probably need something more to convert to agreement here
-            val agreement = objectMapper.convertValue<ObjectNode>(currentPolicy!!)
-            // We need to add a DSP-specific timestamp option
-            agreement.put("${Namespaces.DSPACE}/timestamp", formatted)
-            // HACK: Add a top-level context URL which should translate all unprefixed properties to prefixed ones
-            agreement.put("@context", "${Namespaces.ODRL}/")
+            // TODO: Fill in true assigner here
+            val agreement = (currentPolicy as OdrlOffer).toAgreement(objectMapper, OdrlParty())
+            currentPolicy = agreement
 
             if (!terminateOnError(
                     sendMessage(
@@ -296,7 +272,7 @@ class NegotiationImpl(
                         ContractAgreementMessage(
                             providerPid = ownPid,
                             consumerPid = peerPid,
-                            agreement = agreement,
+                            agreement = currentPolicy as OdrlAgreement,
                             callbackAddress = ownEndpoint.toString(),
                         ),
                     ),
@@ -376,19 +352,9 @@ class NegotiationImpl(
             // TODO: (how) should we evaluate the timestamp? What would be a good timeout to detect outdated requests?
             //       Should this be passed to the negotiator as well?
 
-            val agreement =
-                try {
-                    OdrlParser().convertToOdrlPolicy(req.agreement)
-                } catch (e: OdrlException) {
-                    responseCallback(false)
-                    return
-                }
-
-            val parsedPolicy = OdrlParser().convertToOdrlPolicy(currentPolicy!!)
-
             // If the provider tries to send a (semantically) different agreement, reject and terminate the negotiation.
             // We leave the semantics to the negotiator :)
-            if (!negotiator.verifyAgreement(parsedPolicy, agreement)) {
+            if (!negotiator.verifyAgreement(currentPolicy as OdrlOffer, req.agreement)) {
                 responseCallback(false)
                 terminateNegotiation("errPolicyFailure")
                 return
