@@ -32,9 +32,9 @@ class NegotiationManager(
 ) {
     private val pidMutex = Mutex()
     private val assignedIds = mutableSetOf<String>()
-    private val providerNegotiation = ConcurrentHashMap<String, Negotiation>()
-    private val consumerNegotiations = ConcurrentHashMap<String, Negotiation>()
-    private val pendingConsumerNegotiations = ConcurrentHashMap<String, MutableSharedFlow<Negotiation?>>()
+    private val providerNegotiation = ConcurrentHashMap<String, NegotiationImpl>()
+    private val consumerNegotiations = ConcurrentHashMap<String, NegotiationImpl>()
+    private val pendingConsumerNegotiations = ConcurrentHashMap<String, MutableSharedFlow<NegotiationImpl?>>()
 
     /**
      * Start a negotiation by sending the provided contract request to the provider.
@@ -98,6 +98,7 @@ class NegotiationManager(
                     cancel("The provider terminated the negotiation")
                 }
             }
+
             else -> {
                 pidMutex.withLock {
                     assignedIds.remove(consumerPid)
@@ -111,17 +112,18 @@ class NegotiationManager(
 
         // HACK: in case the user passed in an unexpanded jsonld object, make sure it is expanded
         val expandedPolicy = objectMapper.convertFromJsonLd<JsonNode>(request)
+        val policyFuture = CompletableDeferred<OdrlPolicy>()
 
         // Create the final negotiation object now that we have all the information required.
         // Note that we cannot bind the peer identity yet because we don't have a request with an Authorization header
         // at this point.
         // TODO: When we define the authentication model eventually, revisit this
         val negotiation =
-            Negotiation(
+            NegotiationImpl(
                 state = NegotiationState.REQUESTED,
                 peerIdentity = null,
                 currentPolicy = expandedPolicy,
-                role = Negotiation.Role.CONSUMER,
+                role = NegotiationImpl.Role.CONSUMER,
                 ownPid = consumerPid,
                 peerPid = deserializedResponse.providerPid,
                 negotiator = negotiator ?: defaultNegotiator,
@@ -129,6 +131,12 @@ class NegotiationManager(
                 ownEndpoint = callbackUrl,
                 peerEndpoint = provider,
                 objectMapper = objectMapper,
+                completionCallback = completionCallback { result ->
+                    policyFuture.completeWith(result)
+                    pidMutex.withLock {
+                        consumerNegotiations.remove(consumerPid)
+                    }
+                }
             )
 
         pidMutex.withLock {
@@ -136,15 +144,7 @@ class NegotiationManager(
             consumerNegotiations[consumerPid] = negotiation
         }
 
-        CoroutineScope(Dispatchers.Default).launch {
-            negotiationCompletedHandler(negotiation) {
-                pidMutex.withLock {
-                    consumerNegotiations.remove(consumerPid)
-                }
-            }
-        }
-
-        return negotiation.completed
+        return policyFuture
     }
 
     /**
@@ -155,7 +155,7 @@ class NegotiationManager(
         request: ContractRequestMessage,
         originUrl: Url,
         peerIdent: String,
-    ): Negotiation? {
+    ): NegotiationImpl? {
         if (request.providerPid != null) {
             return getAsProvider(request.providerPid, request.consumerPid, peerIdent)
         }
@@ -165,12 +165,12 @@ class NegotiationManager(
             assignedIds.add(providerPid)
 
             val negotiation =
-                Negotiation(
+                NegotiationImpl(
                     state = NegotiationState.REQUESTED,
                     peerIdentity = peerIdent,
                     // The policy is actually set after it has been processed by the negotiator
                     currentPolicy = null,
-                    role = Negotiation.Role.PROVIDER,
+                    role = NegotiationImpl.Role.PROVIDER,
                     ownPid = providerPid,
                     peerPid = request.consumerPid,
                     negotiator = defaultNegotiator,
@@ -178,15 +178,14 @@ class NegotiationManager(
                     ownEndpoint = originUrl,
                     peerEndpoint = Url(request.callbackAddress),
                     objectMapper = objectMapper,
-                )
-            providerNegotiation[providerPid] = negotiation
-            CoroutineScope(Dispatchers.Default).launch {
-                negotiationCompletedHandler(negotiation) {
-                    pidMutex.withLock {
-                        providerNegotiation.remove(providerPid)
+                    completionCallback = completionCallback {
+                        pidMutex.withLock {
+                            providerNegotiation.remove(providerPid)
+                        }
                     }
-                }
-            }
+                )
+
+            providerNegotiation[providerPid] = negotiation
             return negotiation
         }
     }
@@ -195,7 +194,7 @@ class NegotiationManager(
         request: ContractOfferMessage,
         originUrl: Url,
         peerIdent: String,
-    ): Negotiation? {
+    ): NegotiationImpl? {
         if (request.consumerPid != null) {
             return getAsConsumer(request.consumerPid, request.providerPid, peerIdent)
         }
@@ -205,11 +204,11 @@ class NegotiationManager(
             assignedIds.add(consumerPid)
 
             val negotiation =
-                Negotiation(
+                NegotiationImpl(
                     state = NegotiationState.OFFERED,
                     peerIdentity = peerIdent,
                     currentPolicy = null,
-                    role = Negotiation.Role.CONSUMER,
+                    role = NegotiationImpl.Role.CONSUMER,
                     ownPid = consumerPid,
                     peerPid = request.providerPid,
                     negotiator = defaultNegotiator,
@@ -217,16 +216,14 @@ class NegotiationManager(
                     ownEndpoint = originUrl,
                     peerEndpoint = Url(request.callbackAddress),
                     objectMapper = objectMapper,
+                    completionCallback = completionCallback {
+                        pidMutex.withLock {
+                            consumerNegotiations.remove(consumerPid)
+                        }
+                    }
                 )
 
             consumerNegotiations[consumerPid] = negotiation
-            CoroutineScope(Dispatchers.Default).launch {
-                negotiationCompletedHandler(negotiation) {
-                    pidMutex.withLock {
-                        consumerNegotiations.remove(consumerPid)
-                    }
-                }
-            }
             return negotiation
         }
     }
@@ -235,7 +232,7 @@ class NegotiationManager(
         providerPid: String,
         consumerPid: String?,
         peerIdent: String,
-    ): Negotiation? {
+    ): NegotiationImpl? {
         val negotiation = providerNegotiation[providerPid] ?: return null
 
         if (consumerPid != null && negotiation.peerPid != consumerPid) {
@@ -255,7 +252,7 @@ class NegotiationManager(
         consumerPid: String,
         providerPid: String?,
         peerIdent: String,
-    ): Negotiation? {
+    ): NegotiationImpl? {
         // This is needed since kotlinx coroutines does not support condition variables...
         val negotiationProducer =
             pidMutex.withLock {
@@ -282,7 +279,7 @@ class NegotiationManager(
         return negotiation
     }
 
-    fun getNegotiations(): List<Negotiation> {
+    fun getNegotiations(): List<NegotiationImpl> {
         return (consumerNegotiations.values + providerNegotiation.values).toList()
     }
 
@@ -292,18 +289,22 @@ class NegotiationManager(
             .first { id -> !assignedIds.contains(id) }
     }
 
-    private suspend fun negotiationCompletedHandler(
-        negotiation: Negotiation,
-        deleter: suspend () -> Unit,
-    ) {
-        try {
-            val policy = negotiation.completed.await()
-            contractStore.addContract(policy)
-        } catch (e: Exception) {
-            // TODO: More context (ids, identities)
-            LOG.info("Policy negotiation completed exceptionally", e)
+    // Perform actions required by all our registered negotiations after completion and then call a negotiation-specific
+    // completion callback.
+    private fun completionCallback(next: NegotiationCompletionCallback): NegotiationCompletionCallback {
+        return { result: Result<OdrlPolicy> ->
+            result.fold(
+                onSuccess = { contract -> contractStore.addContract(contract) },
+                onFailure = { err -> LOG.info("Policy negotiation failed", err) }
+            )
+            // We call the next callback asynchronously since it may need to acquire locks that are held up the call
+            // stack.
+            // A reentrant lock may solve this locking problem more elegantly, but I'm not aware of one for kotlin
+            // coroutines.
+            CoroutineScope(Dispatchers.Default).launch {
+                next(result)
+            }
         }
-        deleter()
     }
 
     companion object {

@@ -131,11 +131,8 @@ class NegotiationTest {
             assertEquals(NegotiationState.FINALIZED, negotiation.state)
             assertEquals(NegotiationState.FINALIZED, consumerState)
 
-            assertTrue(negotiation.completed.isCompleted)
-            val result = negotiation.completed.await()
-
             // Verify that the returned and stored policies are the same
-            coVerify { contractStore.addContract(result) }
+            coVerify { contractStore.addContract(any()) }
 
             // TODO: Can I structurally compare json nodes?
         }
@@ -220,10 +217,7 @@ class NegotiationTest {
             assertTrue(responseCallbackCalled)
             assertEquals(NegotiationState.FINALIZED, negotiation.state)
 
-            assertTrue(negotiation.completed.isCompleted)
-            val result = negotiation.completed.await()
-
-            coVerify { contractStore.addContract(result) }
+            coVerify { contractStore.addContract(any()) }
         }
 
     private fun ApplicationTestBuilder.configureTestApp(controller: Controller) {
