@@ -45,14 +45,14 @@ kaniko-http-echo-build:
     - asprunner
 
 container_test:
-  image: $CI_REGISTRY_IMAGE/container-pipeline:latest
+  image: eclipse-temurin:21
   services:
     - name: $CI_REGISTRY_IMAGE/http-echo
       command: [ "/http-echo" ]
-    - name: $CI_REGISTRY_IMAGE/container-pipeline:latest
+    - name: $CI_REGISTRY_IMAGE/container-pipeline
       alias: connector1
       command: [ "/execute" ]
-    - name: $CI_REGISTRY_IMAGE/container-pipeline:latest
+    - name: $CI_REGISTRY_IMAGE/container-pipeline
       alias: connector2
       command: [ "/execute" ]
   stage: test
