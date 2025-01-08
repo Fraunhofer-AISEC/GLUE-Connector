@@ -1,14 +1,18 @@
 package de.fraunhofer.aisec.glue
 
+import com.apicatalog.jsonld.JsonLd
+import com.apicatalog.jsonld.document.JsonDocument
+import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.datatype.jsonp.JSONPModule
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
+import com.fasterxml.jackson.module.kotlin.jacksonMapperBuilder
 import com.apicatalog.jsonld.JsonLdOptions
 import de.fraunhofer.aisec.glue.controllers.Controller
 import de.fraunhofer.aisec.glue.controllers.NegotiationController
-import de.fraunhofer.aisec.glue.jsonld.JsonLDModule
 import de.fraunhofer.aisec.glue.models.negotiation.*
 import de.fraunhofer.aisec.glue.negotiation.DummyNegotiator
 import de.fraunhofer.aisec.glue.negotiation.NegotiationManager
 import de.fraunhofer.aisec.glue.negotiation.toAgreement
-import de.fraunhofer.aisec.glue.plugins.configureSerialization
 import de.fraunhofer.iosb.odrl.OdrlOffer
 import de.fraunhofer.iosb.odrl.OdrlParty
 import de.fraunhofer.iosb.odrl.parser.OdrlParser
@@ -18,7 +22,6 @@ import io.ktor.client.engine.mock.*
 import io.ktor.client.engine.okhttp.*
 import io.ktor.client.plugins.auth.*
 import io.ktor.client.plugins.auth.providers.*
-import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.http.content.*
@@ -46,14 +49,14 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import kotlin.time.toKotlinDuration
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation as ClientContentNegotiation
+import io.ktor.server.plugins.contentnegotiation.ContentNegotiation as ServerContentNegotiation
 
 class NegotiationTest {
     private fun httpClient(mockFactory: suspend MockRequestHandleScope.(HttpRequestData) -> HttpResponseData) =
         HttpClient(MockEngine(mockFactory)) {
-            install(ContentNegotiation) {
-                jackson(streamRequestBody = false) {
-                    registerModules(JsonLDModule(JsonLdOptions()))
-                }
+            install(ClientContentNegotiation) {
+                register(ContentType.Application.Json, JacksonConverter(objectMapper, streamRequestBody = false))
             }
         }
 
@@ -224,7 +227,9 @@ class NegotiationTest {
             config = ApplicationConfig("/dev/null")
         }
         application {
-            configureSerialization()
+            install(ServerContentNegotiation) {
+                register(ContentType.Application.Json, JacksonConverter(objectMapper))
+            }
             install(Authentication) {
                 basic {
                     validate { creds -> UserIdPrincipal(creds.name) }
@@ -238,10 +243,8 @@ class NegotiationTest {
 
     private fun ApplicationTestBuilder.testClient() =
         createClient {
-            install(ContentNegotiation) {
-                jackson {
-                    registerModules(JsonLDModule(JsonLdOptions()))
-                }
+            install(ClientContentNegotiation) {
+                register(ContentType.Application.Json, JacksonConverter(objectMapper))
             }
         }
 
@@ -420,10 +423,8 @@ class NegotiationTest {
         runTest(timeout = Duration.ofSeconds(30).toKotlinDuration()) {
             val testClient =
                 HttpClient(OkHttp) {
-                    install(ContentNegotiation) {
-                        jackson {
-                            registerModules(JsonLDModule(JsonLdOptions()))
-                        }
+                    install(ClientContentNegotiation) {
+                        register(ContentType.Application.Json, JacksonConverter(objectMapper))
                     }
                     install(Auth) {
                         basic {
@@ -465,7 +466,9 @@ class NegotiationTest {
                     }
                 },
                 module = {
-                    configureSerialization()
+                    install(ServerContentNegotiation) {
+                        register(ContentType.Application.Json, JacksonConverter(objectMapper))
+                    }
                     install(Authentication) {
                         basic {
                             validate { creds -> UserIdPrincipal(creds.name) }

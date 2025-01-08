@@ -1,25 +1,20 @@
 package de.fraunhofer.aisec.glue.tools
 
-import com.apicatalog.jsonld.JsonLdOptions
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
-import com.fasterxml.jackson.module.kotlin.jacksonMapperBuilder
 import com.fasterxml.jackson.module.kotlin.readValue
 import de.fraunhofer.aisec.glue.ContractStore
 import de.fraunhofer.aisec.glue.controllers.NegotiationController
-import de.fraunhofer.aisec.glue.jsonld.JsonLDModule
 import de.fraunhofer.aisec.glue.negotiation.DummyNegotiator
 import de.fraunhofer.aisec.glue.negotiation.NegotiationManager
 import de.fraunhofer.aisec.glue.plugins.configureAuthentication
-import de.fraunhofer.aisec.glue.plugins.configureSerialization
 import de.fraunhofer.iosb.odrl.OdrlOffer
+import de.fraunhofer.iosb.odrl.parser.OdrlParser
 import io.ktor.client.*
 import io.ktor.client.engine.okhttp.*
 import io.ktor.client.plugins.auth.*
 import io.ktor.client.plugins.auth.providers.*
-import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.http.*
 import io.ktor.serialization.jackson.*
+import io.ktor.server.application.*
 import io.ktor.server.config.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
@@ -29,10 +24,12 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import java.io.File
 import kotlin.system.exitProcess
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation as ClientContentNegotiation
+import io.ktor.server.plugins.contentnegotiation.ContentNegotiation as ServerContentNegotiation
 
 fun main(args: Array<String>) {
     val usage = "Usage: [-l localAddress] -c connectorAddress -p policyPath"
-    val objectMapper = jacksonMapperBuilder().addModules(JavaTimeModule(), JsonLDModule(JsonLdOptions())).build()
+    val objectMapper = OdrlParser().mapper
 
     var localHost = "0.0.0.0"
     var connectorAddress: String? = null
@@ -82,10 +79,8 @@ fun main(args: Array<String>) {
     runBlocking {
         val httpClient =
             HttpClient(OkHttp) {
-                install(ContentNegotiation) {
-                    jackson {
-                        registerModules(JsonLDModule(JsonLdOptions()))
-                    }
+                install(ClientContentNegotiation) {
+                    register(ContentType.Application.Json, JacksonConverter(objectMapper))
                 }
                 install(Auth) {
                     basic {
@@ -116,7 +111,9 @@ fun main(args: Array<String>) {
                     },
                     module = {
                         configureAuthentication()
-                        configureSerialization()
+                        install(ServerContentNegotiation) {
+                            register(ContentType.Application.Json, JacksonConverter(objectMapper))
+                        }
                         routing {
                             NegotiationController(negotiationManager).apply { registerRoutes() }
                         }
