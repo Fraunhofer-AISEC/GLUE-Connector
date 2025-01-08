@@ -6,7 +6,6 @@ import de.fraunhofer.iosb.odrl.OdrlAgreement
 import de.fraunhofer.iosb.odrl.OdrlOffer
 import de.fraunhofer.iosb.odrl.OdrlParty
 import de.fraunhofer.iosb.odrl.OdrlPolicy
-import de.fraunhofer.iosb.odrl.parser.OdrlParser
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -106,7 +105,7 @@ class NegotiationImpl(
         LOG.debug("Negotiation completed")
         state = NegotiationState.FINALIZED
         // The non-null assertion here is safe since the negotiation may only be completed with a contract
-        completionCallback(Result.success(OdrlParser().convertToOdrlPolicy(currentPolicy!!)))
+        completionCallback(Result.success(currentPolicy!!))
     }
 
     /**
@@ -289,9 +288,9 @@ class NegotiationImpl(
                 responseCallback(false)
                 return
             }
-            responseCallback(true)
 
-            state = NegotiationState.VERIFIED
+            completeNegotiation()
+
             if (!terminateOnError(
                     sendMessage(
                         "$peerPid/events",
@@ -303,11 +302,12 @@ class NegotiationImpl(
                     ),
                 )
             ) {
+                // This will be after the terminate message, but we should probably still respond with false
+                responseCallback(false)
                 return
             }
 
-            state = NegotiationState.FINALIZED
-            completeNegotiation()
+            responseCallback(true)
         }
 
     suspend fun processFinalize(responseCallback: suspend (Boolean) -> Unit) {
@@ -315,10 +315,9 @@ class NegotiationImpl(
             responseCallback(false)
             return
         }
-        responseCallback(true)
 
-        state = NegotiationState.FINALIZED
         completeNegotiation()
+        responseCallback(true)
     }
 
     // TODO: Having a locked variant of this that may be invoked by callbacks and could therefore cause a deadlock is
@@ -361,6 +360,7 @@ class NegotiationImpl(
             }
 
             responseCallback(true)
+            currentPolicy = req.agreement
             state = NegotiationState.VERIFIED
             sendMessage(
                 "$peerPid/agreement/verification",
