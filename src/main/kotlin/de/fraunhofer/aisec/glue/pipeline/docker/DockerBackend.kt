@@ -5,16 +5,16 @@ import de.fraunhofer.aisec.glue.docker.Container
 import de.fraunhofer.aisec.glue.docker.DockerClient
 import de.fraunhofer.aisec.glue.docker.InetUtil
 import de.fraunhofer.aisec.glue.docker.Network
-import de.fraunhofer.aisec.glue.docker.model.ContainerCreateRequest
-import de.fraunhofer.aisec.glue.docker.model.HostConfig
-import de.fraunhofer.aisec.glue.docker.model.PortBinding
+import de.fraunhofer.aisec.glue.docker.model.*
 import de.fraunhofer.aisec.glue.pipeline.Backend
 import de.fraunhofer.aisec.glue.pipeline.ContainerInfo
 import de.fraunhofer.aisec.glue.pipeline.ContainerPipeline
 import de.fraunhofer.iosb.odrl.glue.GlueContainerPipeline
 import org.slf4j.LoggerFactory
 import java.io.File
+import java.net.Inet4Address
 import java.net.InetAddress
+import kotlin.experimental.or
 
 class DockerBackend(
     private val objectMapper: ObjectMapper,
@@ -23,7 +23,6 @@ class DockerBackend(
     private val subnetLen = 29
     private val subnets =
         InetUtil.getSubnets(InetUtil.parseInet4Address("10.1.0.0"), 16, subnetLen)
-            .map { a -> "${a.hostAddress}/$subnetLen" }
             .iterator()
 
     // Note: This is an implementation detail of docker that should not be relied upon.
@@ -104,11 +103,24 @@ class DockerBackend(
                 val name = "pipeline-$id-net-$i"
                 // TODO: Instead of arena allocating subnets, make sure to also reissue released subnets if available
                 val subnet = subnets.next()
-                val network = dockerClient.networks.create(name, subnet)
+                val subnetCidr = "${subnet.hostAddress}/$subnetLen"
+                val gateway = Inet4Address.getByAddress(subnet.address.also { a -> a[3] = a[3] or 1 }).hostAddress
+                val network = dockerClient.networks.create(NetworkCreateRequest(
+                    name = name,
+                    ipam = IPAM(
+                        config = listOf(
+                            IPAMConfig(
+                                subnet = subnetCidr,
+                                gateway = gateway
+                            )
+                        )
+                    )
+                ))
+
                 networks.add(network)
                 network.connect(c[0])
                 network.connect(c[1])
-                // We always want to have the container pipeline reachable
+                // We always want to have the controller reachable
                 selfContainer?.let { self -> network.connect(self) }
             }
         } catch (e: Exception) {

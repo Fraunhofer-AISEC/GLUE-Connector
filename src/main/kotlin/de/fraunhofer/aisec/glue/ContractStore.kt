@@ -19,15 +19,20 @@ import org.ktorm.entity.map
 import org.ktorm.entity.sequenceOf
 import org.slf4j.LoggerFactory
 import java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor
+import kotlin.io.path.createTempDirectory
 
 class ContractStore(
     objectMapper: ObjectMapper,
 ) {
     // Currently this is just backed by an in-memory DB
     private val dataSource by lazy {
+        // Make sure we end up with a unique db every time.
+        // Note: On linux, the TMP dir is usually cleaned on reboot. On windows, this could lead to a bunch of junk
+        // files over time.
+        val path = createTempDirectory().resolve("contracts.db")
         BasicDataSource().apply {
             driverClassName = "org.duckdb.DuckDBDriver"
-            url = "jdbc:duckdb::memory:contract_store"
+            url = "jdbc:duckdb:$path"
         }
     }
 

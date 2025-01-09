@@ -3,6 +3,7 @@
     "odrl": "http://www.w3.org/ns/odrl/2/",
     "glue": "http://fhg.de/glue/"
   },
+  "@type": "http://www.w3.org/ns/odrl/2/Offer",
   "@id": "http://dataowner.com/policy:6163",
   "odrl:permission": [
     {

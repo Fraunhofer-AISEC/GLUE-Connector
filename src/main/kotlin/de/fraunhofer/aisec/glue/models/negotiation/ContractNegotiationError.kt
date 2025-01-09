@@ -3,9 +3,9 @@ package de.fraunhofer.aisec.glue.models.negotiation
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.fasterxml.jackson.annotation.JsonTypeName
-import de.fraunhofer.aisec.glue.jsonld.JsonLDType
+import de.fraunhofer.iosb.odrl.parser.JsonLd
 
-@JsonLDType
+@JsonLd(Contexts.DSPACE)
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type")
 @JsonTypeName("${Namespaces.DSPACE}/ContractNegotiationError")
 data class ContractNegotiationError(

@@ -1,23 +1,16 @@
 package de.fraunhofer.aisec.glue
 
-import com.apicatalog.jsonld.JsonLdOptions
-import com.fasterxml.jackson.datatype.jsonp.JSONPModule
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
-import com.fasterxml.jackson.module.kotlin.jacksonMapperBuilder
 import de.fraunhofer.aisec.glue.controllers.PipelineController
 import de.fraunhofer.aisec.glue.docker.DockerClient
-import de.fraunhofer.aisec.glue.jsonld.JsonLDModule
 import de.fraunhofer.aisec.glue.models.pipeline.PipelineCreateRequest
 import de.fraunhofer.aisec.glue.models.pipeline.PipelineCreateResponse
 import de.fraunhofer.aisec.glue.pipeline.*
 import de.fraunhofer.aisec.glue.pipeline.docker.DockerBackend
-import de.fraunhofer.aisec.glue.plugins.configureSerialization
 import de.fraunhofer.iosb.odrl.glue.GlueContainer
 import de.fraunhofer.iosb.odrl.glue.GlueContainerPipeline
 import de.fraunhofer.iosb.odrl.parser.OdrlParser
 import io.ktor.client.*
 import io.ktor.client.call.*
-import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.serialization.jackson.*
@@ -36,7 +29,9 @@ import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
-import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Duration.Companion.hours
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation as ClientContentNegotiation
+import io.ktor.server.plugins.contentnegotiation.ContentNegotiation as ServerContentNegotiation
 
 class PipelineTest {
     // Baseline test to check if the PipelineManager still behaves as it should
@@ -135,7 +130,9 @@ class PipelineTest {
                 config = ApplicationConfig("/dev/null")
             }
             application {
-                configureSerialization()
+                install(ServerContentNegotiation) {
+                    register(ContentType.Application.Json, JacksonConverter(objectMapper))
+                }
                 install(Authentication) {
                     basic {
                         validate { creds -> UserIdPrincipal(creds.name) }
@@ -147,7 +144,7 @@ class PipelineTest {
             }
             val testClient =
                 createClient {
-                    install(ContentNegotiation) {
+                    install(ClientContentNegotiation) {
                         jackson()
                     }
                 }
@@ -185,9 +182,9 @@ class PipelineTest {
 
     @Test
     fun `Test the docker-based pipeline implementation`() =
-        runTest(timeout = 30.seconds) {
+        runTest(timeout = 30.hours) {
             // TODO: Fix this in CI
-            return@runTest
+            //return@runTest
 
             // Since we do real io calls, we cannot use the virtual time provided by the kotlin coroutines test runner.
             // We don't want to use runBlocking, as it does not have the nice coroutine dumps os runTest, so here we are...
@@ -223,10 +220,7 @@ class PipelineTest {
         }
 
     companion object {
-        private val objectMapper =
-            jacksonMapperBuilder()
-                .addModules(JsonLDModule(JsonLdOptions()), JSONPModule(), JavaTimeModule())
-                .build()
+        private val objectMapper = OdrlParser().mapper
 
         private val testContainers =
             GlueContainerPipeline(
