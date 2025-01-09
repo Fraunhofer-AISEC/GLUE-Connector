@@ -1,8 +1,6 @@
 package de.fraunhofer.iosb.odrl.evaluator
 
-import de.fraunhofer.iosb.odrl.OdrlAgreement
 import de.fraunhofer.iosb.odrl.OdrlException
-import de.fraunhofer.iosb.odrl.OdrlOffer
 import de.fraunhofer.iosb.odrl.OdrlPolicy
 
 class OdrlPolicyEvaluator(
@@ -16,9 +14,6 @@ class OdrlPolicyEvaluator(
         actionCallback: OdrlActionCallback? = null,
         infringementCallback: OdrlInfringementCallback? = null
     ): Decision {
-        if (policy is OdrlAgreement || policy is OdrlOffer)
-            throw OdrlException("Cannot evaluate policy of type ${policy.javaClass.simpleName}")
-
         // Evaluate permissions
         val permissionResults = policy.permission.map { permissionEvaluator.isAllowed(ctx, it, actionCallback) }
         var allowed = permissionResults.any { it.success }
