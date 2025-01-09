@@ -1,8 +1,10 @@
 package de.fraunhofer.aisec.glue.controllers
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import de.fraunhofer.aisec.glue.ContractStore
 import de.fraunhofer.aisec.glue.models.pipeline.PipelineCreateRequest
 import de.fraunhofer.aisec.glue.models.pipeline.PipelineCreateResponse
+import de.fraunhofer.aisec.glue.negotiation.upcast
 import de.fraunhofer.aisec.glue.pipeline.PipelineManager
 import de.fraunhofer.iosb.odrl.OdrlConstraint
 import de.fraunhofer.iosb.odrl.OdrlIdentifiers
@@ -23,7 +25,7 @@ import org.slf4j.LoggerFactory
  * This controller provides an interface for other connectors to manage container pipelines associated with their
  * policies.
  */
-class PipelineController(private val contractStore: ContractStore, private val pipelineManager: PipelineManager) :
+class PipelineController(private val objectMapper: ObjectMapper, private val contractStore: ContractStore, private val pipelineManager: PipelineManager) :
     Controller {
     override fun Route.registerRoutes() {
         authenticate {
@@ -59,7 +61,7 @@ class PipelineController(private val contractStore: ContractStore, private val p
 
                     OdrlPolicyEvaluator().evaluate(
                         Context(req.action ?: "TODO: Default action?", req.target),
-                        contract,
+                        contract.upcast(objectMapper),
                         actionCallback = { action ->
                             when (action.uid.toString()) {
                                 GlueIdentifiers.DEPLOY_PIPELINE -> {
