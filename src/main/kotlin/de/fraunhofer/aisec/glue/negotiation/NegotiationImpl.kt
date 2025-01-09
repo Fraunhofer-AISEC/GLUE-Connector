@@ -16,9 +16,9 @@ import org.slf4j.LoggerFactory
 
 class NegotiationImpl(
     var state: NegotiationState,
-    var peerIdentity: String?,
+    override var peerIdentity: String?,
     var currentPolicy: OdrlPolicy? = null,
-    val role: Role,
+    override val role: Negotiation.Role,
     val ownPid: String,
     val peerPid: String,
     val ownEndpoint: Url,
@@ -37,7 +37,7 @@ class NegotiationImpl(
      */
     private fun precondition(
         expectedState: NegotiationState,
-        expectedRole: Role,
+        expectedRole: Negotiation.Role,
     ): Boolean {
         return state == expectedState && role == expectedRole
     }
@@ -65,7 +65,7 @@ class NegotiationImpl(
      * Derive (providerPid, consumerPid) from own and peer pid and role.
      */
     private fun getProviderAndConsumerPid(): Pair<String, String> {
-        return if (role == Role.PROVIDER) {
+        return if (role == Negotiation.Role.PROVIDER) {
             Pair(ownPid, peerPid)
         } else {
             Pair(peerPid, ownPid)
@@ -112,9 +112,9 @@ class NegotiationImpl(
      * This is only valid if we are the provider and the negotiation is in its initial or the offered state, which will
      * be indicated by the parameter of [responseCallback] when invoked.
      */
-    suspend fun processRequest(
+    override suspend fun processRequest(
         req: ContractRequestMessage,
-        initial: Boolean = false,
+        initial: Boolean,
         responseCallback: suspend (Boolean) -> Unit,
     ) = mutex.withLock {
         // When we first construct a negotiation, we initialize it to the requested state right away.
@@ -126,7 +126,7 @@ class NegotiationImpl(
             } else {
                 NegotiationState.OFFERED
             }
-        if (!precondition(allowedState, Role.PROVIDER)) {
+        if (!precondition(allowedState, Negotiation.Role.PROVIDER)) {
             responseCallback(false)
             return
         }
@@ -186,9 +186,9 @@ class NegotiationImpl(
      * This operation is only allowed if we are a consumer and the negotiation is either in its initial or the requested
      * state, which will be reported back by the argument to [responseCallback].
      */
-    suspend fun processOffer(
+    override suspend fun processOffer(
         req: ContractOfferMessage,
-        initial: Boolean = false,
+        initial: Boolean,
         responseCallback: suspend (Boolean) -> Unit,
     ) = mutex.withLock {
         val allowedState =
@@ -198,7 +198,7 @@ class NegotiationImpl(
                 NegotiationState.REQUESTED
             }
 
-        if (!precondition(allowedState, Role.CONSUMER)) {
+        if (!precondition(allowedState, Negotiation.Role.CONSUMER)) {
             responseCallback(false)
             return
         }
@@ -245,11 +245,11 @@ class NegotiationImpl(
         state = NegotiationState.ACCEPTED
     }
 
-    suspend fun processAccept(responseCallback: suspend (Boolean) -> Unit): Unit =
+    override suspend fun processAccept(responseCallback: suspend (Boolean) -> Unit): Unit =
         mutex.withLock {
             // By making sure that the state machine is in the offered state, we make sure that the current offer has
             // been made by us, as client offers (= requests) move us into the requested state.
-            if (!precondition(NegotiationState.OFFERED, Role.PROVIDER)) {
+            if (!precondition(NegotiationState.OFFERED, Negotiation.Role.PROVIDER)) {
                 responseCallback(false)
                 return
             }
@@ -277,9 +277,9 @@ class NegotiationImpl(
             state = NegotiationState.AGREED
         }
 
-    suspend fun processVerify(responseCallback: suspend (Boolean) -> Unit): Unit =
+    override suspend fun processVerify(responseCallback: suspend (Boolean) -> Unit): Unit =
         mutex.withLock {
-            if (!precondition(NegotiationState.AGREED, Role.PROVIDER)) {
+            if (!precondition(NegotiationState.AGREED, Negotiation.Role.PROVIDER)) {
                 responseCallback(false)
                 return
             }
@@ -305,8 +305,8 @@ class NegotiationImpl(
             responseCallback(true)
         }
 
-    suspend fun processFinalize(responseCallback: suspend (Boolean) -> Unit) {
-        if (!precondition(NegotiationState.VERIFIED, Role.CONSUMER)) {
+    override suspend fun processFinalize(responseCallback: suspend (Boolean) -> Unit) {
+        if (!precondition(NegotiationState.VERIFIED, Negotiation.Role.CONSUMER)) {
             responseCallback(false)
             return
         }
@@ -317,7 +317,7 @@ class NegotiationImpl(
 
     //       bad. Find out if there are any coroutine reentrant locks in kotlin or if the default mutex can be made
     //       reentrant somehow.
-    fun getStateMessageUnlocked(): ContractNegotiation {
+    override fun getStateMessageUnlocked(): ContractNegotiation {
         val (providerPid, consumerPid) = getProviderAndConsumerPid()
 
         return ContractNegotiation(
@@ -327,17 +327,17 @@ class NegotiationImpl(
         )
     }
 
-    suspend fun getStateMessage(): ContractNegotiation =
+    override suspend fun getStateMessage(): ContractNegotiation =
         mutex.withLock {
             return getStateMessageUnlocked()
         }
 
-    suspend fun processAgreement(
+    override suspend fun processAgreement(
         req: ContractAgreementMessage,
         responseCallback: suspend (Boolean) -> Unit,
     ): Unit =
         mutex.withLock {
-            if ((state != NegotiationState.REQUESTED && state != NegotiationState.ACCEPTED) || role != Role.CONSUMER) {
+            if ((state != NegotiationState.REQUESTED && state != NegotiationState.ACCEPTED) || role != Negotiation.Role.CONSUMER) {
                 responseCallback(false)
                 return
             }
@@ -364,7 +364,7 @@ class NegotiationImpl(
             )
         }
 
-    suspend fun processTermination(
+    override suspend fun processTermination(
         req: ContractNegotiationTerminationMessage,
         responseCallback: suspend () -> Unit,
     ) = mutex.withLock {
@@ -387,8 +387,4 @@ class NegotiationImpl(
         private val LOG = LoggerFactory.getLogger(NegotiationImpl::class.java)
     }
 
-    enum class Role {
-        PROVIDER,
-        CONSUMER,
-    }
 }
