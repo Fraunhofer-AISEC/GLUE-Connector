@@ -109,7 +109,7 @@ class NegotiationManager(
                 state = NegotiationState.REQUESTED,
                 peerIdentity = null,
                 currentPolicy = odrlRequest,
-                role = NegotiationImpl.Role.CONSUMER,
+                role = Negotiation.Role.CONSUMER,
                 ownPid = consumerPid,
                 peerPid = deserializedResponse.providerPid,
                 negotiator = negotiator ?: defaultNegotiator,
@@ -137,7 +137,7 @@ class NegotiationManager(
         request: ContractRequestMessage,
         originUrl: Url,
         peerIdent: String,
-    ): NegotiationImpl? {
+    ): Negotiation? {
         if (request.providerPid != null) {
             return getAsProvider(request.providerPid, request.consumerPid, peerIdent)
         }
@@ -150,7 +150,7 @@ class NegotiationManager(
                 peerIdentity = peerIdent,
                 // The policy is actually set after it has been processed by the negotiator
                 currentPolicy = null,
-                role = NegotiationImpl.Role.PROVIDER,
+                role = Negotiation.Role.PROVIDER,
                 ownPid = providerPid,
                 peerPid = request.consumerPid,
                 negotiator = defaultNegotiator,
@@ -171,7 +171,7 @@ class NegotiationManager(
         request: ContractOfferMessage,
         originUrl: Url,
         peerIdent: String,
-    ): NegotiationImpl? {
+    ): Negotiation? {
         if (request.consumerPid != null) {
             return getAsConsumer(request.consumerPid, request.providerPid, peerIdent)
         }
@@ -183,7 +183,7 @@ class NegotiationManager(
                 state = NegotiationState.OFFERED,
                 peerIdentity = peerIdent,
                 currentPolicy = null,
-                role = NegotiationImpl.Role.CONSUMER,
+                role = Negotiation.Role.CONSUMER,
                 ownPid = consumerPid,
                 peerPid = request.providerPid,
                 negotiator = defaultNegotiator,
@@ -206,7 +206,7 @@ class NegotiationManager(
         providerPid: String,
         consumerPid: String?,
         peerIdent: String,
-    ): NegotiationImpl? {
+    ): Negotiation? {
         val negotiation = providerNegotiations[providerPid] ?: return null
 
         if (consumerPid != null && negotiation.peerPid != consumerPid) {
@@ -226,7 +226,7 @@ class NegotiationManager(
         consumerPid: String,
         providerPid: String?,
         peerIdent: String,
-    ): NegotiationImpl? {
+    ): Negotiation? {
         // This is needed since kotlinx coroutines does not support condition variables...
         val negotiationProducer =
             if (consumerNegotiations.containsKey(consumerPid)) {
@@ -251,7 +251,7 @@ class NegotiationManager(
         return negotiation
     }
 
-    fun getNegotiations(): List<NegotiationImpl> {
+    fun getNegotiations(): List<Negotiation> {
         return (consumerNegotiations.values + providerNegotiations.values).toList()
     }
 
