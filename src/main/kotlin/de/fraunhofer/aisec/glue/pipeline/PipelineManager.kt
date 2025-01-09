@@ -23,25 +23,30 @@ class PipelineManager(
             val name = createPipelineName()
             val pipeline = backend.createPipeline(name, pipelineSpec)
 
-            val containerInfo = pipeline.getContainerInfo()
-            for (i in containerInfo.indices) {
-                val current = containerInfo[i]
-                val next = containerInfo.getOrNull(i + 1)?.name
+            try {
+                val containerInfo = pipeline.getContainerInfo()
+                for (i in containerInfo.indices) {
+                    val current = containerInfo[i]
+                    val next = containerInfo.getOrNull(i + 1)?.name
 
-                pipeline.injectConfig(
-                    i,
-                    ContainerConfig(
-                        controller = backend.getConnectorIp(current),
-                        nextContainer = next,
-                        parameters = pipelineSpec.container[i].parameter,
-                    ),
-                )
+                    pipeline.injectConfig(
+                        i,
+                        ContainerConfig(
+                            controller = backend.getConnectorIp(current),
+                            nextContainer = next,
+                            parameters = pipelineSpec.container[i].parameter,
+                        ),
+                    )
+                }
+
+                pipeline.start()
+
+                pipelines[name] = pipeline
+                pipeline
+            } catch (t: Throwable) {
+                pipeline.remove()
+                throw t
             }
-
-            pipeline.start()
-
-            pipelines[name] = pipeline
-            pipeline
         }
 
     suspend fun deletePipeline(pipelineName: String): Boolean =

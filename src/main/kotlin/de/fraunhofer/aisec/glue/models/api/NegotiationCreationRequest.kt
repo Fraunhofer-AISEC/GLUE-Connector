@@ -1,8 +1,8 @@
 package de.fraunhofer.aisec.glue.models.api
 
-import com.fasterxml.jackson.databind.JsonNode
+import de.fraunhofer.iosb.odrl.OdrlOffer
 
 data class NegotiationCreationRequest(
     val peer: String,
-    val contractRequest: JsonNode,
+    val contractRequest: OdrlOffer,
 )

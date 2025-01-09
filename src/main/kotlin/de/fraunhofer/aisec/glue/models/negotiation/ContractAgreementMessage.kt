@@ -3,10 +3,10 @@ package de.fraunhofer.aisec.glue.models.negotiation
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.fasterxml.jackson.annotation.JsonTypeName
-import com.fasterxml.jackson.databind.JsonNode
-import de.fraunhofer.aisec.glue.jsonld.JsonLDType
+import de.fraunhofer.iosb.odrl.parser.JsonLd
+import de.fraunhofer.iosb.odrl.OdrlAgreement
 
-@JsonLDType
+@JsonLd(Contexts.DSPACE)
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type")
 @JsonTypeName("${Namespaces.DSPACE}/ContractOfferMessage")
 data class ContractAgreementMessage(
@@ -15,7 +15,7 @@ data class ContractAgreementMessage(
     @JsonProperty("${Namespaces.DSPACE}/consumerPid")
     val consumerPid: String,
     @JsonProperty("${Namespaces.DSPACE}/agreement")
-    val agreement: JsonNode,
+    val agreement: OdrlAgreement,
     @JsonProperty("${Namespaces.DSPACE}/callbackAddress")
     val callbackAddress: String,
 )

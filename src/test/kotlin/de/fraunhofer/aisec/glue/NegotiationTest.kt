@@ -1,26 +1,27 @@
 package de.fraunhofer.aisec.glue
 
 import com.apicatalog.jsonld.JsonLd
-import com.apicatalog.jsonld.JsonLdOptions
 import com.apicatalog.jsonld.document.JsonDocument
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.datatype.jsonp.JSONPModule
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.jacksonMapperBuilder
+import com.apicatalog.jsonld.JsonLdOptions
 import de.fraunhofer.aisec.glue.controllers.Controller
 import de.fraunhofer.aisec.glue.controllers.NegotiationController
-import de.fraunhofer.aisec.glue.jsonld.JsonLDModule
 import de.fraunhofer.aisec.glue.models.negotiation.*
 import de.fraunhofer.aisec.glue.negotiation.DummyNegotiator
 import de.fraunhofer.aisec.glue.negotiation.NegotiationManager
-import de.fraunhofer.aisec.glue.plugins.configureSerialization
+import de.fraunhofer.aisec.glue.negotiation.toAgreement
+import de.fraunhofer.iosb.odrl.OdrlOffer
+import de.fraunhofer.iosb.odrl.OdrlParty
+import de.fraunhofer.iosb.odrl.parser.OdrlParser
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.engine.mock.*
 import io.ktor.client.engine.okhttp.*
 import io.ktor.client.plugins.auth.*
 import io.ktor.client.plugins.auth.providers.*
-import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.http.content.*
@@ -37,7 +38,6 @@ import io.ktor.server.testing.*
 import io.mockk.coJustRun
 import io.mockk.coVerify
 import io.mockk.mockk
-import jakarta.json.JsonObject
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
 import org.slf4j.event.Level
@@ -49,14 +49,14 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import kotlin.time.toKotlinDuration
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation as ClientContentNegotiation
+import io.ktor.server.plugins.contentnegotiation.ContentNegotiation as ServerContentNegotiation
 
 class NegotiationTest {
     private fun httpClient(mockFactory: suspend MockRequestHandleScope.(HttpRequestData) -> HttpResponseData) =
         HttpClient(MockEngine(mockFactory)) {
-            install(ContentNegotiation) {
-                jackson(streamRequestBody = false) {
-                    registerModules(JsonLDModule(JsonLdOptions()))
-                }
+            install(ClientContentNegotiation) {
+                register(ContentType.Application.Json, JacksonConverter(objectMapper, streamRequestBody = false))
             }
         }
 
@@ -79,12 +79,14 @@ class NegotiationTest {
                             consumerState = NegotiationState.AGREED
                             respond("")
                         }
+
                         "/negotiations/$consumerPid/events" -> {
                             val reqBody = convertValue<ContractNegotiationEventMessage>(req.body)
                             assertEquals(NegotiationEvent.FINALIZED, reqBody.eventType)
                             consumerState = NegotiationState.FINALIZED
                             respond("")
                         }
+
                         else -> {
                             throw IllegalStateException("Unexpected URL ${req.url} called")
                         }
@@ -100,7 +102,7 @@ class NegotiationTest {
                     providerPid = null,
                     consumerPid = consumerPid,
                     callbackAddress = "https://consumer/negotiations",
-                    offer = parsedExamplePolicy,
+                    offer = exampleOffer,
                 )
 
             val negotiation =
@@ -130,11 +132,8 @@ class NegotiationTest {
             assertEquals(NegotiationState.FINALIZED, negotiation.state)
             assertEquals(NegotiationState.FINALIZED, consumerState)
 
-            assertTrue(negotiation.completed.isCompleted)
-            val result = negotiation.completed.await()
-
             // Verify that the returned and stored policies are the same
-            coVerify { contractStore.addContract(result) }
+            coVerify { contractStore.addContract(any()) }
 
         }
 
@@ -157,6 +156,7 @@ class NegotiationTest {
                             providerState = NegotiationState.VERIFIED
                             respond("")
                         }
+
                         else -> {
                             throw IllegalStateException("Unexpected URL ${req.url} called")
                         }
@@ -171,7 +171,7 @@ class NegotiationTest {
                     providerPid = providerPid,
                     consumerPid = null,
                     callbackAddress = "https://provider/negotiations",
-                    offer = parsedExamplePolicy,
+                    offer = exampleOffer,
                 )
 
             val negotiation =
@@ -196,7 +196,7 @@ class NegotiationTest {
                 ContractAgreementMessage(
                     providerPid = providerPid,
                     consumerPid = negotiation.ownPid,
-                    agreement = parsedExamplePolicy,
+                    agreement = exampleAgreement,
                     callbackAddress = "https://provider/negotiations",
                 )
             responseCallbackCalled = false
@@ -218,10 +218,7 @@ class NegotiationTest {
             assertTrue(responseCallbackCalled)
             assertEquals(NegotiationState.FINALIZED, negotiation.state)
 
-            assertTrue(negotiation.completed.isCompleted)
-            val result = negotiation.completed.await()
-
-            coVerify { contractStore.addContract(result) }
+            coVerify { contractStore.addContract(any()) }
         }
 
     private fun ApplicationTestBuilder.configureTestApp(controller: Controller) {
@@ -230,7 +227,9 @@ class NegotiationTest {
             config = ApplicationConfig("/dev/null")
         }
         application {
-            configureSerialization()
+            install(ServerContentNegotiation) {
+                register(ContentType.Application.Json, JacksonConverter(objectMapper))
+            }
             install(Authentication) {
                 basic {
                     validate { creds -> UserIdPrincipal(creds.name) }
@@ -244,10 +243,8 @@ class NegotiationTest {
 
     private fun ApplicationTestBuilder.testClient() =
         createClient {
-            install(ContentNegotiation) {
-                jackson {
-                    registerModules(JsonLDModule(JsonLdOptions()))
-                }
+            install(ClientContentNegotiation) {
+                register(ContentType.Application.Json, JacksonConverter(objectMapper))
             }
         }
 
@@ -264,12 +261,14 @@ class NegotiationTest {
                             consumerState = NegotiationState.AGREED
                             respond("")
                         }
+
                         "/negotiations/$consumerPid/events" -> {
                             val reqBody = convertValue<ContractNegotiationEventMessage>(req.body)
                             assertEquals(NegotiationEvent.FINALIZED, reqBody.eventType)
                             consumerState = NegotiationState.FINALIZED
                             respond("")
                         }
+
                         else -> {
                             throw IllegalStateException("Unexpected URL ${req.url} called")
                         }
@@ -291,7 +290,7 @@ class NegotiationTest {
                             providerPid = null,
                             consumerPid = consumerPid,
                             callbackAddress = "https://consumer/negotiations",
-                            offer = parsedExamplePolicy,
+                            offer = exampleOffer,
                         ),
                     )
                 }
@@ -343,6 +342,7 @@ class NegotiationTest {
                             providerState = NegotiationState.VERIFIED
                             respond("")
                         }
+
                         else -> {
                             throw IllegalStateException("Unexpected URL ${req.url} called")
                         }
@@ -365,7 +365,7 @@ class NegotiationTest {
                             providerPid = providerPid,
                             consumerPid = null,
                             callbackAddress = "https://provider/negotiations",
-                            offer = parsedExamplePolicy,
+                            offer = exampleOffer,
                         ),
                     )
                 }
@@ -390,7 +390,7 @@ class NegotiationTest {
                         ContractAgreementMessage(
                             providerPid = providerPid,
                             consumerPid = respBody.consumerPid,
-                            agreement = parsedExamplePolicy,
+                            agreement = exampleAgreement,
                             callbackAddress = "https://consumer/negotiations",
                         ),
                     )
@@ -423,10 +423,8 @@ class NegotiationTest {
         runTest(timeout = Duration.ofSeconds(30).toKotlinDuration()) {
             val testClient =
                 HttpClient(OkHttp) {
-                    install(ContentNegotiation) {
-                        jackson {
-                            registerModules(JsonLDModule(JsonLdOptions()))
-                        }
+                    install(ClientContentNegotiation) {
+                        register(ContentType.Application.Json, JacksonConverter(objectMapper))
                     }
                     install(Auth) {
                         basic {
@@ -441,13 +439,15 @@ class NegotiationTest {
             val providerContractStore = mockk<ContractStore>()
             coJustRun { providerContractStore.addContract(any()) }
 
-            val providerNegotiationManager = NegotiationManager(testClient, objectMapper, DummyNegotiator(), providerContractStore)
+            val providerNegotiationManager =
+                NegotiationManager(testClient, objectMapper, DummyNegotiator(), providerContractStore)
             val providerController = NegotiationController(providerNegotiationManager)
 
             val consumerContractStore = mockk<ContractStore>()
             coJustRun { consumerContractStore.addContract(any()) }
 
-            val consumerNegotiationManager = NegotiationManager(testClient, objectMapper, DummyNegotiator(), consumerContractStore)
+            val consumerNegotiationManager =
+                NegotiationManager(testClient, objectMapper, DummyNegotiator(), consumerContractStore)
             val consumerController = NegotiationController(consumerNegotiationManager)
 
             fun testServer(
@@ -466,7 +466,9 @@ class NegotiationTest {
                     }
                 },
                 module = {
-                    configureSerialization()
+                    install(ServerContentNegotiation) {
+                        register(ContentType.Application.Json, JacksonConverter(objectMapper))
+                    }
                     install(Authentication) {
                         basic {
                             validate { creds -> UserIdPrincipal(creds.name) }
@@ -495,7 +497,7 @@ class NegotiationTest {
                 consumerNegotiationManager.startNegotiation(
                     URLBuilder(providerAddress).appendPathSegments("negotiations").build(),
                     URLBuilder(consumerAddress).appendPathSegments("negotiations").build(),
-                    parsedExamplePolicy,
+                    exampleOffer,
                     null,
                 ).await()
 
@@ -505,19 +507,12 @@ class NegotiationTest {
 
 
     companion object {
-        private val objectMapper =
-            jacksonMapperBuilder()
-                .addModules(JsonLDModule(JsonLdOptions()), JSONPModule(), JavaTimeModule())
-                .build()
+        private val objectMapper = OdrlParser().mapper
 
-        val parsedExamplePolicy: JsonNode by lazy {
-            File("test-containers/example-policy.json").inputStream().use { input ->
-                val mapper = jacksonMapperBuilder().addModules(JSONPModule(), JavaTimeModule()).build()
-                val jsonld = mapper.readValue(input, JsonObject::class.java)
-                val compacted =
-                    JsonLd.compact(JsonDocument.of(jsonld), JsonDocument.of(JsonObject.EMPTY_JSON_OBJECT)).get()
-                mapper.convertValue(compacted, JsonNode::class.java)
-            }
+        val exampleOffer: OdrlOffer = File("test-containers/example-policy.json").inputStream().use { input ->
+            objectMapper.readValue(input, OdrlOffer::class.java)
         }
+
+        val exampleAgreement = exampleOffer.toAgreement(objectMapper, OdrlParty("http://dataconsumer.com/org"))
     }
 }

@@ -132,7 +132,7 @@ class DockerContainerPipeline internal constructor(
             ContainerInfo(
                 name = c.name,
                 ipAddresses = inspect.networkSettings?.networks?.values?.mapNotNull(EndpointSettings::ipAddress) ?: emptyList(),
-                ports = inspect.networkSettings?.ports?.map { (k, v) -> parsePortBinding(k, v) } ?: emptyList(),
+                ports = inspect.networkSettings?.ports?.mapNotNull { (k, v) -> v?.let{ parsePortBinding(k, v) } } ?: emptyList(),
                 status = parseContainerStatus(inspect.state!!),
                 pid = inspect.state.pid,
             )
