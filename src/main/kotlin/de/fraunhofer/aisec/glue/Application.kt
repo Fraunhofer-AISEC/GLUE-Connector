@@ -55,7 +55,7 @@ val defaultDependencies by DI.Module {
     bind<ContractStore>() with singleton { ContractStore(instance()) }
     bind<NegotiationManager>() with singleton { NegotiationManager(instance(), instance(), DummyNegotiator(), instance()) }
     bind<NegotiationController>() with singleton { NegotiationController(instance()) }
-    bind<PipelineController>() with singleton { PipelineController(instance(), instance(), instance()) }
+    bind<PipelineController>() with singleton { PipelineController(instance(), instance()) }
     bind<NegotiationApiController>() with singleton { NegotiationApiController(instance()) }
     bind<RemotePipelineApiController>() with singleton { RemotePipelineApiController(instance(), instance()) }
 }
