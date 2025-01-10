@@ -10,10 +10,10 @@ import de.fraunhofer.iosb.odrl.parser.JsonLd
 @JsonSubTypes(
     Type(GlueRestParameter::class),
 )
-open class GlueParameter {
+open class GlueParameter(
     @JsonProperty(GlueIdentifiers.VALUE)
     val value: GlueValue? = null
-
+) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false

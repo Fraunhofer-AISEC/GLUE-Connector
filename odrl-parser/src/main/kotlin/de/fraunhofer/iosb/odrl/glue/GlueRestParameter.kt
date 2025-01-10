@@ -7,12 +7,18 @@ import java.net.URI
 @JsonLd(GlueIdentifiers.CONTEXT)
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type", defaultImpl = GlueRestParameter::class)
 @JsonTypeName(GlueIdentifiers.REST_PARAMETER)
-class GlueRestParameter: GlueParameter() {
+class GlueRestParameter(
+    // Properties of superclass GlueParameter
+    @JsonProperty(GlueIdentifiers.VALUE)
+    value: GlueValue? = null,
+
+    // Properties of GlueRestParameter
     @JsonProperty(GlueIdentifiers.HTTP_URL)
-    val httpUrl: URI = URI.create("")
+    val httpUrl: URI = URI.create(""),
 
     @JsonProperty(GlueIdentifiers.HTTP_TYPE)
-    val httpType: GlueHttpType = GlueHttpType.GET
+    val httpType: GlueHttpType = GlueHttpType.GET,
+): GlueParameter(value) {
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

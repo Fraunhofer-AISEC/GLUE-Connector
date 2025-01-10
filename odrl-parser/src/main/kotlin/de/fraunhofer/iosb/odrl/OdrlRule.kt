@@ -17,64 +17,65 @@ import java.net.URI
     Type(OdrlProhibition::class),
     Type(OdrlDuty::class),
 )
-open class OdrlRule: JsonLdBeanValidator {
+open class OdrlRule(
     @JsonProperty("@id")
-    val uid: URI? = null
+    val uid: URI? = null,
 
     @JsonProperty(OdrlIdentifiers.HAS_ACTION)
-    val action: OdrlAction = OdrlAction(URI.create(""))
+    val action: OdrlAction = OdrlAction(URI.create("")),
 
     @JsonProperty(OdrlIdentifiers.TARGET)
-    val target: OdrlAsset? = null
+    val target: OdrlAsset? = null,
 
     @JsonProperty(OdrlIdentifiers.OUTPUT)
-    val output: OdrlAsset? = null
+    val output: OdrlAsset? = null,
 
     @JsonProperty(OdrlIdentifiers.ASSIGNEE)
-    val assignee: OdrlParty? = null
+    val assignee: OdrlParty? = null,
 
     @JsonProperty(OdrlIdentifiers.ASSIGNER)
-    val assigner: OdrlParty? = null
+    val assigner: OdrlParty? = null,
 
     @JsonProperty(OdrlIdentifiers.ATTRIBUTED_PARTY)
-    val attributedParty: OdrlParty? = null
+    val attributedParty: OdrlParty? = null,
 
     @JsonProperty(OdrlIdentifiers.ATTRIBUTING_PARTY)
-    val attributingParty: OdrlParty? = null
+    val attributingParty: OdrlParty? = null,
 
     @JsonProperty(OdrlIdentifiers.COMPENSATED_PARTY)
-    val compensatedParty: OdrlParty? = null
+    val compensatedParty: OdrlParty? = null,
 
     @JsonProperty(OdrlIdentifiers.COMPENSATING_PARTY)
-    val compensatingParty: OdrlParty? = null
+    val compensatingParty: OdrlParty? = null,
 
     @JsonProperty(OdrlIdentifiers.CONSENTED_PARTY)
-    val consentedParty: OdrlParty? = null
+    val consentedParty: OdrlParty? = null,
 
     @JsonProperty(OdrlIdentifiers.CONSENTING_PARTY)
-    val consentingParty: OdrlParty? = null
+    val consentingParty: OdrlParty? = null,
 
     @JsonProperty(OdrlIdentifiers.CONTRACTED_PARTY)
-    val contractedParty: OdrlParty? = null
+    val contractedParty: OdrlParty? = null,
 
     @JsonProperty(OdrlIdentifiers.CONTRACTING_PARTY)
-    val contractingParty: OdrlParty? = null
+    val contractingParty: OdrlParty? = null,
 
     @JsonProperty(OdrlIdentifiers.INFORMED_PARTY)
-    val informedParty: OdrlParty? = null
+    val informedParty: OdrlParty? = null,
 
     @JsonProperty(OdrlIdentifiers.INFORMING_PARTY)
-    val informingParty: OdrlParty? = null
+    val informingParty: OdrlParty? = null,
 
     @JsonProperty(OdrlIdentifiers.TRACKED_PARTY)
-    val trackedParty: OdrlParty? = null
+    val trackedParty: OdrlParty? = null,
 
     @JsonProperty(OdrlIdentifiers.TRACKING_PARTY)
-    val trackingParty: OdrlParty? = null
+    val trackingParty: OdrlParty? = null,
 
     @JsonProperty(OdrlIdentifiers.HAS_CONSTRAINT)
     @JsonSetter(nulls = Nulls.AS_EMPTY)
-    val constraint: List<OdrlConstraintRepresentation> = listOf()
+    val constraint: List<OdrlConstraintRepresentation> = listOf(),
+): JsonLdBeanValidator {
 
     override fun validate(): List<ValidationError> {
         return validateOdrlRule.validate(this).errors
