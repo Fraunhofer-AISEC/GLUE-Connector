@@ -56,7 +56,7 @@ fun main() {
         val e = OdrlPolicyEvaluator()
 
         var policy = p.readOdrlPolicy(loadFileOrDie("/policy-example-1.json"))
-        var context = Context("http://www.w3.org/ns/odrl/2/play", "http://example.com/game:9090")
+        var context = Context("http://www.w3.org/ns/odrl/2/play", "http://example.com/target")
         println("Evaluating $policy on $context")
         var decision = e.evaluate(context, policy)
         println("Decision of policy-example-1.json is $decision (should be: ALLOW)")

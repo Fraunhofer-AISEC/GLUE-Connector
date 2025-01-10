@@ -20,7 +20,7 @@ class GlueValueProcessorTest {
 
     @BeforeTest
     fun setup() {
-        mapper = OdrlParser().mapper;
+        mapper = OdrlParser().mapper
         processor = GlueValueProcessor()
         callback = GlueParameterPlaceholderCallback {
             when (it) {
