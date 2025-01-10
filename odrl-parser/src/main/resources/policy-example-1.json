@@ -1,5 +1,5 @@
 {
-  "@context": "file:/glue-odrl.jsonld",
+  "@context": "http://www.w3.org/ns/odrl.jsonld",
   "@type": "Policy",
   "uid": "http://example.com/policy:9090",
   "profile": "http://example.com/odrl:profile:07",
