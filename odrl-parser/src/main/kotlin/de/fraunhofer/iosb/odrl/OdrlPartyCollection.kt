@@ -19,6 +19,8 @@ data class OdrlPartyCollection(
     @JsonSetter(nulls = Nulls.AS_EMPTY)
     val refinement: List<OdrlConstraintRepresentation> = listOf(),
 ): JsonLdBeanValidator {
+    // Constructor necessary for Jackson to deserialize primitive type
+    @Suppress("unused")
     constructor(primitiveValue: String) : this(URI.create(primitiveValue))
 
     override fun validate(): List<ValidationError> {

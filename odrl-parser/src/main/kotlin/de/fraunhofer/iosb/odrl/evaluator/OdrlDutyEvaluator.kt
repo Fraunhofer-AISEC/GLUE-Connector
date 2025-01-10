@@ -32,7 +32,7 @@ class OdrlDutyEvaluator(
                     else -> throw OdrlException("Invalid $c: Expected type 'OdrlConstraint' or 'OdrlLogicalConstraint'")
                 }
             if (!result.success)
-                return Result(true);
+                return Result(true)
         }
 
         // Action must be exercised
@@ -44,7 +44,7 @@ class OdrlDutyEvaluator(
             val results = duty.consequence.map { isFulfilled(ctx, it, actionCallback) }
             if (results.any { !it.success })
                 return Result(result, "Not all consequences fulfilled. Individual results: $results")
-            return result;
+            return result
         }
 
         return Result(true)

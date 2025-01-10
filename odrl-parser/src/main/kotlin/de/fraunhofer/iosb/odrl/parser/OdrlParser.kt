@@ -9,6 +9,7 @@ import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import de.fraunhofer.iosb.odrl.OdrlPolicy
 import java.io.Reader
 
+@Suppress("unused")
 class OdrlParser(val mapper: ObjectMapper = ObjectMapper()) {
     init {
         configureMapper()
@@ -25,7 +26,7 @@ class OdrlParser(val mapper: ObjectMapper = ObjectMapper()) {
     }
 
     fun readOdrlPolicy(r: Reader): OdrlPolicy {
-        return mapper.readValue(r, OdrlPolicy::class.java);
+        return mapper.readValue(r, OdrlPolicy::class.java)
     }
 
     fun convertToOdrlPolicy(value: Any): OdrlPolicy {

@@ -26,6 +26,8 @@ data class OdrlAction(
     @JsonSetter(nulls = Nulls.AS_EMPTY)
     val implies: List<OdrlAction> = listOf(),
 ): JsonLdBeanValidator {
+    // Constructor necessary for Jackson to deserialize primitive type
+    @Suppress("unused")
     constructor(primitiveValue: String) : this(URI.create(primitiveValue))
 
     override fun validate(): List<ValidationError> {

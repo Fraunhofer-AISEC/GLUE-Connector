@@ -37,7 +37,7 @@ class OdrlOperatorEvaluator(
             }
             OdrlIdentifiers.ISPARTOF ->
                 return Result(rightOperandList.contains(leftOperandValue), "$leftOperand is not a part of $rightOperandList")
-            OdrlIdentifiers.GT, OdrlIdentifiers.GTEQ, OdrlIdentifiers.LT, OdrlIdentifiers.LTEQ, ->
+            OdrlIdentifiers.GT, OdrlIdentifiers.GTEQ, OdrlIdentifiers.LT, OdrlIdentifiers.LTEQ ->
                 throw OdrlException("Cannot evaluate $operator on left operand $leftOperandValue and right operand list $rightOperandList")
             OdrlIdentifiers.ISA, OdrlIdentifiers.ISALLOF, OdrlIdentifiers.ISANYOF, OdrlIdentifiers.ISNONEOF ->
                 throw OdrlException("$operator is not supported")
