@@ -12,12 +12,26 @@ import java.net.URI
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type")
 @JsonTypeName(OdrlIdentifiers.SET)
 class OdrlSet(
+    // Properties of superclass OdrlPolicy
+    @JsonProperty("@id")
     uid: URI = URI.create(""),
+
+    @JsonProperty(OdrlIdentifiers.HAS_PERMISSION)
     permission: List<OdrlPermission> = listOf(),
+
+    @JsonProperty(OdrlIdentifiers.HAS_PROHIBITION)
     prohibition: List<OdrlProhibition> = listOf(),
+
+    @JsonProperty(OdrlIdentifiers.OBLIGATION)
     obligation: List<OdrlDuty> = listOf(),
+
+    @JsonProperty(OdrlIdentifiers.PROFILE)
     profile: List<OdrlIri> = listOf(),
+
+    @JsonProperty(OdrlIdentifiers.INHERIT_FROM)
     inheritFrom: List<OdrlIri> = listOf(),
+
+    @JsonProperty(OdrlIdentifiers.CONFLICT)
     conflict: OdrlConflictTerm? = null,
 ) : OdrlPolicy(uid, permission, prohibition, obligation, profile, inheritFrom, conflict),
     JsonLdBeanValidator {
