@@ -18,32 +18,33 @@ import java.net.URI
     Type(OdrlOffer::class),
     Type(OdrlAgreement::class),
 )
-open class OdrlPolicy: JsonLdBeanValidator {
+open class OdrlPolicy(
     @JsonProperty("@id")
-    val uid: URI = URI.create("")
+    val uid: URI = URI.create(""),
 
     @JsonProperty(OdrlIdentifiers.HAS_PERMISSION)
     @JsonSetter(nulls = Nulls.AS_EMPTY)
-    val permission: List<OdrlPermission> = listOf()
+    val permission: List<OdrlPermission> = listOf(),
 
     @JsonProperty(OdrlIdentifiers.HAS_PROHIBITION)
     @JsonSetter(nulls = Nulls.AS_EMPTY)
-    val prohibition: List<OdrlProhibition> = listOf()
+    val prohibition: List<OdrlProhibition> = listOf(),
 
     @JsonProperty(OdrlIdentifiers.OBLIGATION)
     @JsonSetter(nulls = Nulls.AS_EMPTY)
-    val obligation: List<OdrlDuty> = listOf()
+    val obligation: List<OdrlDuty> = listOf(),
 
     @JsonProperty(OdrlIdentifiers.PROFILE)
     @JsonSetter(nulls = Nulls.AS_EMPTY)
-    val profile: List<OdrlIri> = listOf()
+    val profile: List<OdrlIri> = listOf(),
 
     @JsonProperty(OdrlIdentifiers.INHERIT_FROM)
     @JsonSetter(nulls = Nulls.AS_EMPTY)
-    val inheritFrom: List<OdrlIri> = listOf()
+    val inheritFrom: List<OdrlIri> = listOf(),
 
     @JsonProperty(OdrlIdentifiers.CONFLICT)
-    val conflict: OdrlConflictTerm? = null
+    val conflict: OdrlConflictTerm? = null,
+): JsonLdBeanValidator {
 
     override fun validate(): List<ValidationError> {
         return validateOdrlPolicy.validate(this).errors

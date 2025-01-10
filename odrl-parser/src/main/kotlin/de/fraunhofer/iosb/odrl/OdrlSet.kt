@@ -6,11 +6,22 @@ import de.fraunhofer.iosb.odrl.parser.JsonLd
 import de.fraunhofer.iosb.odrl.parser.JsonLdBeanValidator
 import io.konform.validation.Validation
 import io.konform.validation.ValidationError
+import java.net.URI
 
 @JsonLd(GlueIdentifiers.CONTEXT)
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type")
 @JsonTypeName(OdrlIdentifiers.SET)
-class OdrlSet: OdrlPolicy(), JsonLdBeanValidator {
+class OdrlSet(
+    uid: URI = URI.create(""),
+    permission: List<OdrlPermission> = listOf(),
+    prohibition: List<OdrlProhibition> = listOf(),
+    obligation: List<OdrlDuty> = listOf(),
+    profile: List<OdrlIri> = listOf(),
+    inheritFrom: List<OdrlIri> = listOf(),
+    conflict: OdrlConflictTerm? = null,
+) : OdrlPolicy(uid, permission, prohibition, obligation, profile, inheritFrom, conflict),
+    JsonLdBeanValidator {
+
     override fun validate(): List<ValidationError> {
         return validateOdrlSet.validate(this).errors
     }
