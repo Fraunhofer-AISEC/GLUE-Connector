@@ -11,7 +11,8 @@ import de.fraunhofer.iosb.odrl.parser.JsonLd
     Type(GlueRestParameter::class),
 )
 open class GlueParameter(
-    @JsonProperty(GlueIdentifiers.VALUE)
+    // Using the @field: annotation target allows Jackson to see this property also in subclasses
+    @field:JsonProperty(GlueIdentifiers.VALUE)
     val value: GlueValue? = null
 ) {
     override fun equals(other: Any?): Boolean {

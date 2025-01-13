@@ -9,7 +9,6 @@ import java.net.URI
 @JsonTypeName(GlueIdentifiers.REST_PARAMETER)
 class GlueRestParameter(
     // Properties of superclass GlueParameter
-    @JsonProperty(GlueIdentifiers.VALUE)
     value: GlueValue? = null,
 
     // Properties of GlueRestParameter
