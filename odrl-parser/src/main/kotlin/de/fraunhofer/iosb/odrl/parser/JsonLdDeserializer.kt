@@ -7,6 +7,7 @@ import com.apicatalog.jsonld.loader.DocumentLoader
 import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.databind.*
 import com.fasterxml.jackson.databind.jsontype.TypeDeserializer
+import de.fraunhofer.iosb.odrl.OdrlIdentifiers
 import jakarta.json.JsonValue
 import java.io.StringReader
 
@@ -24,7 +25,11 @@ class JsonLdDeserializer<T>(
         val jsonDocument = JsonDocument.of(StringReader(ctx.readTree(jp).toString()))
         val jsonLdObject = JsonLd.compact(jsonDocument, JsonDocument.of(JsonValue.EMPTY_JSON_OBJECT))
             .options(options).loader(documentLoader).compactArrays(true).compactToRelative(false).get()
-        val bean = mapper.readValue(jsonLdObject.toString(), clazz)
+
+        val jsonLdString = jsonLdObject.toString()
+            .replace("http://www.w3.org/ns/odrl/2/neg", OdrlIdentifiers.NEQ)
+
+        val bean = mapper.readValue(jsonLdString, clazz)
         if (bean is JsonLdBeanValidator) {
             val validationErrors = bean.validate()
             if (validationErrors.isNotEmpty())

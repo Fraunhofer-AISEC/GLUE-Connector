@@ -1,6 +1,8 @@
 package de.fraunhofer.iosb.odrl
 
+import com.fasterxml.jackson.databind.exc.InvalidFormatException
 import de.fraunhofer.iosb.odrl.Commons.Companion.loadFileOrDie
+import org.junit.jupiter.api.assertThrows
 import java.io.StringReader
 import java.net.URI
 import java.time.LocalDate
@@ -35,5 +37,18 @@ class OdrlSetTest {
         val string = parser.writeOdrlPolicy(set1)
         val set = parser.readOdrlPolicy(StringReader(string))
         assertEquals(set1, set)
+    }
+
+    @Test
+    fun testSetDeserializationWithInvalidUri() {
+        assertThrows<InvalidFormatException> {
+            parser.readOdrlPolicy(StringReader(
+                "{\n" +
+                    "  \"@context\": \"http://www.w3.org/ns/odrl.jsonld\",\n" +
+                    "  \"@type\": \"Set\",\n" +
+                    "  \"@id\": \":::invalid-uri:::\"\n" +
+                    "}"
+            ))
+        }
     }
 }

@@ -17,7 +17,7 @@ import java.net.URI
     Type(OdrlProhibition::class),
     Type(OdrlDuty::class),
 )
-open class OdrlRule(
+abstract class OdrlRule(
     // Using the @field: annotation target allows Jackson to see these properties also in subclasses
     @field:JsonProperty("@id")
     val uid: URI? = null,
