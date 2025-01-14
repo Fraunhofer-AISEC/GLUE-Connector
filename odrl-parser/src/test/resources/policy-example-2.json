@@ -21,9 +21,7 @@
           "@value": "2015-12-31",
           "@type": "xs:date"
         },
-        "odrl:dataType": {
-          "@id": "xs:date"
-        }
+        "odrl:dataType": "http://www.w3.org/2001/XMLSchema#date"
       }
     ]
   }

@@ -1,0 +1,11 @@
+{
+  "@context": "http://www.w3.org/ns/odrl.jsonld",
+  "@type": "Constraint",
+  "uid": "http://example.com/constraint",
+  "leftOperand": "http://example.com/leftOperand",
+  "operator": "eq",
+  "rightOperand": ["exampleRightOperand1", "exampleRightOperand2"],
+  "dataType": "http://example.com/dataType",
+  "unit": "http://example.com/unit",
+  "status": "http://example.com/status"
+}

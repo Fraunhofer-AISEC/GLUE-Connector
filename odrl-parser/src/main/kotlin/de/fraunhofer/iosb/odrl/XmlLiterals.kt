@@ -166,6 +166,25 @@ data class XmlAnyUri(
     @JsonProperty("@value")
     val value: URI,
 ): OdrlRightOperand() {
+    // Constructor necessary for Jackson to deserialize primitive type
+    @Suppress("unused")
+    constructor(primitiveValue: String) : this(URI.create(primitiveValue))
+
+    override fun compareTo(other: OdrlRightOperand) = compareString(value.toString(), other)
+    override fun equals(other: Any?) = super.equals(other)
+    override fun hashCode(): Int { return value.hashCode() }
+}
+
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type", defaultImpl = XmlAnyType::class)
+@JsonTypeName(XmlIdentifiers.ANYTYPE)
+data class XmlAnyType(
+    @JsonProperty("@value")
+    val value: URI,
+): OdrlRightOperand() {
+    // Constructor necessary for Jackson to deserialize primitive type
+    @Suppress("unused")
+    constructor(primitiveValue: String) : this(URI.create(primitiveValue))
+
     override fun compareTo(other: OdrlRightOperand) = compareString(value.toString(), other)
     override fun equals(other: Any?) = super.equals(other)
     override fun hashCode(): Int { return value.hashCode() }

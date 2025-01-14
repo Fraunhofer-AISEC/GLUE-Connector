@@ -9,7 +9,7 @@ class OdrlOperatorEvaluator(
         ctx: Context,
         operator: OdrlOperator,
         leftOperand: OdrlLeftOperand,
-        rightOperandReferenceList: List<OdrlIri>
+        rightOperandReferenceList: List<XmlAnyUri>
     ): Result {
         throw OdrlException("Evaluation of right operand references is not supported")
     }
