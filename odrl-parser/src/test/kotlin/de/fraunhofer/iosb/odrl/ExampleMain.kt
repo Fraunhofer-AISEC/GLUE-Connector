@@ -1,5 +1,6 @@
 package de.fraunhofer.iosb.odrl
 
+import de.fraunhofer.iosb.odrl.Commons.Companion.loadFileOrDie
 import de.fraunhofer.iosb.odrl.evaluator.Context
 import de.fraunhofer.iosb.odrl.evaluator.OdrlPolicyEvaluator
 import de.fraunhofer.iosb.odrl.evaluator.Result
@@ -7,17 +8,6 @@ import de.fraunhofer.iosb.odrl.glue.GlueContainerPipeline
 import de.fraunhofer.iosb.odrl.glue.GlueIdentifiers
 import de.fraunhofer.iosb.odrl.parser.OdrlParser
 import kotlinx.coroutines.runBlocking
-import java.io.BufferedReader
-import kotlin.system.exitProcess
-
-fun loadFileOrDie(fileName: String): BufferedReader {
-    val reader = {}.javaClass.getResourceAsStream(fileName)?.bufferedReader()
-    if (reader == null) {
-        println("Failed to load file $fileName")
-        exitProcess(-1)
-    }
-    return reader
-}
 
 fun extractPipelinesFromAction(action: OdrlAction): Pair<Result, List<GlueContainerPipeline>> {
     if (action.refinement.size != 1)

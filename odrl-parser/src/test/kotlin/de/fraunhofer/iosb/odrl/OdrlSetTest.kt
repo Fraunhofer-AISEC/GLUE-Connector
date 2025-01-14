@@ -1,17 +1,17 @@
-import de.fraunhofer.iosb.odrl.*
+package de.fraunhofer.iosb.odrl
+
+import de.fraunhofer.iosb.odrl.Commons.Companion.loadFileOrDie
 import java.io.StringReader
 import java.net.URI
 import java.time.LocalDate
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class OdrlAgreementTest {
+class OdrlSetTest {
     private val parser = Commons.parserInstance
-    private val agreement1 = OdrlAgreement(
+    private val set1 = OdrlSet(
         uid = URI.create("http://example.com/policy"),
         profile = listOf(OdrlIri(URI.create("http://example.com/profile"))),
-        assigner = OdrlParty(URI.create("http://example.com/assigner")),
-        assignee = OdrlParty(URI.create("http://example.com/assignee")),
         permission = listOf(OdrlPermission(
             uid = URI.create("http://example.com/permission"),
             target = OdrlAsset(URI.create("http://example.com/target")),
@@ -25,15 +25,15 @@ class OdrlAgreementTest {
     )
 
     @Test
-    fun testAgreementDeserialization() {
-        val agreement = parser.readOdrlPolicy(loadFileOrDie("/agreement-example-1.json"))
-        assertEquals(agreement1, agreement)
+    fun testSetDeserialization() {
+        val set = parser.readOdrlPolicy(loadFileOrDie("/set-example-1.json"))
+        assertEquals(set1, set)
     }
 
     @Test
-    fun testAgreementSerializationAndDeserialization() {
-        val string = parser.writeOdrlPolicy(agreement1)
-        val agreement = parser.readOdrlPolicy(StringReader(string))
-        assertEquals(agreement1, agreement)
+    fun testSetSerializationAndDeserialization() {
+        val string = parser.writeOdrlPolicy(set1)
+        val set = parser.readOdrlPolicy(StringReader(string))
+        assertEquals(set1, set)
     }
 }

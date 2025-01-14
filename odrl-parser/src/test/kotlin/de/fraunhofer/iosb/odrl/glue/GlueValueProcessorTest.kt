@@ -1,10 +1,11 @@
+package de.fraunhofer.iosb.odrl.glue
+
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.BooleanNode
 import com.fasterxml.jackson.databind.node.NullNode
 import com.fasterxml.jackson.databind.node.TextNode
 import de.fraunhofer.iosb.odrl.*
 import de.fraunhofer.iosb.odrl.de.fraunhofer.iosb.odrl.glue.GlueParameterPlaceholderCallback
-import de.fraunhofer.iosb.odrl.glue.*
 import de.fraunhofer.iosb.odrl.parser.OdrlParser
 import kotlinx.coroutines.runBlocking
 import java.time.LocalDate
