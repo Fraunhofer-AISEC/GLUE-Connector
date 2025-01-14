@@ -3,6 +3,7 @@ package de.fraunhofer.iosb.odrl.parser
 import com.apicatalog.jsonld.JsonLd
 import com.apicatalog.jsonld.JsonLdOptions
 import com.apicatalog.jsonld.document.JsonDocument
+import com.apicatalog.jsonld.loader.DocumentLoader
 import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.databind.*
 import com.fasterxml.jackson.databind.jsontype.TypeDeserializer
@@ -12,6 +13,7 @@ import java.io.StringReader
 class JsonLdDeserializer<T>(
     private val mapper: ObjectMapper,
     private val options: JsonLdOptions,
+    private val documentLoader: DocumentLoader,
     private val clazz: Class<T>
 ) : JsonDeserializer<T>() {
 
@@ -21,7 +23,7 @@ class JsonLdDeserializer<T>(
     ): T {
         val jsonDocument = JsonDocument.of(StringReader(ctx.readTree(jp).toString()))
         val jsonLdObject = JsonLd.compact(jsonDocument, JsonDocument.of(JsonValue.EMPTY_JSON_OBJECT))
-            .options(options).compactArrays(true).compactToRelative(false).get()
+            .options(options).loader(documentLoader).compactArrays(true).compactToRelative(false).get()
         val bean = mapper.readValue(jsonLdObject.toString(), clazz)
         if (bean is JsonLdBeanValidator) {
             val validationErrors = bean.validate()
