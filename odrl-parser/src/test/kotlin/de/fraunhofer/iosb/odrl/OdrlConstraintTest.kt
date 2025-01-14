@@ -38,15 +38,15 @@ class OdrlConstraintTest {
 
     @Test
     fun testConstraintDeserialization() {
-        for (i in 1..2) {
-            val constraint = mapper.readValue(loadFileOrDie("/constraint-example-$i.json"), OdrlConstraint::class.java)
-            assertEquals(constraints[i-1], constraint)
+        constraints.forEachIndexed { i, c ->
+            val constraint = mapper.readValue(loadFileOrDie("/constraint-example-${i+1}.json"), OdrlConstraint::class.java)
+            assertEquals(c, constraint)
         }
     }
 
     @Test
     fun testConstraintSerializationAndDeserialization() {
-        for (c in constraints) {
+        constraints.forEach { c ->
             val string = mapper.writeValueAsString(c)
             val constraint = mapper.readValue(string, OdrlConstraint::class.java)
             assertEquals(c, constraint)
