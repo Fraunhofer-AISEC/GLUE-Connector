@@ -1,0 +1,12 @@
+{
+  "@context": {},
+  "@type": "http://fhg.de/glue/Container",
+  "http://fhg.de/glue/image": "test/container1",
+  "http://fhg.de/glue/hash": "364a4787748a98c1c28085d4154a06c3a9be9a67c0b08a56b3f69fa8fabf172e",
+  "http://fhg.de/glue/allowNetwork": true,
+  "http://fhg.de/glue/parameter": {
+    "@type": "http://fhg.de/glue/RestParameter",
+    "http://fhg.de/glue/httpType": "GET",
+    "http://fhg.de/glue/httpUrl": "http://0.0.0.0:1234/dockerEndpoint?key1=value1"
+  }
+}

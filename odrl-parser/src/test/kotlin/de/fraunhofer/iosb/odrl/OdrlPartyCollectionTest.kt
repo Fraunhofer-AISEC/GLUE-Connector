@@ -26,7 +26,8 @@ class OdrlPartyCollectionTest {
 
     @Test
     fun testPartyCollectionDeserialization() {
-        val partyCollection = mapper.readValue(loadFileOrDie("/party-collection-example-1.json"), OdrlPartyCollection::class.java)
+        val partyCollection =
+            mapper.readValue(loadFileOrDie("/party-collection-example-1.json"), OdrlPartyCollection::class.java)
         assertEquals(partyCollection1, partyCollection)
     }
 

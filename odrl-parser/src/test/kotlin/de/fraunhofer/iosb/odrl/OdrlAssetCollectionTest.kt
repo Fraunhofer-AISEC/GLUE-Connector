@@ -26,7 +26,8 @@ class OdrlAssetCollectionTest {
 
     @Test
     fun testAssetCollectionDeserialization() {
-        val assetCollection = mapper.readValue(loadFileOrDie("/asset-collection-example-1.json"), OdrlAssetCollection::class.java)
+        val assetCollection =
+            mapper.readValue(loadFileOrDie("/asset-collection-example-1.json"), OdrlAssetCollection::class.java)
         assertEquals(assetCollection1, assetCollection)
     }
 

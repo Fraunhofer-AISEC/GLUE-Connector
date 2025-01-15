@@ -75,7 +75,10 @@ class OdrlLogicalConstraintTest {
     @Test
     fun testLogicalConstraintDeserialization() {
         constraints.forEachIndexed { i, c ->
-            val constraint = mapper.readValue(loadFileOrDie("/logical-constraint-example-${i+1}.json"), OdrlLogicalConstraint::class.java)
+            val constraint = mapper.readValue(
+                loadFileOrDie("/logical-constraint-example-${i + 1}.json"),
+                OdrlLogicalConstraint::class.java
+            )
             assertEquals(c, constraint)
         }
     }
