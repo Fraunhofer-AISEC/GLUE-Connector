@@ -22,7 +22,7 @@ jib_container_pipeline_build:
   script:
     - ./gradlew jib -Djib.to.auth.username=${CI_REGISTRY_USER} -Djib.to.auth.password=${CI_REGISTRY_PASSWORD} -Djib.to.image=${CI_REGISTRY_IMAGE}:latest
   tags:
-      - munich-local-glue
+      - munich-glue-local
 
 kaniko-http-echo-build:
   variables:
@@ -42,7 +42,7 @@ kaniko-http-echo-build:
       --destination $DOCKER_IMAGE:latest
     - rm -rf /kaniko/0
   tags:
-    - munich-local-glue
+    - munich-glue-local
 
 container_test:
   image: eclipse-temurin:21
@@ -58,7 +58,7 @@ container_test:
   stage: test
   script: ./execute
   tags:
-      - munich-local-glue
+      - munich-glue-local
 
 after_script:
   - echo "End CI"
