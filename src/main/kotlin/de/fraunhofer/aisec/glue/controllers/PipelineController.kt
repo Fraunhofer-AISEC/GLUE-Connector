@@ -5,6 +5,7 @@ import de.fraunhofer.aisec.glue.models.pipeline.PipelineCreateRequest
 import de.fraunhofer.aisec.glue.models.pipeline.PipelineCreateResponse
 import de.fraunhofer.aisec.glue.pipeline.PipelineManager
 import de.fraunhofer.aisec.glue.policy.PolicyEngine
+import de.fraunhofer.aisec.glue.policy.PolicyViolationException
 import de.fraunhofer.iosb.odrl.OdrlIdentifiers
 import io.ktor.http.*
 import io.ktor.server.auth.*
@@ -58,7 +59,6 @@ class PipelineController(
                     val policyResult = policyEngine.evaluatePolicy(contract, URI(req.action ?: DEFAULT_ACTION), URI(req.target))
                     policyResult.map { eval ->
                         val pipeline = eval.containerPipeline
-                        pipeline.start()
                         call.respond(
                             PipelineCreateResponse(
                                 pipeline.name,
@@ -67,7 +67,10 @@ class PipelineController(
                             ),
                         )
                     }.recover { err ->
-                        call.respond(HttpStatusCode.Forbidden, err.message ?: "Unknown policy error")
+                        when (err) {
+                            is PolicyViolationException -> call.respond(HttpStatusCode.Forbidden, err.message!!)
+                            else -> call.respond(HttpStatusCode.InternalServerError, err.message ?: "Unknown Error")
+                        }
                     }
                 }
 
