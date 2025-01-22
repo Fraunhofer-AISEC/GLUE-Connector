@@ -4,26 +4,25 @@ import de.fraunhofer.aisec.glue.ContractStore
 import de.fraunhofer.aisec.glue.models.pipeline.PipelineCreateRequest
 import de.fraunhofer.aisec.glue.models.pipeline.PipelineCreateResponse
 import de.fraunhofer.aisec.glue.pipeline.PipelineManager
-import de.fraunhofer.iosb.odrl.OdrlConstraint
+import de.fraunhofer.aisec.glue.policy.PolicyEngine
 import de.fraunhofer.iosb.odrl.OdrlIdentifiers
-import de.fraunhofer.iosb.odrl.evaluator.Context
-import de.fraunhofer.iosb.odrl.evaluator.OdrlPolicyEvaluator
-import de.fraunhofer.iosb.odrl.evaluator.Result
-import de.fraunhofer.iosb.odrl.glue.GlueContainerPipeline
-import de.fraunhofer.iosb.odrl.glue.GlueIdentifiers
 import io.ktor.http.*
 import io.ktor.server.auth.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import kotlinx.coroutines.channels.Channel
 import org.slf4j.LoggerFactory
+import java.net.URI
 
 /**
  * This controller provides an interface for other connectors to manage container pipelines associated with their
  * policies.
  */
-class PipelineController(private val contractStore: ContractStore, private val pipelineManager: PipelineManager) :
+class PipelineController(
+    private val contractStore: ContractStore,
+    private val pipelineManager: PipelineManager,
+    private val policyEngine: PolicyEngine,
+) :
     Controller {
     override fun Route.registerRoutes() {
         authenticate {
@@ -56,67 +55,20 @@ class PipelineController(private val contractStore: ContractStore, private val p
                         return@post
                     }
 
-                    // Note: We have to initialize this here
-                    val pipelineCreateChannel = Channel<PipelineCreateResponse>(1)
-
-                    OdrlPolicyEvaluator().evaluate(
-                        Context(req.action ?: "TODO: Default action?", req.target),
-                        contract,
-                        actionCallback = { action ->
-                            when (action.uid.toString()) {
-                                GlueIdentifiers.DEPLOY_PIPELINE -> {
-                                    val pipelineDefs =
-                                        action.refinement.filter { r ->
-                                            if (r is OdrlConstraint) {
-                                                r.leftOperand.uid.toString() == GlueIdentifiers.HAS_CONTAINER_PIPELINE &&
-                                                    r.operator.uid.toString() == OdrlIdentifiers.EQ
-                                            } else {
-                                                false
-                                            }
-                                        }.map { it as OdrlConstraint }
-
-                                    if (pipelineDefs.isEmpty()) {
-                                        throw Exception("A pipeline deploy action does not contain a pipeline definition")
-                                    }
-                                    // TODO: Is there a case where this could be fine (i.e. if further constraints exist)?
-                                    if (pipelineDefs.size > 1) {
-                                        throw Exception("A pipeline deploy action contains multiple pipeline definitions")
-                                    }
-
-                                    val pipelineDef =
-                                        pipelineDefs[0].rightOperand.firstOrNull() as? GlueContainerPipeline
-                                            ?: throw Exception(
-                                                "Unexpected right operand type for container pipeline constraint",
-                                            )
-
-                                    val pipeline = pipelineManager.createPipeline(pipelineDef)
-
-                                    // TODO: Wait until the containers are up/healthy using docker API
-                                    // If not, the container pipeline might not report the port correctly
-
-                                    // Find the exposed port for the first container
-                                    val containerDetails = pipeline.getContainerInfo(0)!!
-                                    pipelineCreateChannel.trySend(
-                                        PipelineCreateResponse(
-                                            pipeline.name,
-                                            containerDetails.ports[0].hostPort.toInt(),
-                                        ),
-                                    )
-                                    Result(true)
-                                }
-                                // We don't know how to handle this action...
-                                else -> {
-                                    LOG.warn("Action ${action.uid} is not handled yet, ignoring for now...")
-                                    Result(true)
-                                }
-                            }
-                        },
-                    )
-
-                    // TODO: Make sure that a pipeline was actually created
-
-                    // Now the container pipeline is set up, return the pipeline ID and port to the caller
-                    call.respond(pipelineCreateChannel.tryReceive().getOrThrow())
+                    val policyResult = policyEngine.evaluatePolicy(contract, URI(req.action ?: DEFAULT_ACTION), URI(req.target))
+                    policyResult.map { eval ->
+                        val pipeline = eval.containerPipeline
+                        pipeline.start()
+                        call.respond(
+                            PipelineCreateResponse(
+                                pipeline.name,
+                                // TODO: This is unsafe, add an optional list of ports instead
+                                pipeline.getContainerInfo(0)!!.ports[0].hostPort.toInt(),
+                            ),
+                        )
+                    }.recover { err ->
+                        call.respond(HttpStatusCode.Forbidden, err.message ?: "Unknown policy error")
+                    }
                 }
 
                 get("{id}") {
@@ -142,6 +94,7 @@ class PipelineController(private val contractStore: ContractStore, private val p
 
     companion object {
         // The port that is exposed on the first container
+        private const val DEFAULT_ACTION = OdrlIdentifiers.USE
         private const val DEFAULT_PORT = "8080/tcp"
         private val LOG = LoggerFactory.getLogger(PipelineController::class.java)
     }
