@@ -10,6 +10,7 @@ import de.fraunhofer.aisec.glue.negotiation.DummyNegotiator
 import de.fraunhofer.aisec.glue.negotiation.NegotiationManager
 import de.fraunhofer.aisec.glue.pipeline.PipelineManager
 import de.fraunhofer.aisec.glue.plugins.configureAuthentication
+import de.fraunhofer.aisec.glue.policy.PolicyEngine
 import de.fraunhofer.iosb.odrl.parser.OdrlParser
 import io.ktor.client.*
 import io.ktor.client.engine.okhttp.*
@@ -51,10 +52,11 @@ val defaultDependencies by DI.Module {
         }
     bind<ObjectMapper>() with singleton { OdrlParser().mapper }
     bind<PipelineManager>() with singleton { PipelineManager(instance()) }
+    bind<PolicyEngine>() with singleton { PolicyEngine(instance()) }
     bind<ContractStore>() with singleton { ContractStore(instance()) }
     bind<NegotiationManager>() with singleton { NegotiationManager(instance(), instance(), DummyNegotiator(), instance()) }
     bind<NegotiationController>() with singleton { NegotiationController(instance()) }
-    bind<PipelineController>() with singleton { PipelineController(instance(), instance()) }
+    bind<PipelineController>() with singleton { PipelineController(instance(), instance(), instance()) }
     bind<NegotiationApiController>() with singleton { NegotiationApiController(instance()) }
     bind<RemotePipelineApiController>() with singleton { RemotePipelineApiController(instance(), instance()) }
 }
