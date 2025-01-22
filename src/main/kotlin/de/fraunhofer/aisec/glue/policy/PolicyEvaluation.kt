@@ -62,7 +62,7 @@ internal class PolicyEvaluation {
 
     suspend fun actionCallback(action: OdrlAction): Result {
         return when (action.uid.toString()) {
-            GlueIdentifiers.HAS_CONTAINER_PIPELINE -> handlePipelineAction(action)
+            GlueIdentifiers.DEPLOY_PIPELINE -> handlePipelineAction(action)
             OdrlIdentifiers.NEXTPOLICY -> Result(false, "Not implemented yet")
             else -> Result(false, "Action ${action.uid} is not supported")
         }
