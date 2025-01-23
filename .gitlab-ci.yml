@@ -26,6 +26,7 @@ jib_container_pipeline_build:
 
 kaniko-http-echo-build:
   variables:
+    CONTEXT_DIR: $CI_PROJECT_DIR/test-containers/http-echo
     DOCKERFILE: test-containers/http-echo/Dockerfile
     DOCKER_IMAGE: $CI_REGISTRY_IMAGE/http-echo
   stage: build
@@ -37,7 +38,7 @@ kaniko-http-echo-build:
     - echo "{\"auths\":{\"$CI_REGISTRY\":{\"username\":\"$CI_REGISTRY_USER\",\"password\":\"$CI_REGISTRY_PASSWORD\"}}}" > /kaniko/.docker/config.json
   script:
     - /kaniko/executor
-      --context $CI_PROJECT_DIR
+      --context $CONTEXT_DIR
       --dockerfile $DOCKERFILE
       --destination $DOCKER_IMAGE:latest
     - rm -rf /kaniko/0
