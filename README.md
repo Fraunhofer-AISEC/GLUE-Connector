@@ -10,7 +10,9 @@ mechanism to spawn a simple HTTP echo server.
 First, build the docker http echo server docker image:
 
 ```sh
-docker build -t container-pipeline/http-echo test-containers/http-echo
+pushd test-containers
+PREFIX=container-pipeline docker compose build
+popd
 ```
 
 Then start two container pipeline connectors with the docker socket mounted
