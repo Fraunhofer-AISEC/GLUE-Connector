@@ -18,8 +18,9 @@ class PolicyEngine(private val pipelineManager: PipelineManager) {
         val context = Context(action, target)
         val evaluation = PolicyEvaluation()
 
-        val decision = OdrlPolicyEvaluator()
-            .evaluate(context, policy, evaluation::actionCallback, evaluation::infringementCallback)
+        val decision =
+            OdrlPolicyEvaluator()
+                .evaluate(context, policy, evaluation::actionCallback, evaluation::infringementCallback)
 
         if (!decision.evaluationResult.success || decision.infringementViolations.isNotEmpty()) {
             val messageBuilder = StringBuilder("Use of the requested resource is prohibited:")
@@ -37,13 +38,14 @@ class PolicyEngine(private val pipelineManager: PipelineManager) {
             return Result.failure(PolicyViolationException(messageBuilder.toString()))
         }
 
-        // Actualize the container pipeline
-        val pipelineDef =
-            evaluation.containerPipeline ?: return Result.failure(
-                IllegalArgumentException("The policy contains no container pipeline definition"),
-            )
-        val pipelineResult = runCatching { pipelineManager.createPipeline(pipelineDef) }
+        // Actualize the container pipeline, if any
+        val pipelineResult = evaluation.containerPipeline?.runCatching { pipelineManager.createPipeline(this) }
 
-        return pipelineResult.map { p -> PolicyEvaluationResult(p) }
+        return runCatching {
+            PolicyEvaluationResult(
+                pipelineResult?.getOrThrow(),
+                evaluation.nextPolicyTemplate,
+            )
+        }
     }
 }
