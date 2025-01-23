@@ -57,6 +57,10 @@ class PipelineController(
                     val policyResult = policyEngine.evaluatePolicy(contract, URI(req.action ?: DEFAULT_ACTION), URI(req.target))
                     policyResult.map { eval ->
                         val pipeline = eval.containerPipeline
+                        if (pipeline == null) {
+                            call.respond(HttpStatusCode.BadRequest, "No matching container pipeline definition found")
+                            return@map
+                        }
                         call.respond(
                             PipelineCreateResponse(
                                 pipeline.name,

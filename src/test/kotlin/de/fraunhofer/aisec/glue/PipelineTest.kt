@@ -6,6 +6,7 @@ import de.fraunhofer.aisec.glue.models.pipeline.PipelineCreateRequest
 import de.fraunhofer.aisec.glue.models.pipeline.PipelineCreateResponse
 import de.fraunhofer.aisec.glue.pipeline.*
 import de.fraunhofer.aisec.glue.pipeline.docker.DockerBackend
+import de.fraunhofer.aisec.glue.policy.PolicyEngine
 import de.fraunhofer.iosb.odrl.glue.GlueContainer
 import de.fraunhofer.iosb.odrl.glue.GlueContainerPipeline
 import de.fraunhofer.iosb.odrl.parser.OdrlParser
@@ -121,7 +122,8 @@ class PipelineTest {
 
             val contractStore = ContractStore(objectMapper)
             val pipelineManager = PipelineManager(objectMapper, mockBackend)
-            val pipelineController = PipelineController(contractStore, pipelineManager)
+            val policyEngine = PolicyEngine(pipelineManager)
+            val pipelineController = PipelineController(contractStore, pipelineManager, policyEngine)
 
             contractStore.addContract(testContract)
 

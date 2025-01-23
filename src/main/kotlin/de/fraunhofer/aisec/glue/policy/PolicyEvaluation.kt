@@ -1,5 +1,6 @@
 package de.fraunhofer.aisec.glue.policy
 
+import com.fasterxml.jackson.databind.JsonNode
 import de.fraunhofer.iosb.odrl.OdrlAction
 import de.fraunhofer.iosb.odrl.OdrlConstraint
 import de.fraunhofer.iosb.odrl.OdrlIdentifiers
@@ -9,6 +10,7 @@ import de.fraunhofer.iosb.odrl.glue.GlueIdentifiers
 
 internal class PolicyEvaluation {
     var containerPipeline: GlueContainerPipeline? = null
+    var nextPolicyTemplate: JsonNode? = null
 
     /**
      * This function evaluates the DeployPipeline action and extracts a runnable container pipeline from it
@@ -60,10 +62,14 @@ internal class PolicyEvaluation {
         return Result(true)
     }
 
+    private fun handleNextPolicyAction(action: OdrlAction): Result {
+        TODO()
+    }
+
     suspend fun actionCallback(action: OdrlAction): Result {
         return when (action.uid.toString()) {
             GlueIdentifiers.DEPLOY_PIPELINE -> handlePipelineAction(action)
-            OdrlIdentifiers.NEXTPOLICY -> Result(false, "Not implemented yet")
+            OdrlIdentifiers.NEXTPOLICY -> handleNextPolicyAction(action)
             else -> Result(false, "Action ${action.uid} is not supported")
         }
     }
