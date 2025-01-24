@@ -163,8 +163,28 @@ class DockerClient(internal val httpClient: HttpClient, private val baseUrl: Url
     val networks = Networks()
 
     inner class Images {
-        fun get(name: String): Image {
+        // TODO: if pulling all the tags is not feasible, create a parser or make sure that the tag is in the name
+        // TODO: we need to authenticate ourselves to the docker registry otherwise we cannot pull the image
+        suspend fun createByPull(name: String): Image {
+            LOG.debug("Attempting to pull the image \"$name\" from image registry...")
+            httpClient.post(endpoint("images/create")) {
+                parameter("fromImage", name)
+                System.getenv("REGISTRY_AUTH_TOKEN")?.let { header("X-Registry-Auth", it) }
+            }
+
             return Image(this@DockerClient, name)
+        }
+
+        suspend fun get(name: String): Image {
+            val image = Image(this@DockerClient, name)
+
+            try {
+                image.inspect()
+            } catch (_: ClientRequestException) {
+                return createByPull(name)
+            }
+
+            return image
         }
     }
 
