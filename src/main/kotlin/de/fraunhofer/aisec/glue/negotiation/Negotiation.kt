@@ -10,7 +10,12 @@ interface Negotiation {
      * Cancel this negotiation
      */
     suspend fun cancel(cause: String?)
-    suspend fun processRequest(req: ContractRequestMessage, initial: Boolean = false, responseCallback: suspend (Boolean) -> Unit)
+
+    suspend fun processRequest(
+        req: ContractRequestMessage,
+        initial: Boolean = false,
+        responseCallback: suspend (Boolean) -> Unit,
+    )
 
     /**
      * Process a contract offer sent from the provider.
@@ -24,11 +29,15 @@ interface Negotiation {
     )
 
     suspend fun processAccept(responseCallback: suspend (Boolean) -> Unit): Unit
+
     suspend fun processVerify(responseCallback: suspend (Boolean) -> Unit): Unit
+
     suspend fun processFinalize(responseCallback: suspend (Boolean) -> Unit)
 
     fun getStateMessageUnlocked(): ContractNegotiation
+
     suspend fun getStateMessage(): ContractNegotiation
+
     suspend fun processAgreement(
         req: ContractAgreementMessage,
         responseCallback: suspend (Boolean) -> Unit,

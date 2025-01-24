@@ -3,8 +3,8 @@ package de.fraunhofer.aisec.glue.models.negotiation
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.fasterxml.jackson.annotation.JsonTypeName
-import de.fraunhofer.iosb.odrl.parser.JsonLd
 import de.fraunhofer.iosb.odrl.OdrlAgreement
+import de.fraunhofer.iosb.odrl.parser.JsonLd
 
 @JsonLd(Contexts.DSPACE)
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type")
