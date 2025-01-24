@@ -21,8 +21,11 @@
         "http://fhg.de/glue/httpType": "POST",
         "http://fhg.de/glue/httpUrl": "http://0.0.0.0:1234/dockerEndpoint",
         "http://fhg.de/glue/value": {
-          "http://example.com/valueProperty1": "testProperty",
-          "http://example.com/valueProperty2": [42, 43, 44]
+          "@type": "http://fhg.de/glue/Value",
+          "http://fhg.de/glue/json": {
+            "http://example.com/valueProperty1": "testProperty",
+            "http://example.com/valueProperty2": [42, 43, 44]
+          }
         }
       }
     }

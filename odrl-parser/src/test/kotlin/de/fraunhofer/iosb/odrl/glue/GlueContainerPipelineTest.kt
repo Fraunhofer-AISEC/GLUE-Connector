@@ -49,7 +49,7 @@ class GlueContainerPipelineTest {
                     parameter = listOf(GlueRestParameter(
                         httpType = GlueHttpType.POST,
                         httpUrl = URI.create("http://0.0.0.0:1234/dockerEndpoint"),
-                        value = GlueValue.create(mapper.readValue(
+                        value = GlueValue(mapper.readValue(
                         "{\n" +
                                 "  \"http://example.com/valueProperty1\": \"testProperty\",\n" +
                                 "  \"http://example.com/valueProperty2\": [42, 43, 44]\n" +

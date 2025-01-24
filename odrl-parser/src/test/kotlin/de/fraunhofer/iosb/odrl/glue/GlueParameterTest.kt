@@ -9,12 +9,15 @@ import kotlin.test.assertEquals
 class GlueParameterTest {
     private val mapper = Commons.parserInstance.mapper
     private val parameter1 = GlueParameter(
-        value = GlueValue.create(mapper.readValue("[\"testValue1\", \"testValue2\"]", JsonNode::class.java))
+        value = GlueValue(mapper.readValue("[\"testValue1\", \"testValue2\"]", JsonNode::class.java))
     )
     private val parameter1Json = "{\n" +
             "  \"@context\": {},\n" +
             "  \"@type\": \"http://fhg.de/glue/Parameter\",\n" +
-            "  \"http://fhg.de/glue/value\": [\"testValue1\", \"testValue2\"]\n" +
+            "  \"http://fhg.de/glue/value\": {\n" +
+            "    \"@type\": \"http://fhg.de/glue/Value\",\n" +
+             "   \"http://fhg.de/glue/json\": [\"testValue1\", \"testValue2\"]\n" +
+            "  }\n" +
             "}"
 
     @Test

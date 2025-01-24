@@ -77,21 +77,24 @@
                       "glue:httpUrl": "http://0.0.0.0:1234/dockerEndpoint",
                       "glue:httpType": "POST",
                       "glue:value": {
-                        "@context": "http://www.w3.org/ns/odrl.jsonld",
-                        "@type": "Policy",
-                        "uid": "http://dataowner.com/policy:987",
-                        "permission": [
-                          {
-                            "target": "http://dataowner.com/document:1234",
-                            "assigner": "http://dataconsumer.com/org",
-                            "assignee": "http://fhg.de/glue/ParameterPlaceholder?key=nextDataReceiverUid",
-                            "action": "use",
-                            "constraint": {
-                              "@type": "http://fhg.de/glue/ParameterPlaceholder",
-                              "glue:key": "nextDataReceiverConstraint"
+                        "@type": "http://fhg.de/glue/Value",
+                        "glue:json": {
+                          "@context": "http://www.w3.org/ns/odrl.jsonld",
+                          "@type": "Policy",
+                          "uid": "http://dataowner.com/policy:987",
+                          "permission": [
+                            {
+                              "target": "http://dataowner.com/document:1234",
+                              "assigner": "http://dataconsumer.com/org",
+                              "assignee": "http://fhg.de/glue/ParameterPlaceholder?key=nextDataReceiverUid",
+                              "action": "use",
+                              "constraint": {
+                                "@type": "http://fhg.de/glue/ParameterPlaceholder",
+                                "glue:key": "nextDataReceiverConstraint"
+                              }
                             }
-                          }
-                        ]
+                          ]
+                        }
                       }
                     }
                   ]
