@@ -28,6 +28,7 @@ import de.fraunhofer.iosb.odrl.parser.JsonLd
     Type(XmlDate::class),
     Type(XmlTime::class),
     Type(XmlAnyUri::class),
+    Type(XmlAnyType::class),
     // GLUE
     Type(GlueContainerPipeline::class),
 )
@@ -87,6 +88,8 @@ abstract class OdrlRightOperand: Comparable<OdrlRightOperand> {
         return when (other) {
             is PrimitiveString -> value.compareTo(other.value)
             is XmlString -> value.compareTo(other.value)
+            is XmlAnyUri -> value.compareTo(other.value.toString())
+            is XmlAnyType -> value.compareTo(other.value.toString())
             else -> throw OdrlException("Cannot compare String to ${other.javaClass.simpleName}")
         }
     }

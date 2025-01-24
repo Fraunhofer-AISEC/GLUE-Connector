@@ -2,7 +2,6 @@ package de.fraunhofer.aisec.glue.negotiation
 
 import de.fraunhofer.iosb.odrl.OdrlAgreement
 import de.fraunhofer.iosb.odrl.OdrlOffer
-import de.fraunhofer.iosb.odrl.OdrlPolicy
 
 interface Negotiator {
     /**

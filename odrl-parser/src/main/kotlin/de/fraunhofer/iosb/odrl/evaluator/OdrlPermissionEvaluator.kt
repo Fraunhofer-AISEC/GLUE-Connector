@@ -19,13 +19,13 @@ class OdrlPermissionEvaluator(
         // Action has to match
         var result = actionEvaluator.matches(ctx, permission.action)
         if (!result.success)
-            return Result(result, "${permission.action} does not match");
+            return Result(result, "${permission.action} does not match")
 
         // Target has to match
         if (permission.target != null) {
             result = assetEvaluator.matches(ctx, permission.target)
             if (!result.success)
-                return Result(result, "${permission.target} does not match");
+                return Result(result, "${permission.target} does not match")
         } else {
             throw OdrlException("Invalid $permission: Expected property 'target'")
         }
@@ -39,16 +39,16 @@ class OdrlPermissionEvaluator(
                     else -> throw OdrlException("Invalid $c: Expected type 'OdrlConstraint' or 'OdrlLogicalConstraint'")
                 }
             if (!result.success)
-                return Result(result, "$c is not satisfied");
+                return Result(result, "$c is not satisfied")
         }
 
         // Duties have to be fulfilled
         for (d in permission.duty) {
             result = dutyEvaluator.isFulfilled(ctx, d, actionCallback)
             if (!result.success)
-                return Result(result, "$d is not fulfilled");
+                return Result(result, "$d is not fulfilled")
         }
 
-        return Result(true); // This permission allows context |ctx|
+        return Result(true) // This permission allows context |ctx|
     }
 }

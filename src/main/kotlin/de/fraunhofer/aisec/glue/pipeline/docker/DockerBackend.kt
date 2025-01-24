@@ -101,17 +101,22 @@ class DockerBackend(
                 val subnet = subnets.next()
                 val subnetCidr = "${subnet.hostAddress}/$subnetLen"
                 val gateway = Inet4Address.getByAddress(subnet.address.also { a -> a[3] = a[3] or 1 }).hostAddress
-                val network = dockerClient.networks.create(NetworkCreateRequest(
-                    name = name,
-                    ipam = IPAM(
-                        config = listOf(
-                            IPAMConfig(
-                                subnet = subnetCidr,
-                                gateway = gateway
-                            )
-                        )
+                val network =
+                    dockerClient.networks.create(
+                        NetworkCreateRequest(
+                            name = name,
+                            ipam =
+                                IPAM(
+                                    config =
+                                        listOf(
+                                            IPAMConfig(
+                                                subnet = subnetCidr,
+                                                gateway = gateway,
+                                            ),
+                                        ),
+                                ),
+                        ),
                     )
-                ))
 
                 networks.add(network)
                 network.connect(c[0])

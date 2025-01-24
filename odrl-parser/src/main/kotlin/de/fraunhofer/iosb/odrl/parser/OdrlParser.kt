@@ -1,5 +1,7 @@
 package de.fraunhofer.iosb.odrl.parser
 
+import com.apicatalog.jsonld.JsonLdOptions
+import com.apicatalog.jsonld.loader.DocumentLoader
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -7,12 +9,18 @@ import com.fasterxml.jackson.databind.util.StdDateFormat
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import de.fraunhofer.iosb.odrl.OdrlPolicy
+import de.fraunhofer.iosb.odrl.parser.JsonLdModule.Companion.createDocumentLoader
 import java.io.Reader
 
-class OdrlParser(val mapper: ObjectMapper = ObjectMapper()) {
+@Suppress("unused")
+class OdrlParser(
+    val mapper: ObjectMapper = ObjectMapper(),
+    options: JsonLdOptions = JsonLdOptions(),
+    documentLoader: DocumentLoader = createDocumentLoader(),
+) {
     init {
         configureMapper()
-        mapper.registerModules(JsonLdModule(mapper.copy()))
+        mapper.registerModules(JsonLdModule(mapper.copy(), options, documentLoader))
     }
 
     private fun configureMapper() {
@@ -25,7 +33,7 @@ class OdrlParser(val mapper: ObjectMapper = ObjectMapper()) {
     }
 
     fun readOdrlPolicy(r: Reader): OdrlPolicy {
-        return mapper.readValue(r, OdrlPolicy::class.java);
+        return mapper.readValue(r, OdrlPolicy::class.java)
     }
 
     fun convertToOdrlPolicy(value: Any): OdrlPolicy {

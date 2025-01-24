@@ -115,10 +115,11 @@ class NegotiationManager(
                 ownEndpoint = callbackUrl,
                 peerEndpoint = provider,
                 objectMapper = objectMapper,
-                completionCallback = completionCallback { result ->
-                    policyFuture.completeWith(result)
-                    consumerNegotiations.remove(consumerPid)
-                }
+                completionCallback =
+                    completionCallback { result ->
+                        policyFuture.completeWith(result)
+                        consumerNegotiations.remove(consumerPid)
+                    },
             )
 
         pendingConsumerNegotiations.remove(consumerPid)!!.tryEmit(negotiation)
@@ -156,9 +157,10 @@ class NegotiationManager(
                 ownEndpoint = originUrl,
                 peerEndpoint = Url(request.callbackAddress),
                 objectMapper = objectMapper,
-                completionCallback = completionCallback {
-                    providerNegotiations.remove(providerPid)
-                }
+                completionCallback =
+                    completionCallback {
+                        providerNegotiations.remove(providerPid)
+                    },
             )
 
         providerNegotiations[providerPid] = negotiation
@@ -189,11 +191,12 @@ class NegotiationManager(
                 ownEndpoint = originUrl,
                 peerEndpoint = Url(request.callbackAddress),
                 objectMapper = objectMapper,
-                completionCallback = completionCallback {
-                    pidMutex.withLock {
-                        consumerNegotiations.remove(consumerPid)
-                    }
-                }
+                completionCallback =
+                    completionCallback {
+                        pidMutex.withLock {
+                            consumerNegotiations.remove(consumerPid)
+                        }
+                    },
             )
 
         consumerNegotiations[consumerPid] = negotiation
@@ -268,7 +271,7 @@ class NegotiationManager(
         return { result: Result<OdrlPolicy> ->
             result.fold(
                 onSuccess = { contract -> contractStore.addContract(contract) },
-                onFailure = { err -> LOG.info("Policy negotiation failed", err) }
+                onFailure = { err -> LOG.info("Policy negotiation failed", err) },
             )
             // We call the next callback asynchronously since it may need to acquire locks that are held up the call
             // stack.

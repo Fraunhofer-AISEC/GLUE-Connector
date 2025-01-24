@@ -1,12 +1,5 @@
 package de.fraunhofer.aisec.glue
 
-import com.apicatalog.jsonld.JsonLd
-import com.apicatalog.jsonld.document.JsonDocument
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.datatype.jsonp.JSONPModule
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
-import com.fasterxml.jackson.module.kotlin.jacksonMapperBuilder
-import com.apicatalog.jsonld.JsonLdOptions
 import de.fraunhofer.aisec.glue.controllers.Controller
 import de.fraunhofer.aisec.glue.controllers.NegotiationController
 import de.fraunhofer.aisec.glue.models.negotiation.*
@@ -509,10 +502,11 @@ class NegotiationTest {
     companion object {
         private val objectMapper = OdrlParser().mapper
 
-        val exampleOffer: OdrlOffer = File("test-containers/example-policy.json").inputStream().use { input ->
-            objectMapper.readValue(input, OdrlOffer::class.java)
-        }
+        val exampleOffer: OdrlOffer =
+            File("test-containers/example-policy.json").inputStream().use { input ->
+                objectMapper.readValue(input, OdrlOffer::class.java)
+            }
 
-        val exampleAgreement = exampleOffer.toAgreement(objectMapper, OdrlParty("http://dataconsumer.com/org"))
+        val exampleAgreement = exampleOffer.toAgreement(OdrlParty("http://dataconsumer.com/org"))
     }
 }

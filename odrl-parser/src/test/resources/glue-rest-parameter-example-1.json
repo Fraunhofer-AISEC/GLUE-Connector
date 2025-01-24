@@ -1,0 +1,19 @@
+{
+  "@context": {},
+  "@type": "http://fhg.de/glue/RestParameter",
+  "http://fhg.de/glue/httpType": "POST",
+  "http://fhg.de/glue/httpUrl": "http://0.0.0.0:1234/dockerEndpoint",
+  "http://fhg.de/glue/value": {
+    "@context": "http://www.w3.org/ns/odrl.jsonld",
+    "@type": "Policy",
+    "uid": "http://example.com/policy",
+    "permission": {
+      "target": "http://dataowner.com/document:1234",
+      "action": "use",
+      "constraint": {
+        "@type": "http://fhg.de/glue/ParameterPlaceholder",
+        "http://fhg.de/glue/key": "nextDataReceiverConstraint"
+      }
+    }
+  }
+}

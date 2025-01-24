@@ -9,7 +9,7 @@ class OdrlOperatorEvaluator(
         ctx: Context,
         operator: OdrlOperator,
         leftOperand: OdrlLeftOperand,
-        rightOperandReferenceList: List<OdrlIri>
+        rightOperandReferenceList: List<XmlAnyUri>
     ): Result {
         throw OdrlException("Evaluation of right operand references is not supported")
     }
@@ -37,7 +37,7 @@ class OdrlOperatorEvaluator(
             }
             OdrlIdentifiers.ISPARTOF ->
                 return Result(rightOperandList.contains(leftOperandValue), "$leftOperand is not a part of $rightOperandList")
-            OdrlIdentifiers.GT, OdrlIdentifiers.GTEQ, OdrlIdentifiers.LT, OdrlIdentifiers.LTEQ, ->
+            OdrlIdentifiers.GT, OdrlIdentifiers.GTEQ, OdrlIdentifiers.LT, OdrlIdentifiers.LTEQ ->
                 throw OdrlException("Cannot evaluate $operator on left operand $leftOperandValue and right operand list $rightOperandList")
             OdrlIdentifiers.ISA, OdrlIdentifiers.ISALLOF, OdrlIdentifiers.ISANYOF, OdrlIdentifiers.ISNONEOF ->
                 throw OdrlException("$operator is not supported")

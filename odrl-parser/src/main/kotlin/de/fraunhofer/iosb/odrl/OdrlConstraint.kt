@@ -30,10 +30,13 @@ data class OdrlConstraint(
 
     @JsonProperty(OdrlIdentifiers.HAS_RIGHT_OPERAND_REFERENCE)
     @JsonSetter(nulls = Nulls.AS_EMPTY)
-    val rightOperandReference: List<OdrlIri> = listOf(),
+    // The https://www.w3.org/ns/odrl.jsonld context declares "rightOperandReference" to be of type xsd:anyUri
+    val rightOperandReference: List<XmlAnyUri> = listOf(),
 
     @JsonProperty(OdrlIdentifiers.DATATYPE)
-    val dataType: OdrlIri? = null,
+    // The https://www.w3.org/ns/odrl.jsonld context rewrites "dataType" to "datatype" (probably a bug?)
+    @JsonAlias("http://www.w3.org/ns/odrl/2/datatype")
+    val dataType: XmlAnyType? = null,
 
     @JsonProperty(OdrlIdentifiers.UNIT)
     val unit: OdrlIri? = null,
@@ -99,9 +102,7 @@ val validateOdrlConstraint = Validation<OdrlConstraint> {
     }
 
     // A Constraint MAY have none or one dataType property value for the data type of the rightOperand/Reference
-    OdrlConstraint::dataType ifPresent {
-        run(validateOdrlIri)
-    }
+    // Note: No validation of xsd:anyType necessary
 
     // A Constraint MAY have none or one unit property value of type IRI
     OdrlConstraint::unit ifPresent {

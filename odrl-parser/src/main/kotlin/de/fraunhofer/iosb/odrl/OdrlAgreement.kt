@@ -6,16 +6,29 @@ import de.fraunhofer.iosb.odrl.parser.JsonLd
 import de.fraunhofer.iosb.odrl.parser.JsonLdBeanValidator
 import io.konform.validation.Validation
 import io.konform.validation.ValidationError
+import java.net.URI
 
 @JsonLd(GlueIdentifiers.CONTEXT)
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type")
 @JsonTypeName(OdrlIdentifiers.AGREEMENT)
-class OdrlAgreement: OdrlPolicy(), JsonLdBeanValidator {
+class OdrlAgreement(
+    // Properties of superclass OdrlPolicy
+    uid: URI = URI.create(""),
+    permission: List<OdrlPermission> = listOf(),
+    prohibition: List<OdrlProhibition> = listOf(),
+    obligation: List<OdrlDuty> = listOf(),
+    profile: List<OdrlIri> = listOf(),
+    inheritFrom: List<OdrlIri> = listOf(),
+    conflict: OdrlConflictTerm? = null,
+
+    // Properties of OdrlAgreement
     @JsonProperty(OdrlIdentifiers.ASSIGNER)
-    val assigner: OdrlParty = OdrlParty()
+    val assigner: OdrlParty = OdrlParty(),
 
     @JsonProperty(OdrlIdentifiers.ASSIGNEE)
-    val assignee: OdrlParty = OdrlParty()
+    val assignee: OdrlParty = OdrlParty(),
+) : OdrlPolicy(uid, permission, prohibition, obligation, profile, inheritFrom, conflict),
+    JsonLdBeanValidator {
 
     override fun validate(): List<ValidationError> {
         return validateOdrlAgreement.validate(this).errors

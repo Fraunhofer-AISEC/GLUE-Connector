@@ -13,5 +13,6 @@ object XmlIdentifiers {
     const val DATE = "http://www.w3.org/2001/XMLSchema#date"
     const val TIME = "http://www.w3.org/2001/XMLSchema#time"
     const val ANYURI = "http://www.w3.org/2001/XMLSchema#anyURI"
+    const val ANYTYPE = "http://www.w3.org/2001/XMLSchema#anyType"
 
 }

@@ -1,4 +1,5 @@
-import de.fraunhofer.iosb.odrl.*
+package de.fraunhofer.iosb.odrl
+
 import org.junit.jupiter.api.Assertions.assertFalse
 import java.time.LocalDate
 import java.time.LocalDateTime
