@@ -34,8 +34,8 @@
                   },
                   {
                     "@type": "http://fhg.de/glue/Container",
-                    "glue:image": "container-pipeline/http-echo",
-                    "glue:hash": "sha256:1853980d5d73c3d1468fd86adeb1c3bc9ca5b32c96c661febfcce29720dba66f",
+                    "glue:image": "container-registry.gitlab.cc-asp.fraunhofer.de/ccit-glue/usage-control/container-pipeline/http-echo:latest",
+                    "glue:hash": "sha256:3e4ea72c21f9e73e2ab39735a9e1c50bdb4447ee96d2ad9e2911187b9aa35e39",
                     "glue:parameter": {
                       "@type": "http://fhg.de/glue/RestParameter",
                       "glue:httpUrl": "http://0.0.0.0:1234/dockerEndpoint?key1=value1",
@@ -77,7 +77,7 @@
                 "glue:container": {
                   "@type": "http://fhg.de/glue/Container",
                   "glue:image": "test/policyCompiler",
-                  "glue:hash": "5e7ef9594b0b96c5f591dc9d3462943e340941c770e5e3885a1864b998de016f",
+                  "glue:hash": "sha256:5e7ef9594b0b96c5f591dc9d3462943e340941c770e5e3885a1864b998de016f",
                   "glue:parameter": [
                     {
                       "@type": "http://fhg.de/glue/RestParameter",
