@@ -74,10 +74,17 @@ class OdrlPolicyEvaluatorTest {
     fun testPolicyExample3() {
         runBlocking {
             val policy = parser.readOdrlPolicy(loadFileOrDie("/policy-example-3.json"))
-            val context = Context("http://www.w3.org/ns/odrl/2/use", "http://dataowner.com/document:1234")
+
+            var context = Context("http://www.w3.org/ns/odrl/2/use", "http://dataowner.com/document:1234")
             println("\nEvaluating $policy on $context")
-            val decision = evaluator.evaluate(context, policy, { onActionCallback(it) })
+            var decision = evaluator.evaluate(context, policy, { onActionCallback(it) })
             println("Decision of policy-example-3.json when USING asset is $decision (should be: ALLOW)")
+            assertTrue(decision.evaluationResult.success)
+
+            context = Context("http://www.w3.org/ns/odrl/2/distribute", "http://dataowner.com/document:1234")
+            println("\nEvaluating $policy on $context")
+            decision = evaluator.evaluate(context, policy, { onActionCallback(it) })
+            println("Decision of policy-example-3.json when DISTRIBUTING asset is $decision (should be: ALLOW)")
             assertTrue(decision.evaluationResult.success)
         }
     }
@@ -88,10 +95,11 @@ class OdrlPolicyEvaluatorTest {
     fun testPolicyExample4() {
         runBlocking {
             val policy = parser.readOdrlPolicy(loadFileOrDie("/policy-example-4.json"))
-            val context = Context("http://www.w3.org/ns/odrl/2/use", "http://dataowner.com/document:1234")
+            val context = Context("http://www.w3.org/ns/odrl/2/distribute", "http://dataowner.com/document:1234")
             println("\nEvaluating $policy on $context")
             val decision = evaluator.evaluate(context, policy, { onActionCallback(it) })
             println("Decision of policy-example-4.json when DISTRIBUTING asset is $decision (should be: ALLOW)")
+            assertTrue(decision.evaluationResult.success)
         }
     }
 }
