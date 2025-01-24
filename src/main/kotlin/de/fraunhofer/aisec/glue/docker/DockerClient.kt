@@ -12,8 +12,10 @@ import io.ktor.client.engine.okhttp.*
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
+import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.jackson.*
+import io.ktor.util.*
 import org.slf4j.LoggerFactory
 import java.io.Closeable
 import java.net.URI
@@ -160,11 +162,19 @@ class DockerClient(internal val httpClient: HttpClient, private val baseUrl: Url
 
     val networks = Networks()
 
+    inner class Images {
+        fun get(name: String): Image {
+            return Image(this@DockerClient, name)
+        }
+    }
+
+    val images = Images()
+
     companion object {
         private val LOG = LoggerFactory.getLogger(DockerClient::class.java)
 
         private const val API_VERSION = "v1.43"
-        private val UNIX_BASE_URL = Url("http://localhost/$API_VERSION")
+        internal val UNIX_BASE_URL = Url("http://localhost/$API_VERSION")
 
         private val defaultConfig: HttpClientConfig<OkHttpConfig>.() -> Unit = {
             expectSuccess = true

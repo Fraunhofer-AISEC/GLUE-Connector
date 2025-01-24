@@ -3,7 +3,9 @@ package de.fraunhofer.aisec.glue.negotiation
 import de.fraunhofer.aisec.glue.models.negotiation.*
 
 interface Negotiation {
+    val state: NegotiationState
     val role: Role
+    val ownPid: String
     val peerIdentity: String?
 
     /**
