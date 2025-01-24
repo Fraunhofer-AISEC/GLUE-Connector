@@ -144,7 +144,6 @@ class DockerClient(internal val httpClient: HttpClient, private val baseUrl: Url
             return Network(this@DockerClient, name)
         }
 
-
         suspend fun create(req: NetworkCreateRequest): Network {
             httpClient.post(endpoint("networks/create")) {
                 setBody(req)

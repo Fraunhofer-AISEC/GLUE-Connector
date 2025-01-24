@@ -5,8 +5,8 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.fasterxml.jackson.annotation.JsonTypeName
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import de.fraunhofer.aisec.glue.jsonld.BoxedStringDeserializer
-import de.fraunhofer.iosb.odrl.parser.JsonLd
 import de.fraunhofer.iosb.odrl.OdrlOffer
+import de.fraunhofer.iosb.odrl.parser.JsonLd
 
 @JsonLd(Contexts.DSPACE)
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type")

@@ -27,7 +27,7 @@ class NegotiationImpl(
     val httpClient: HttpClient,
     val negotiator: Negotiator,
     val objectMapper: ObjectMapper,
-    val completionCallback: NegotiationCompletionCallback
+    val completionCallback: NegotiationCompletionCallback,
 ) : Negotiation {
     private val mutex = Mutex()
 
@@ -163,8 +163,8 @@ class NegotiationImpl(
             }
         }
 
-        // TODO: Fill in true assigner here
-        val agreement = req.offer.toAgreement(objectMapper, OdrlParty())
+        // TODO: Fill in true assignee here
+        val agreement = req.offer.toAgreement(OdrlParty())
 
         // We have accepted the contract as is, tell the consumer and anyone waiting for this contract negotiation
         if (!terminateOnError(
@@ -213,7 +213,6 @@ class NegotiationImpl(
 
         if (!ok) {
             if (newOffer != null) {
-
                 sendMessage(
                     "$peerPid/request",
                     ContractRequestMessage(
@@ -261,8 +260,8 @@ class NegotiationImpl(
 
             state = NegotiationState.ACCEPTED
 
-            // TODO: Fill in true assigner here
-            val agreement = (currentPolicy as OdrlOffer).toAgreement(objectMapper, OdrlParty())
+            // TODO: Fill in true assignee here
+            val agreement = (currentPolicy as OdrlOffer).toAgreement(OdrlParty())
             currentPolicy = agreement
 
             if (!terminateOnError(
@@ -393,5 +392,4 @@ class NegotiationImpl(
     companion object {
         private val LOG = LoggerFactory.getLogger(NegotiationImpl::class.java)
     }
-
 }
