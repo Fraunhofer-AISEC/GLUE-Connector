@@ -18,8 +18,16 @@ fun <T : Any, R : Any> upcast(
             ?: throw IllegalArgumentException("Could not upcast $baseObj to $targetClass, no primary constructor")
     return constructor.callBy(
         constructor.parameters.associateWith { param ->
-            additionalParams[param.name] ?: baseProperties.find { it.name == param.name }?.get(baseObj)
-                ?: throw IllegalArgumentException("Could not upcast $baseObj to $targetClass, missing parameter for ${param.name}")
+            val pName = param.name
+            if (pName in additionalParams) {
+                additionalParams[pName]
+            } else {
+                try {
+                    baseProperties.first { it.name == pName }.get(baseObj)
+                } catch (_: NoSuchElementException) {
+                    throw IllegalArgumentException("Could not upcast $baseObj to $targetClass, missing parameter for $pName")
+                }
+            }
         },
     )
 }

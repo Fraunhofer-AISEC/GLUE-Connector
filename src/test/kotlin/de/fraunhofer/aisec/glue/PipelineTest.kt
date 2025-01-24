@@ -69,7 +69,7 @@ class PipelineTest {
 
             val pipelineManager = PipelineManager(objectMapper, mockBackend)
 
-            val pipeline = pipelineManager.createPipeline(testContainers)
+            val pipeline = pipelineManager.createPipeline(getTestContainers())
 
             assertEquals(mockPipeline, pipeline)
 
@@ -197,7 +197,7 @@ class PipelineTest {
                 val dockerBackend = DockerBackend(objectMapper, dockerClient)
                 val pipelineManager = PipelineManager(objectMapper, dockerBackend)
 
-                pipelineManager.createPipeline(testContainers).use { pipeline ->
+                pipelineManager.createPipeline(getTestContainers(dockerClient)).use { pipeline ->
                     val containerInfo = pipeline.getContainerInfo()
 
                     // Technically, we should probably inspect the container here manually, but since the container info is
@@ -219,23 +219,33 @@ class PipelineTest {
             }
         }
 
+    suspend fun getTestContainers(dockerClient: DockerClient? = null) =
+        GlueContainerPipeline(
+            listOf(
+                GlueContainer(
+                    image = "container-pipeline/proxy",
+                    hash = "sha256:${getContainerIdHash("container-pipeline/proxy", dockerClient)}",
+                    allowNetwork = true,
+                ),
+                GlueContainer(
+                    image = "container-pipeline/http-echo",
+                    hash = "sha256:${getContainerIdHash("container-pipeline/http-echo", dockerClient)}",
+                ),
+            ),
+        )
+
+    suspend fun getContainerIdHash(
+        image: String,
+        dockerClient: DockerClient? = null,
+    ): String {
+        val imageToCheck = dockerClient?.images?.get(image) ?: return "invalid-hash"
+        val inspectResponse = imageToCheck.inspect()
+        return inspectResponse.id?.split(":")?.last()
+            ?: throw IllegalStateException("No container ID hash found")
+    }
+
     companion object {
         private val objectMapper = OdrlParser().mapper
-
-        private val testContainers =
-            GlueContainerPipeline(
-                listOf(
-                    GlueContainer(
-                        image = "container-pipeline/proxy",
-                        hash = "sha256:a4531b520e7053a1b43894e83d4bd53d9f350706c51e27fbc1aa54b4f2999890",
-                        allowNetwork = true,
-                    ),
-                    GlueContainer(
-                        image = "container-pipeline/http-echo",
-                        hash = "sha256:1853980d5d73c3d1468fd86adeb1c3bc9ca5b32c96c661febfcce29720dba66f",
-                    ),
-                ),
-            )
 
         private val testContract =
             File("test-containers/example-policy.json").reader().use { r ->

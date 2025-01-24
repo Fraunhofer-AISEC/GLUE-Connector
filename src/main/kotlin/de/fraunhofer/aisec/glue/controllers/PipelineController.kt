@@ -35,6 +35,7 @@ class PipelineController(private val contractStore: ContractStore, private val p
                     val req = call.receive<PipelineCreateRequest>()
 
                     // TODO: Push this code down to some other class (ContractManager?)
+                    // TODO: Make this responsive to sending the same contract again with different content but the same ID, so that the contract in the DB gets updated
                     val contract =
                         if (req.contractId != null) {
                             contractStore.getContract(req.contractId)

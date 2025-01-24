@@ -15,12 +15,12 @@ import kotlinx.coroutines.sync.withLock
 import org.slf4j.LoggerFactory
 
 class NegotiationImpl(
-    var state: NegotiationState,
+    state: NegotiationState,
     // TODO: Don't save this as string and don't make it nullable or mutable
     override var peerIdentity: String?,
     var currentPolicy: OdrlPolicy? = null,
     override val role: Negotiation.Role,
-    val ownPid: String,
+    override val ownPid: String,
     val peerPid: String,
     val ownEndpoint: Url,
     val peerEndpoint: Url,
@@ -29,6 +29,8 @@ class NegotiationImpl(
     val objectMapper: ObjectMapper,
     val completionCallback: NegotiationCompletionCallback,
 ) : Negotiation {
+    override var state: NegotiationState = state
+        private set
     private val mutex = Mutex()
 
     /**

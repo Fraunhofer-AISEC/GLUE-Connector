@@ -45,10 +45,11 @@ class DockerBackend(
         }
     }
 
-    private fun convertPipeline(
+    private suspend fun convertPipeline(
         id: String,
         pipelineDef: GlueContainerPipeline,
     ): MutableList<ContainerCreateRequest> {
+        checkHashes(pipelineDef)
         return pipelineDef.container.map { c ->
             // TODO: Provide configurable defaults for other parameters
             //       We probably should persist this to the point where we inject the config
@@ -68,6 +69,29 @@ class DockerBackend(
                     ),
             )
         }.toMutableList()
+    }
+
+    // Hash check adapted from https://github.com/Fraunhofer-AISEC/trusted-connector/blob/16fb97953c89e796d80c52cacc7a4445c1dda019/ids-dataflow-control/src/main/kotlin/de/fhg/aisec/ids/dataflowcontrol/usagecontrol/DockerImageConstraint.kt#L104
+    private suspend fun checkHashes(pipelineDef: GlueContainerPipeline): Boolean {
+        for (glueContainer in pipelineDef.container) {
+            val expectedHash = glueContainer.hash.split(":").last()
+            val imageToCheck = dockerClient.images.get(glueContainer.image)
+            val inspectResponse = imageToCheck.inspect()
+            val idHash = inspectResponse.id?.split(":")?.last()
+
+            if (expectedHash == idHash ||
+                inspectResponse.repoDigests?.any { expectedHash == it.split(":").last() } == true
+            ) {
+                continue
+            }
+
+            throw Exception(
+                "The hash check for container ${glueContainer.image} failed. " +
+                    "Expected $expectedHash, found candidates:\nID Hash: $idHash, " +
+                    "Repo Digests: ${inspectResponse.repoDigests?.joinToString(", ")}",
+            )
+        }
+        return true
     }
 
     private suspend fun createContainers(
