@@ -1,0 +1,21 @@
+{
+  "@context": {},
+  "@type": "http://fhg.de/glue/ContainerPipeline",
+  "http://fhg.de/glue/container": [
+    {
+      "http://fhg.de/glue/image": "test/container1",
+      "http://fhg.de/glue/hash": "364a4787748a98c1c28085d4154a06c3a9be9a67c0b08a56b3f69fa8fabf172e",
+      "http://fhg.de/glue/allowNetwork": true,
+      "http://fhg.de/glue/parameter": {
+        "@type": "http://fhg.de/glue/RestParameter",
+        "http://fhg.de/glue/httpType": "GET",
+        "http://fhg.de/glue/httpUrl": "http://0.0.0.0:1234/dockerEndpoint?key1=value1"
+      }
+    },
+    {
+      "@type": "http://fhg.de/glue/Container",
+      "http://fhg.de/glue/image": "test/container2",
+      "http://fhg.de/glue/hash": "ac924fdd26993b2ad157e3512c4a36ad293491f6eb8d268d6d4e1bf1c5c307ad"
+    }
+  ]
+}

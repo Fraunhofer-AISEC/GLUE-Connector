@@ -6,14 +6,41 @@ import de.fraunhofer.iosb.odrl.parser.JsonLd
 import de.fraunhofer.iosb.odrl.parser.JsonLdBeanValidator
 import io.konform.validation.Validation
 import io.konform.validation.ValidationError
+import java.net.URI
 
 @JsonLd(GlueIdentifiers.CONTEXT)
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type", defaultImpl = OdrlPermission::class)
 @JsonTypeName(OdrlIdentifiers.PROHIBITION)
-class OdrlProhibition: OdrlRule(), JsonLdBeanValidator {
+class OdrlProhibition(
+    // Properties of superclass OdrlRule
+    uid: URI? = null,
+    action: OdrlAction = OdrlAction(URI.create("")),
+    target: OdrlAsset? = null,
+    output: OdrlAsset? = null,
+    assignee: OdrlParty? = null,
+    assigner: OdrlParty? = null,
+    attributedParty: OdrlParty? = null,
+    attributingParty: OdrlParty? = null,
+    compensatedParty: OdrlParty? = null,
+    compensatingParty: OdrlParty? = null,
+    consentedParty: OdrlParty? = null,
+    consentingParty: OdrlParty? = null,
+    contractedParty: OdrlParty? = null,
+    contractingParty: OdrlParty? = null,
+    informedParty: OdrlParty? = null,
+    informingParty: OdrlParty? = null,
+    trackedParty: OdrlParty? = null,
+    trackingParty: OdrlParty? = null,
+    constraint: List<OdrlConstraintRepresentation> = listOf(),
+
+    // Properties of OdrlProhibition
     @JsonProperty(OdrlIdentifiers.REMEDY)
     @JsonSetter(nulls = Nulls.AS_EMPTY)
     val remedy: List<OdrlDuty> = listOf()
+): OdrlRule(uid, action, target, output, assignee, assigner, attributedParty, attributingParty, compensatedParty,
+        compensatingParty, consentedParty, consentingParty, contractedParty, contractingParty, informedParty,
+        informingParty, trackedParty, trackingParty, constraint),
+    JsonLdBeanValidator {
 
     override fun validate(): List<ValidationError> {
         return validateOdrlProhibition.validate(this).errors

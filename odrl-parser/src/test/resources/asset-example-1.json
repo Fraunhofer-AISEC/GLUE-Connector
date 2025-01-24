@@ -1,0 +1,13 @@
+{
+  "@context": "http://www.w3.org/ns/odrl.jsonld",
+  "@type": "Asset",
+  "uid": "http://example.com/asset",
+  "partOf": {
+    "source": "http://example.com/assetCollection",
+    "refinement": {
+      "leftOperand": "http://example.com/leftOperand",
+      "operator": "eq",
+      "rightOperand": "exampleRightOperand"
+    }
+  }
+}

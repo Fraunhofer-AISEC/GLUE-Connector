@@ -1,0 +1,24 @@
+{
+  "@context": "http://www.w3.org/ns/odrl.jsonld",
+  "@type": "Permission",
+  "uid": "http://example.com/permission",
+  "action": "play",
+  "target": "http://example.com/targetAsset",
+  "output": "http://example.com/outputAsset",
+  "assignee": "http://example.com/assignee",
+  "assigner": "http://example.com/assigner",
+  "constraint": {
+    "leftOperand": "http://example.com/leftOperand",
+    "operator": "gteq",
+    "rightOperand": "exampleRightOperand"
+  },
+  "duty": [{
+    "uid": "http://example.com/compensationDuty",
+    "action": "compensate",
+    "compensatedParty": "http://example.com/compensatedParty"
+  },{
+    "uid": "http://example.com/attributionDuty",
+    "action": "attribute",
+    "attributedParty": "http://example.com/attributedParty"
+  }]
+}

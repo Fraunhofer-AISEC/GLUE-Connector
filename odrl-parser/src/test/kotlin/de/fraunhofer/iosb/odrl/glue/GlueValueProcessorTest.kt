@@ -1,35 +1,27 @@
+package de.fraunhofer.iosb.odrl.glue
+
 import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.BooleanNode
 import com.fasterxml.jackson.databind.node.NullNode
 import com.fasterxml.jackson.databind.node.TextNode
 import de.fraunhofer.iosb.odrl.*
 import de.fraunhofer.iosb.odrl.de.fraunhofer.iosb.odrl.glue.GlueParameterPlaceholderCallback
-import de.fraunhofer.iosb.odrl.glue.*
 import de.fraunhofer.iosb.odrl.parser.OdrlParser
 import kotlinx.coroutines.runBlocking
 import java.time.LocalDate
-import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class GlueValueProcessorTest {
-    private lateinit var mapper: ObjectMapper
-    private lateinit var processor: GlueValueProcessor
-    private lateinit var callback: GlueParameterPlaceholderCallback
-
-    @BeforeTest
-    fun setup() {
-        mapper = OdrlParser().mapper;
-        processor = GlueValueProcessor()
-        callback = GlueParameterPlaceholderCallback {
-            when (it) {
-                "testKeyString" -> TextNode.valueOf("testValue")
-                "testKeyBool" -> BooleanNode.valueOf(true)
-                "nextDataReceiverUid" -> getTestNextDataReceiverUid()
-                "nextDataReceiverConstraint" -> getTestNextDataReceiverConstraint()
-                else -> NullNode.getInstance()
-            }
+    private val mapper = OdrlParser().mapper
+    private val processor = GlueValueProcessor()
+    private val callback = GlueParameterPlaceholderCallback {
+        when (it) {
+            "testKeyString" -> TextNode.valueOf("testValue")
+            "testKeyBool" -> BooleanNode.valueOf(true)
+            "nextDataReceiverUid" -> getTestNextDataReceiverUid()
+            "nextDataReceiverConstraint" -> getTestNextDataReceiverConstraint()
+            else -> NullNode.getInstance()
         }
     }
 

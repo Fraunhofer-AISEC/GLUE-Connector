@@ -18,32 +18,34 @@ import java.net.URI
     Type(OdrlOffer::class),
     Type(OdrlAgreement::class),
 )
-open class OdrlPolicy: JsonLdBeanValidator {
-    @JsonProperty("@id")
-    val uid: URI = URI.create("")
+open class OdrlPolicy(
+    // Using the @field: annotation target allows Jackson to see these properties also in subclasses
+    @field:JsonProperty("@id")
+    val uid: URI = URI.create(""),
 
-    @JsonProperty(OdrlIdentifiers.HAS_PERMISSION)
+    @field:JsonProperty(OdrlIdentifiers.HAS_PERMISSION)
     @JsonSetter(nulls = Nulls.AS_EMPTY)
-    val permission: List<OdrlPermission> = listOf()
+    val permission: List<OdrlPermission> = listOf(),
 
-    @JsonProperty(OdrlIdentifiers.HAS_PROHIBITION)
+    @field:JsonProperty(OdrlIdentifiers.HAS_PROHIBITION)
     @JsonSetter(nulls = Nulls.AS_EMPTY)
-    val prohibition: List<OdrlProhibition> = listOf()
+    val prohibition: List<OdrlProhibition> = listOf(),
 
-    @JsonProperty(OdrlIdentifiers.OBLIGATION)
+    @field:JsonProperty(OdrlIdentifiers.OBLIGATION)
     @JsonSetter(nulls = Nulls.AS_EMPTY)
-    val obligation: List<OdrlDuty> = listOf()
+    val obligation: List<OdrlDuty> = listOf(),
 
-    @JsonProperty(OdrlIdentifiers.PROFILE)
+    @field:JsonProperty(OdrlIdentifiers.PROFILE)
     @JsonSetter(nulls = Nulls.AS_EMPTY)
-    val profile: List<OdrlIri> = listOf()
+    val profile: List<OdrlIri> = listOf(),
 
-    @JsonProperty(OdrlIdentifiers.INHERIT_FROM)
+    @field:JsonProperty(OdrlIdentifiers.INHERIT_FROM)
     @JsonSetter(nulls = Nulls.AS_EMPTY)
-    val inheritFrom: List<OdrlIri> = listOf()
+    val inheritFrom: List<OdrlIri> = listOf(),
 
-    @JsonProperty(OdrlIdentifiers.CONFLICT)
-    val conflict: OdrlConflictTerm? = null
+    @field:JsonProperty(OdrlIdentifiers.CONFLICT)
+    val conflict: OdrlConflictTerm? = null,
+): JsonLdBeanValidator {
 
     override fun validate(): List<ValidationError> {
         return validateOdrlPolicy.validate(this).errors

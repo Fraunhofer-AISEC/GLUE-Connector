@@ -1,0 +1,15 @@
+{
+  "@context": "http://www.w3.org/ns/odrl.jsonld",
+  "@type": "Action",
+  "uid": "http://example.com/action",
+  "refinement": {
+    "leftOperand": "http://example.com/leftOperand",
+    "operator": "eq",
+    "rightOperand": "exampleRightOperand"
+  },
+  "includedIn": "http://example.com/anotherAction",
+  "implies": [
+    "http://example.com/impliedAction1",
+    "http://example.com/impliedAction2"
+  ]
+}

@@ -6,20 +6,21 @@ import de.fraunhofer.iosb.odrl.parser.JsonLd
 import de.fraunhofer.iosb.odrl.parser.JsonLdBeanValidator
 import io.konform.validation.Validation
 import io.konform.validation.ValidationError
-import java.net.URI
 
 @JsonLd(GlueIdentifiers.CONTEXT)
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type", defaultImpl = OdrlPartyCollection::class)
 @JsonTypeName(OdrlIdentifiers.PARTY_COLLECTION)
 data class OdrlPartyCollection(
     @JsonProperty(OdrlIdentifiers.SOURCE)
-    val source: URI? = null,
+    val source: OdrlIri? = null,
 
     @JsonProperty(OdrlIdentifiers.REFINEMENT)
     @JsonSetter(nulls = Nulls.AS_EMPTY)
     val refinement: List<OdrlConstraintRepresentation> = listOf(),
 ): JsonLdBeanValidator {
-    constructor(primitiveValue: String) : this(URI.create(primitiveValue))
+    // Constructor necessary for Jackson to deserialize primitive type
+    @Suppress("unused")
+    constructor(primitiveValue: String) : this(OdrlIri(primitiveValue))
 
     override fun validate(): List<ValidationError> {
         return validateOdrlPartyCollection.validate(this).errors
@@ -38,9 +39,9 @@ data class OdrlPartyCollection(
 }
 
 val validateOdrlPartyCollection = Validation {
-    // A PartyCollection MAY have one source property value (of type IRI
+    // A PartyCollection MAY have one source property value of type IRI
     OdrlPartyCollection::source ifPresent {
-        addConstraint("OdrlPartyCollection: {value} is not a valid IRI") { isIri(it) }
+        run(validateOdrlIri)
     }
 
     // A PartyCollection MAY have none, one, or many refinement property values of type Constraint

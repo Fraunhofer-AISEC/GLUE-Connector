@@ -15,6 +15,8 @@ data class OdrlLeftOperand(
     @JsonProperty("@id")
     val uid: URI,
 ): JsonLdBeanValidator {
+    // Constructor necessary for Jackson to deserialize primitive type
+    @Suppress("unused")
     constructor(primitiveValue: String) : this(URI.create(primitiveValue))
 
     override fun validate(): List<ValidationError> {

@@ -1,0 +1,14 @@
+{
+  "@context": "http://www.w3.org/ns/odrl.jsonld",
+  "@type": "LogicalConstraint",
+  "uid": "http://example.com/logicalConstraint",
+  "or": [{
+    "leftOperand": "http://example.com/leftOperand1",
+    "operator": "eq",
+    "rightOperand": "exampleRightOperand1"
+  },{
+    "leftOperand": "http://example.com/leftOperand2",
+    "operator": "eq",
+    "rightOperand": "exampleRightOperand2"
+  }]
+}

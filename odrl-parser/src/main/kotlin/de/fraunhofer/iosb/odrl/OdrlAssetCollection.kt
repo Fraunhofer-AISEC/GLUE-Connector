@@ -6,20 +6,21 @@ import de.fraunhofer.iosb.odrl.parser.JsonLd
 import de.fraunhofer.iosb.odrl.parser.JsonLdBeanValidator
 import io.konform.validation.Validation
 import io.konform.validation.ValidationError
-import java.net.URI
 
 @JsonLd(GlueIdentifiers.CONTEXT)
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type", defaultImpl = OdrlAssetCollection::class)
 @JsonTypeName(OdrlIdentifiers.ASSET_COLLECTION)
 data class OdrlAssetCollection(
     @JsonProperty(OdrlIdentifiers.SOURCE)
-    val source: URI? = null,
+    val source: OdrlIri? = null,
 
     @JsonProperty(OdrlIdentifiers.REFINEMENT)
     @JsonSetter(nulls = Nulls.AS_EMPTY)
     val refinement: List<OdrlConstraintRepresentation> = listOf(),
 ): JsonLdBeanValidator {
-    constructor(primitiveValue: String) : this(URI.create(primitiveValue))
+    // Constructor necessary for Jackson to deserialize primitive type
+    @Suppress("unused")
+    constructor(primitiveValue: String) : this(OdrlIri(primitiveValue))
 
     override fun validate(): List<ValidationError> {
         return validateOdrlAssetCollection.validate(this).errors
@@ -40,7 +41,7 @@ data class OdrlAssetCollection(
 val validateOdrlAssetCollection = Validation {
     // An AssetCollection MAY have one source property value of type IRI
     OdrlAssetCollection::source ifPresent {
-        addConstraint("OdrlAssetCollection: {value} is not a valid IRI") { isIri(it) }
+        run(validateOdrlIri)
     }
 
     // An AssetCollection MAY have none, one, or many refinement property values of type Constraint

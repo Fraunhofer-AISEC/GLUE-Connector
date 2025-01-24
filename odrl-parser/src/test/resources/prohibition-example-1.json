@@ -1,0 +1,20 @@
+{
+  "@context": "http://www.w3.org/ns/odrl.jsonld",
+  "@type": "Prohibition",
+  "uid": "http://example.com/prohibition",
+  "action": "play",
+  "target": "http://example.com/targetAsset",
+  "output": "http://example.com/outputAsset",
+  "assignee": "http://example.com/assignee",
+  "assigner": "http://example.com/assigner",
+  "constraint": {
+    "leftOperand": "http://example.com/leftOperand",
+    "operator": "eq",
+    "rightOperand": "exampleRightOperand"
+  },
+  "remedy": {
+    "uid": "http://example.com/compensationDuty",
+    "action": "compensate",
+    "compensatedParty": "http://example.com/compensatedParty"
+  }
+}
