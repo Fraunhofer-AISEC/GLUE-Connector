@@ -4,7 +4,6 @@
     "glue": "http://fhg.de/glue/",
 
     "ContainerPipeline": "glue:ContainerPipeline",
-    "containerPipeline": "glue:containerPipeline",
 
     "Container": "glue:Container",
     "container": {
@@ -35,6 +34,9 @@
     "ParameterPlaceholder": "glue:ParameterPlaceholder",
     "key": "glue:key",
 
-    "deployPipeline": "glue:deployPipeline"
+    "deployPipeline": "glue:deployPipeline",
+
+    "policyTemplate": "glue:policyTemplate",
+    "containerPipeline": "glue:containerPipeline"
   }
 }

@@ -7,7 +7,6 @@ object GlueIdentifiers {
 
     // Core vocabulary
     const val CONTAINER_PIPELINE = "http://fhg.de/glue/ContainerPipeline"
-    const val HAS_CONTAINER_PIPELINE = "http://fhg.de/glue/containerPipeline"
 
     const val CONTAINER = "http://fhg.de/glue/Container"
     const val HAS_CONTAINER = "http://fhg.de/glue/container"
@@ -29,6 +28,10 @@ object GlueIdentifiers {
     const val PARAMETER_PLACEHOLDER = "http://fhg.de/glue/ParameterPlaceholder"
     const val KEY = "http://fhg.de/glue/key"
 
-    // Common vocabulary
+    // Common vocabulary: Actions
     const val DEPLOY_PIPELINE = "http://fhg.de/glue/deployPipeline"
+
+    // Common vocabulary: Left operands
+    const val HAS_POLICY_TEMPLATE = "http://fhg.de/glue/policyTemplate"
+    const val HAS_CONTAINER_PIPELINE = "http://fhg.de/glue/containerPipeline"
 }
