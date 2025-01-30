@@ -1,16 +1,16 @@
 package de.fraunhofer.aisec.glue.policy
 
-import com.fasterxml.jackson.databind.JsonNode
 import de.fraunhofer.iosb.odrl.OdrlAction
 import de.fraunhofer.iosb.odrl.OdrlConstraint
 import de.fraunhofer.iosb.odrl.OdrlIdentifiers
 import de.fraunhofer.iosb.odrl.evaluator.Result
 import de.fraunhofer.iosb.odrl.glue.GlueContainerPipeline
 import de.fraunhofer.iosb.odrl.glue.GlueIdentifiers
+import de.fraunhofer.iosb.odrl.glue.GlueValue
 
 internal class PolicyEvaluation {
     var containerPipeline: GlueContainerPipeline? = null
-    var nextPolicyTemplate: JsonNode? = null
+    var nextPolicyTemplate: GlueValue? = null
 
     /**
      * This function evaluates the DeployPipeline action and extracts a runnable container pipeline from it
@@ -58,12 +58,40 @@ internal class PolicyEvaluation {
             return Result(false, "Only one container pipeline can be created at this time")
         }
 
+        // Return this as tuple to also support a pipeline for next contract
         containerPipeline = pipelineDefs[0]
         return Result(true)
     }
 
-    private fun handleNextPolicyAction(action: OdrlAction): Result {
-        TODO()
+    private suspend fun handleNextPolicyAction(action: OdrlAction): Result {
+        val policyTemplates = mutableListOf<GlueValue>()
+        for (refinement in action.refinement) {
+            if (refinement !is OdrlConstraint) {
+                return Result(false, "Logical constraints are currently not supported")
+            }
+
+            if (refinement.leftOperand.uid.toString() != GlueIdentifiers.HAS_POLICY_TEMPLATE) {
+                return Result(false, "Unsupported refinement type for next policy: ${refinement.leftOperand.uid}")
+            }
+
+            if (refinement.operator.uid.toString() != OdrlIdentifiers.EQ) {
+                return Result(false, "Invalid operator for policy template constraint: ${refinement.operator.uid}")
+            }
+
+            if (refinement.rightOperand.size != 1) {
+                return Result(false, "Invalid number of right operands for policy template constraint")
+            }
+
+            policyTemplates += refinement.rightOperand[0] as? GlueValue ?:
+                return Result(false, "Right operand for policy template must be of type glue:Value")
+        }
+
+        if (policyTemplates.size != 1) {
+            return Result(false, "Next policy action must declare exactly one policy template")
+        }
+
+        nextPolicyTemplate = policyTemplates[0]
+        return Result(true)
     }
 
     suspend fun actionCallback(action: OdrlAction): Result {

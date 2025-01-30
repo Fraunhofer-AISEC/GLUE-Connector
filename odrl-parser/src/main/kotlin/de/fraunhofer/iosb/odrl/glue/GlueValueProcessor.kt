@@ -18,7 +18,7 @@ class GlueValueProcessor(
         glueValue: GlueValue,
         callback: GlueParameterPlaceholderCallback,
     ): GlueValue {
-        return GlueValue(resolvePlaceholders(glueValue.jsonNode, callback))
+        return GlueValue(resolvePlaceholders(glueValue.json, callback))
     }
 
     private suspend fun resolvePlaceholders(

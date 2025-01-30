@@ -13,7 +13,7 @@ class GlueRestParameterTest {
     private val restParameter1 = GlueRestParameter(
         httpType = GlueHttpType.POST,
         httpUrl = URI.create("http://0.0.0.0:1234/dockerEndpoint"),
-        value = GlueValue.create(mapper.readValue(
+        value = GlueValue(mapper.readValue(
         "{\n" +
                 "  \"@type\": \"http://www.w3.org/ns/odrl/2/Policy\",\n" +
                 "  \"@id\": \"http://example.com/policy\",\n" +

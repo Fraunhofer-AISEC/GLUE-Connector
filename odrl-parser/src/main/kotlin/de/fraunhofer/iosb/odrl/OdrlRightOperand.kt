@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.jsontype.TypeSerializer
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import de.fraunhofer.iosb.odrl.glue.GlueContainerPipeline
 import de.fraunhofer.iosb.odrl.glue.GlueIdentifiers
+import de.fraunhofer.iosb.odrl.glue.GlueValue
 import de.fraunhofer.iosb.odrl.parser.JsonLd
 
 @JsonLd(GlueIdentifiers.CONTEXT)
@@ -31,6 +32,7 @@ import de.fraunhofer.iosb.odrl.parser.JsonLd
     Type(XmlAnyType::class),
     // GLUE
     Type(GlueContainerPipeline::class),
+    Type(GlueValue::class),
 )
 abstract class OdrlRightOperand: Comparable<OdrlRightOperand> {
     companion object {
@@ -52,7 +54,7 @@ abstract class OdrlRightOperand: Comparable<OdrlRightOperand> {
         return when (other) {
             is PrimitiveBoolean -> value.compareTo(other.value)
             is XmlBoolean -> value.compareTo(other.value)
-            else -> throw OdrlException("Cannot compare Boolean to ${other.javaClass.simpleName}")
+            else -> throw UnsupportedOperationException("Cannot compare Boolean to ${other.javaClass.simpleName}")
         }
     }
 
@@ -66,7 +68,7 @@ abstract class OdrlRightOperand: Comparable<OdrlRightOperand> {
             is XmlLong -> value.toLong().compareTo(other.value)
             is XmlDouble -> value.toDouble().compareTo(other.value)
             is XmlFloat -> value.toDouble().compareTo(other.value)
-            else -> throw OdrlException("Cannot compare Int to ${other.javaClass.simpleName}")
+            else -> throw UnsupportedOperationException("Cannot compare Int to ${other.javaClass.simpleName}")
         }
     }
 
@@ -80,7 +82,7 @@ abstract class OdrlRightOperand: Comparable<OdrlRightOperand> {
             is XmlLong -> value.toLong().compareTo(other.value.toDouble())
             is XmlDouble -> value.compareTo(other.value)
             is XmlFloat -> value.compareTo(other.value)
-            else -> throw OdrlException("Cannot compare Double to ${other.javaClass.simpleName}")
+            else -> throw UnsupportedOperationException("Cannot compare Double to ${other.javaClass.simpleName}")
         }
     }
 
@@ -90,7 +92,7 @@ abstract class OdrlRightOperand: Comparable<OdrlRightOperand> {
             is XmlString -> value.compareTo(other.value)
             is XmlAnyUri -> value.compareTo(other.value.toString())
             is XmlAnyType -> value.compareTo(other.value.toString())
-            else -> throw OdrlException("Cannot compare String to ${other.javaClass.simpleName}")
+            else -> throw UnsupportedOperationException("Cannot compare String to ${other.javaClass.simpleName}")
         }
     }
 
@@ -108,28 +110,28 @@ abstract class OdrlRightOperand: Comparable<OdrlRightOperand> {
 data class PrimitiveBoolean(val value: Boolean): OdrlRightOperand() {
     override fun compareTo(other: OdrlRightOperand) = compareBoolean(value, other)
     override fun equals(other: Any?) = super.equals(other)
-    override fun hashCode(): Int { return value.hashCode() }
+    override fun hashCode() = value.hashCode()
 }
 
 @JsonSerialize(using = PrimitiveSerializer::class)
 data class PrimitiveInt(val value: Int): OdrlRightOperand() {
     override fun compareTo(other: OdrlRightOperand) = compareInt(value, other)
     override fun equals(other: Any?) = super.equals(other)
-    override fun hashCode(): Int { return value.hashCode() }
+    override fun hashCode() = value.hashCode()
 }
 
 @JsonSerialize(using = PrimitiveSerializer::class)
 data class PrimitiveDouble(val value: Double): OdrlRightOperand() {
     override fun compareTo(other: OdrlRightOperand) = compareDouble(value, other)
     override fun equals(other: Any?) = super.equals(other)
-    override fun hashCode(): Int { return value.hashCode() }
+    override fun hashCode() = value.hashCode()
 }
 
 @JsonSerialize(using = PrimitiveSerializer::class)
 data class PrimitiveString(val value: String): OdrlRightOperand() {
     override fun compareTo(other: OdrlRightOperand) = compareString(value, other)
     override fun equals(other: Any?) = super.equals(other)
-    override fun hashCode(): Int { return value.hashCode() }
+    override fun hashCode() = value.hashCode()
 }
 
 class PrimitiveSerializer: StdSerializer<Any>(Any::class.java) {
