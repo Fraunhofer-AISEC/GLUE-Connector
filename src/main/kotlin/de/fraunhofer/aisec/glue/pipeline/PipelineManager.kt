@@ -65,4 +65,10 @@ class PipelineManager(
             // TODO: Check the integrity of the running containers (using healthchecks if available)
             return true
         }
+
+    suspend fun getPipelineById(id: String): ContainerPipeline? = pipelineMutex.withLock { pipelines[id] }
+
+    suspend fun getPipelineByIp(ip: String): ContainerPipeline? = pipelineMutex.withLock {
+        backend.getPipelineFromIp(ip)?.let { id -> getPipelineById(id) }
+    }
 }
