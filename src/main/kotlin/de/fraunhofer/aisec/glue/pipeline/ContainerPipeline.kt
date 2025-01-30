@@ -1,8 +1,11 @@
 package de.fraunhofer.aisec.glue.pipeline
 
+import com.fasterxml.jackson.databind.JsonNode
 import java.io.Closeable
 
 abstract class ContainerPipeline(val name: String) : Closeable {
+    val placeholderValues = mutableMapOf<String, JsonNode>()
+
     abstract suspend fun start()
 
     abstract suspend fun stop()

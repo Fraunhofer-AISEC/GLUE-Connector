@@ -63,4 +63,10 @@ class PipelineManager(
             val pipeline = pipelines[id] ?: return false
             return true
         }
+
+    suspend fun getPipelineById(id: String): ContainerPipeline? = pipelineMutex.withLock { pipelines[id] }
+
+    suspend fun getPipelineByIp(ip: String): ContainerPipeline? = pipelineMutex.withLock {
+        backend.getPipelineFromIp(ip)?.let { id -> getPipelineById(id) }
+    }
 }

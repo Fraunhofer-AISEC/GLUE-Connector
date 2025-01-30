@@ -8,18 +8,18 @@ import de.fraunhofer.aisec.glue.docker.model.NetworkCreateRequest
 import de.fraunhofer.aisec.glue.docker.model.PortBinding
 import de.fraunhofer.aisec.glue.docker.unix.UnixSocketFactory
 import io.ktor.client.*
+import io.ktor.client.call.*
 import io.ktor.client.engine.okhttp.*
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
-import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.jackson.*
-import io.ktor.util.*
 import org.slf4j.LoggerFactory
 import java.io.Closeable
 import java.net.URI
 import java.nio.file.Path
+import de.fraunhofer.aisec.glue.docker.model.Network as NetworkInspectResponse
 
 class DockerClient(internal val httpClient: HttpClient, private val baseUrl: Url) : Closeable {
     /**
@@ -155,6 +155,11 @@ class DockerClient(internal val httpClient: HttpClient, private val baseUrl: Url
 
         fun get(name: String): Network {
             return Network(this@DockerClient, name)
+        }
+
+        suspend fun list(): List<Network> {
+            val nets = httpClient.get(endpoint("networks")).body<List<NetworkInspectResponse>>()
+            return nets.map { n -> Network(this@DockerClient, n.name ?: throw NullPointerException("Received unnamed network from docker")) }
         }
     }
 
