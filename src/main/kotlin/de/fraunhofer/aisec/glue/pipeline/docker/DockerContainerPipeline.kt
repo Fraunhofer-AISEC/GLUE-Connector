@@ -35,7 +35,7 @@ class DockerContainerPipeline internal constructor(
             withTimeout(5000) {
                 container.stop()
             }
-        } catch (e: TimeoutCancellationException) {
+        } catch (_: TimeoutCancellationException) {
             LOG.warn("Could not stop container ${container.name} within timeout")
             try {
                 container.kill()
@@ -92,12 +92,8 @@ class DockerContainerPipeline internal constructor(
     private fun parseContainerStatus(state: ContainerState): ContainerInfo.ContainerStatus {
         val status =
             when (state.status) {
-                "created" -> ContainerInfo.ContainerStatus.DOWN
                 "running" -> ContainerInfo.ContainerStatus.STARTED
-                "exited" -> ContainerInfo.ContainerStatus.DOWN
-                "dead" -> ContainerInfo.ContainerStatus.DOWN
-                // Removing requires a prior exit, so treat as down
-                "removing" -> ContainerInfo.ContainerStatus.DOWN
+                "created", "exited", "dead", "removing" -> ContainerInfo.ContainerStatus.DOWN
                 else -> throw IllegalStateException("The container returned an unexpected state: ${state.status}")
             }
 
@@ -125,22 +121,22 @@ class DockerContainerPipeline internal constructor(
         return ContainerPort(containerPort, hostPort, protocol)
     }
 
-    override suspend fun getContainerInfo(index: Int): ContainerInfo? {
-        return containers.getOrNull(index)?.let { c ->
+    override suspend fun getContainerInfo(index: Int): ContainerInfo {
+        return containers[index].let { c ->
             val inspect = c.inspect()
 
             ContainerInfo(
                 name = c.name,
                 ipAddresses = inspect.networkSettings?.networks?.values?.mapNotNull(EndpointSettings::ipAddress) ?: emptyList(),
                 ports = inspect.networkSettings?.ports?.mapNotNull { (k, v) -> v?.let { parsePortBinding(k, v) } } ?: emptyList(),
-                status = parseContainerStatus(inspect.state!!),
+                status = parseContainerStatus(inspect.state ?: throw IllegalStateException("Inspection has no state object")),
                 pid = inspect.state.pid,
             )
         }
     }
 
     override suspend fun getContainerInfo(): List<ContainerInfo> {
-        return containers.indices.map { i -> getContainerInfo(i)!! }
+        return containers.indices.map { getContainerInfo(it) }
     }
 
     override suspend fun injectConfig(

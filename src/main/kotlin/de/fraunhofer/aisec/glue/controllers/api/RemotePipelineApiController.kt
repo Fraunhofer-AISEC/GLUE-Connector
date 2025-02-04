@@ -11,7 +11,6 @@ import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
-import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -70,7 +69,7 @@ class RemotePipelineApiController(
                 val remotePipeline =
                     try {
                         resp.body<PipelineCreateResponse>()
-                    } catch (e: NoTransformationFoundException) {
+                    } catch (_: NoTransformationFoundException) {
                         call.respond(
                             HttpStatusCode.BadGateway,
                             "Could not deserialize the response from the remote connector",
@@ -89,7 +88,7 @@ class RemotePipelineApiController(
             }
 
             delete("{id}") {
-                val id = call.parameters["id"]!!
+                val id = call.parameters["id"] ?: throw IllegalStateException("ID not found")
                 //  remote pipeline is actually deleted.
                 //  If we don't do this, the remote pipeline may stay around if the later delete request to the peer
                 //  fails.

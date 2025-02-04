@@ -69,7 +69,7 @@ class PipelineController(
                         )
                     }.recover { err ->
                         when (err) {
-                            is PolicyViolationException -> call.respond(HttpStatusCode.Forbidden, err.message!!)
+                            is PolicyViolationException -> call.respond(HttpStatusCode.Forbidden, err.message ?: "Unknown Error")
                             else -> call.respond(HttpStatusCode.InternalServerError, err.message ?: "Unknown Error")
                         }
                     }
@@ -77,7 +77,7 @@ class PipelineController(
 
                 get("{id}") {
                     val principal = call.principal<UserIdPrincipal>()
-                    val id = call.parameters["id"]!!
+                    val id = call.parameters["id"] ?: throw IllegalStateException("ID not found")
 
                     val status = pipelineManager.getPipelineStatus(id)
                     // Currently this only checks if the pipeline exists
@@ -86,7 +86,7 @@ class PipelineController(
 
                 delete("{id}") {
                     val principal = call.principal<UserIdPrincipal>()
-                    val id = call.parameters["id"]!!
+                    val id = call.parameters["id"] ?: throw IllegalStateException("ID not found")
 
                     val found = pipelineManager.deletePipeline(id)
                     call.respond(if (found) HttpStatusCode.OK else HttpStatusCode.NotFound)
