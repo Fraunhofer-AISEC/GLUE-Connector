@@ -1,6 +1,7 @@
 package de.fraunhofer.aisec.glue.controllers.api
 
 import de.fraunhofer.aisec.glue.ContractStore
+import de.fraunhofer.aisec.glue.Utils
 import de.fraunhofer.aisec.glue.Utils.hexEncode
 import de.fraunhofer.aisec.glue.controllers.Controller
 import de.fraunhofer.aisec.glue.models.api.RemotePipelineCreationRequest
@@ -60,6 +61,8 @@ class RemotePipelineApiController(
                     httpClient.post(peerUrl) {
                         header("Content-Type", ContentType.Application.Json)
                         setBody(req.request)
+                        val (username, password) = Utils.getCredentials()
+                        basicAuth(username, password)
                     }
 
                 if (!resp.status.isSuccess()) {

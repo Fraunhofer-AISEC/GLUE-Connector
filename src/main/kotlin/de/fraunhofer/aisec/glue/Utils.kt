@@ -37,4 +37,10 @@ object Utils {
         }
         return builder.build()
     }
+
+    fun getCredentials(): Pair<String, String> {
+        val username = System.getenv("AUTH_USERNAME") ?: throw IllegalStateException("Auth username not set")
+        val password = System.getenv("AUTH_PASSWORD") ?: throw IllegalStateException("Auth password not set")
+        return Pair(username, password)
+    }
 }
