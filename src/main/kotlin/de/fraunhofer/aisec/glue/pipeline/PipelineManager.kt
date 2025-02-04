@@ -18,10 +18,10 @@ class PipelineManager(
     private fun createPipelineName(): String =
         generateSequence { Random.Default.nextBytes(8).hexEncode() }.first { n -> !pipelines.contains(n) }
 
-    suspend fun createPipeline(pipelineSpec: GlueContainerPipeline): ContainerPipeline =
+    suspend fun createPipeline(pipelineSpec: GlueContainerPipeline, contractId: String, targetId: String): ContainerPipeline =
         pipelineMutex.withLock {
             val name = createPipelineName()
-            val pipeline = backend.createPipeline(name, pipelineSpec)
+            val pipeline = backend.createPipeline(name, pipelineSpec, contractId, targetId)
 
             try {
                 val containerInfo = pipeline.getContainerInfo()

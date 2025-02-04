@@ -3,7 +3,7 @@ package de.fraunhofer.aisec.glue.pipeline
 import com.fasterxml.jackson.databind.JsonNode
 import java.io.Closeable
 
-abstract class ContainerPipeline(val name: String) : Closeable {
+abstract class ContainerPipeline(val name: String, val contractId: String, val targetId: String) : Closeable {
     // TODO: This should be persisted somewhere in case we crash
     val placeholderValues = mutableMapOf<String, JsonNode>()
 

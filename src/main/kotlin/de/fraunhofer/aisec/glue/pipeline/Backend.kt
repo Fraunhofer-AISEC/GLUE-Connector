@@ -13,6 +13,8 @@ interface Backend {
     suspend fun createPipeline(
         id: String,
         policyObject: GlueContainerPipeline,
+        contractId: String,
+        targetId: String,
     ): ContainerPipeline
 
     /**
