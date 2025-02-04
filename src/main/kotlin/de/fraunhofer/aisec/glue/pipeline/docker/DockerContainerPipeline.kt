@@ -18,10 +18,12 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 class DockerContainerPipeline internal constructor(
     name: String,
+    contractId: String,
+    targetId: String,
     private val objectMapper: ObjectMapper,
     val containers: List<Container>,
     val networks: List<Network>,
-) : ContainerPipeline(name) {
+) : ContainerPipeline(name, contractId, targetId) {
     private val closed = AtomicBoolean(false)
 
     override suspend fun start() {

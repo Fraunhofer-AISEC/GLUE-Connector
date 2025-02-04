@@ -39,7 +39,9 @@ class PolicyEngine(private val pipelineManager: PipelineManager) {
         }
 
         // Actualize the container pipeline, if any
-        val pipelineResult = evaluation.containerPipeline?.runCatching { pipelineManager.createPipeline(this) }
+        val pipelineResult = evaluation.containerPipeline?.runCatching {
+            pipelineManager.createPipeline(this, policy.uid.toString(), target.toString())
+        }
 
         return runCatching {
             PolicyEvaluationResult(

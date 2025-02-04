@@ -65,12 +65,12 @@ class PipelineTest {
             val mockBackend = mockk<Backend>()
             val pipelineName = slot<String>()
 
-            coEvery { mockBackend.createPipeline(capture(pipelineName), any()) } returns mockPipeline
+            coEvery { mockBackend.createPipeline(capture(pipelineName), any(), any(), any()) } returns mockPipeline
             coEvery { mockBackend.getConnectorIp(any()) } returns "127.0.0.1"
 
             val pipelineManager = PipelineManager(objectMapper, mockBackend)
 
-            val pipeline = pipelineManager.createPipeline(getTestContainers())
+            val pipeline = pipelineManager.createPipeline(getTestContainers(), "testContract", "testTarget")
 
             assertEquals(mockPipeline, pipeline)
 
@@ -116,7 +116,7 @@ class PipelineTest {
             val mockBackend = mockk<Backend>()
             val capturedName = slot<String>()
 
-            coEvery { mockBackend.createPipeline(capture(capturedName), any()) } returns mockPipeline
+            coEvery { mockBackend.createPipeline(capture(capturedName), any(), any(), any()) } returns mockPipeline
             coEvery { mockBackend.getConnectorIp(any()) } returns "127.0.0.1"
             every { mockPipeline.name } answers { capturedName.captured }
 
@@ -197,7 +197,7 @@ class PipelineTest {
                 val dockerBackend = DockerBackend(objectMapper, dockerClient)
                 val pipelineManager = PipelineManager(objectMapper, dockerBackend)
 
-                pipelineManager.createPipeline(getTestContainers(dockerClient)).use { pipeline ->
+                pipelineManager.createPipeline(getTestContainers(dockerClient), "testContract", "testTarget").use { pipeline ->
                     val containerInfo = pipeline.getContainerInfo()
 
                     // Technically, we should probably inspect the container here manually, but since the container info is

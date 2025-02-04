@@ -48,6 +48,8 @@ class DockerBackend(
     private suspend fun convertPipeline(
         id: String,
         pipelineDef: GlueContainerPipeline,
+        contractId: String,
+        targetId: String,
     ): MutableList<ContainerCreateRequest> {
         checkHashes(pipelineDef)
         return pipelineDef.container.map { c ->
@@ -62,7 +64,8 @@ class DockerBackend(
                 labels =
                     mapOf(
                         "de.fraunhofer.aisec.glue.pipeline.id" to id,
-                        "de.fraunhofer.aisec.glue.pipeline.contract" to "TODO: Put contract ID here",
+                        "de.fraunhofer.aisec.glue.pipeline.contract" to contractId,
+                        "de.fraunhofer.aisec.glue.pipeline.target" to targetId,
                         "de.fraunhofer.aisec.glue.pipeline.owner" to "TODO: Put identity of whoever spawned the pipeline here",
                     ),
             )
@@ -116,6 +119,8 @@ class DockerBackend(
     private suspend fun linkContainers(
         id: String,
         containers: List<Container>,
+        contractId: String,
+        targetId: String,
     ): List<Network> {
         val containerPairs = containers.windowed(2)
         val networks = mutableListOf<Network>()
@@ -141,7 +146,9 @@ class DockerBackend(
                                         ),
                                 ),
                             labels = mapOf(
-                                "de.fraunhofer.aisec.glue.pipeline.id" to id
+                                "de.fraunhofer.aisec.glue.pipeline.id" to id,
+                                "de.fraunhofer.aisec.glue.pipeline.contract" to contractId,
+                                "de.fraunhofer.aisec.glue.pipeline.target" to targetId,
                             )
                         ),
                     )
@@ -163,10 +170,10 @@ class DockerBackend(
     override suspend fun createPipeline(
         id: String,
         policyObject: GlueContainerPipeline,
+        contractId: String,
+        targetId: String,
     ): ContainerPipeline {
-        //       Feel free to extract that into a different function or class
-
-        val containerCreateReqs = convertPipeline(id, policyObject)
+        val containerCreateReqs = convertPipeline(id, policyObject, contractId, targetId)
 
         if (containerCreateReqs.isEmpty()) {
             throw IllegalArgumentException("The provided spec contains no containers")
@@ -195,13 +202,13 @@ class DockerBackend(
         val containers = createContainers(id, containerCreateReqs)
         val networks =
             try {
-                linkContainers(id, containers)
+                linkContainers(id, containers, contractId, targetId)
             } catch (e: Exception) {
                 containers.forEach { c -> c.runCatching { remove() } }
                 throw e
             }
 
-        return DockerContainerPipeline(id, objectMapper, containers, networks)
+        return DockerContainerPipeline(id, contractId, targetId, objectMapper, containers, networks)
     }
 
     override suspend fun getConnectorIp(relativeTo: ContainerInfo): String {
