@@ -4,22 +4,41 @@ import com.fasterxml.jackson.databind.JsonNode
 import de.fraunhofer.aisec.glue.ContractStore
 import de.fraunhofer.aisec.glue.Utils
 import de.fraunhofer.aisec.glue.controllers.Controller
+import de.fraunhofer.aisec.glue.models.pipeline.PipelineCreateRequest
+import de.fraunhofer.aisec.glue.models.pipeline.PipelineCreateResponse
 import de.fraunhofer.aisec.glue.negotiation.NegotiationManager
+import de.fraunhofer.aisec.glue.negotiation.toOffer
 import de.fraunhofer.aisec.glue.pipeline.PipelineManager
 import de.fraunhofer.aisec.glue.policy.PolicyEngine
 import de.fraunhofer.iosb.odrl.OdrlIdentifiers
+import de.fraunhofer.iosb.odrl.OdrlParty
 import de.fraunhofer.iosb.odrl.glue.GlueValueProcessor
+import de.fraunhofer.iosb.odrl.parser.OdrlParser
+import io.ktor.client.*
+import io.ktor.client.call.*
+import io.ktor.client.request.*
+import io.ktor.client.statement.*
 import io.ktor.http.*
+import io.ktor.http.content.*
 import io.ktor.server.plugins.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.ktor.server.util.*
+import io.ktor.utils.io.*
+import java.net.InetAddress
 import java.net.URI
 
 /**
- * This controller represents the interface
+ * This controller represents the interface that is exposed to the individual containers.
  */
-class ContainerInterfaceController(val negotiationManager: NegotiationManager, val pipelineManager: PipelineManager, val contractStore: ContractStore, val policyEngine: PolicyEngine) : Controller {
+class ContainerInterfaceController(
+    private val negotiationManager: NegotiationManager,
+    private val pipelineManager: PipelineManager,
+    private val contractStore: ContractStore,
+    private val policyEngine: PolicyEngine,
+    private val httpClient: HttpClient
+) : Controller {
     override fun Route.registerRoutes() {
         // TOOD: Insert some container-side authentication
         // Just IP-Address seems like it *could* be enough here (containers cannot really fake that as they cannot
@@ -33,20 +52,14 @@ class ContainerInterfaceController(val negotiationManager: NegotiationManager, v
             }
 
             post("/proxy") {
-                val destination = call.queryParameters["destination"]
-                val port = call.queryParameters["port"]
+                val destination = call.queryParameters.getOrFail("destination")
+                val port = call.queryParameters["port"] //TODO: Change the pipeline create response to allow more ports
 
-                val pipeline = pipelineManager.getPipelineByIp(call.request.origin.remoteAddress)
-                if (pipeline == null) {
-                    call.respond(HttpStatusCode.NotFound)
-                    return@post
-                }
+                // Obtain the next policy to use on the third container.
 
-                val contract = contractStore.getContract(pipeline.contractId)
-                if (contract == null) {
-                    call.respond(HttpStatusCode.NotFound)
-                    return@post
-                }
+                val pipeline = pipelineManager.getPipelineByIp(call.request.origin.remoteAddress) ?: throw NotFoundException("Pipeline not found")
+                val contract = contractStore.getContract(pipeline.contractId) ?: throw NotFoundException("Contract not found")
+
 
                 val evaluationResult = policyEngine.evaluatePolicy(contract, URI(OdrlIdentifiers.DISTRIBUTE), URI(pipeline.targetId))
                 val evaluation = evaluationResult.getOrElse {
@@ -59,28 +72,66 @@ class ContainerInterfaceController(val negotiationManager: NegotiationManager, v
                     return@post
                 }
 
-                val nextPolicy = try {
-                    GlueValueProcessor().resolvePlaceholders(evaluation.nextPolicyTemplate) {
-                        pipeline.placeholderValues[it] ?: throw NullPointerException("No value for placeholder $it")
-                    }
-                } catch (_: NullPointerException) {
-                    call.respond(HttpStatusCode.NotFound)
-                    return@post
+                val nextPolicy = GlueValueProcessor().resolvePlaceholders(evaluation.nextPolicyTemplate) {
+                    pipeline.placeholderValues[it] ?: throw NotFoundException("No value for placeholder $it")
                 }
 
-                val originUrl = Utils.baseUrlForOrigin(call.request.origin, 2)
+                // Split the destination address into usable parts
+                val destinationURI = URI(destination)
+                val destinationHost = destinationURI.host
+                val destinationPath = destinationURI.path
+
+                // Negotiate the policy with the next connector
+
+                val convertedNextPolicy = OdrlParser().convertToOdrlPolicy(nextPolicy.json).toOffer(OdrlParty(URI("todo:name-this-connector")))
+
+                // This only works in docker compose or similar environments.
+                val originUrl = InetAddress.getLocalHost().hostName
                 val callbackUrl = URLBuilder(originUrl).appendPathSegments("negotiations").build()
                 val negotiation =
                     negotiationManager.startNegotiation(
-                        Url("http://$destination:8080/negotiations"),
+                        Url("http://$destinationHost:8080/negotiations"),
                         callbackUrl,
-                        TODO("Somehow instantiate the policy template"),
+                        convertedNextPolicy
                     )
                 val newPolicy = negotiation.await()
 
-                //  with appropriate contract id and action/target
+                // Spawn the pipeline on the next container
 
-                //  parameter maps to `containerPort` in the response).
+                val createReq = PipelineCreateRequest(
+                    target = pipeline.targetId,
+                    action = OdrlIdentifiers.USE,
+                    contractId = newPolicy.uid.toString()
+                )
+
+                // Wa may also want to add some sort of owner to it, so that the remote pipeline is stopped when this
+                // one shuts down (Assuming that is what we want).
+                val createResp = httpClient.post("http://$destinationHost:8080/pipeline") {
+                    header("Content-Type", ContentType.Application.Json)
+                    setBody(createReq)
+                    val (username, password) = Utils.getCredentials()
+                    basicAuth(username, password)
+                }
+
+                if (!createResp.status.isSuccess()) {
+                    call.respond(HttpStatusCode.BadGateway)
+                    return@post
+                }
+
+                val remotePipeline = createResp.body<PipelineCreateResponse>()
+
+                // Proxy the actual request to the next connector
+
+                val appUrl = "http://$destinationHost:${remotePipeline.pipelinePort}/$destinationPath"
+                val appResponse = httpClient.post(appUrl) {
+                    setBody(call.request.receiveChannel())
+                }
+
+                call.respond(object : OutgoingContent.WriteChannelContent() {
+                    override suspend fun writeTo(channel: ByteWriteChannel) {
+                        appResponse.bodyAsChannel().copyTo(channel)
+                    }
+                })
             }
         }
     }
