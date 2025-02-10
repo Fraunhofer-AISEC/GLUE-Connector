@@ -1,4 +1,7 @@
 go 1.22
 
-use test-containers/http-echo
-use test-containers/proxy
+use (
+	test-containers/forwarder
+	test-containers/htp-echo
+	test-containers/proxy
+)

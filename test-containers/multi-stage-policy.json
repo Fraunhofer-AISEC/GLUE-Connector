@@ -1,0 +1,117 @@
+{
+  "@context": {
+    "odrl": "http://www.w3.org/ns/odrl/2/",
+    "glue": "http://fhg.de/glue/"
+  },
+  "@type": "http://www.w3.org/ns/odrl/2/Offer",
+  "@id": "http://dataowner.com/policy:6163",
+  "odrl:permission": [
+    {
+      "odrl:target": "http://dataowner.com/document:1234",
+      "odrl:assigner": "http://dataowner.com/org",
+      "odrl:assignee": "http://dataconsumer.com/org",
+      "odrl:action": "http://www.w3.org/ns/odrl/2/use",
+      "odrl:duty": {
+        "odrl:action": {
+          "@id": "http://fhg.de/glue/deployPipeline",
+          "odrl:refinement": [
+            {
+              "odrl:leftOperand": "http://fhg.de/glue/containerPipeline",
+              "odrl:operator": "http://www.w3.org/ns/odrl/2/eq",
+              "odrl:rightOperand": {
+                "@type": "http://fhg.de/glue/ContainerPipeline",
+                "glue:container": [
+                  {
+                    "@type": "http://fhg.de/glue/Container",
+                    "glue:image": "container-registry.gitlab.cc-asp.fraunhofer.de/ccit-glue/usage-control/container-pipeline/proxy:latest",
+                    "glue:hash": "sha256:de73eed48c460ac0d82b13ffeceaa35752d28a1d147ece1257e6c00327038e13",
+                    "glue:allowNetwork": true
+                  },
+                  {
+                    "@type": "http://fhg.de/glue/Container",
+                    "glue:image": "container-registry.gitlab.cc-asp.fraunhofer.de/ccit-glue/usage-control/container-pipeline/forwarder:latest",
+                    "glue:hash": "sha256:47aa064ff5a86570e60236dc6423add55cf284b87c05a9e11db01e5fd8cc9789",
+                    "glue:allowNetwork": true
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }, {
+      "odrl:target": "http://dataowner.com/document:1234",
+      "odrl:assigner": "http://dataowner.com/org",
+      "odrl:assignee": "http://dataconsumer.com/org",
+      "odrl:action": "http://www.w3.org/ns/odrl/2/distribute",
+      "odrl:duty": {
+        "odrl:action": {
+          "@id": "http://www.w3.org/ns/odrl/2/nextPolicy",
+          "odrl:refinement": [
+            {
+              "odrl:leftOperand": "http://fhg.de/glue/policyTemplate",
+              "odrl:operator": "http://www.w3.org/ns/odrl/2/eq",
+              "odrl:rightOperand": {
+                "@type": "http://fhg.de/glue/Value",
+                "glue:json": {
+                  "@context": {
+                    "odrl": "http://www.w3.org/ns/odrl.jsonld/",
+                    "glue": "http://fhg.de/glue/"
+                  },
+                  "@type": "http://www.w3.org/ns/odrl/2/Offer",
+                  "@id": "http://dataowner.com/policy:9876",
+                  "odrl:permission": [
+                    {
+                      "odrl:target": "http://dataowner.com/document:1234",
+                      "odrl:assigner": "http://dataowner.com/org",
+                      "odrl:assignee": "http://fhg.de/glue/ParameterPlaceholder?key=nextDataReceiverUid",
+                      "odrl:action": "http://www.w3.org/ns/odrl/2/use",
+                      "odrl:duty": {
+                        "odrl:action": {
+                          "@id": "http://fhg.de/glue/deployPipeline",
+                          "odrl:refinement": [
+                            {
+                              "odrl:leftOperand": "http://fhg.de/glue/containerPipeline",
+                              "odrl:operator": "http://www.w3.org/ns/odrl/2/eq",
+                              "odrl:rightOperand": {
+                                "@type": "http://fhg.de/glue/ContainerPipeline",
+                                "glue:container": [
+                                  {
+                                    "@type": "http://fhg.de/glue/Container",
+                                    "glue:image": "container-registry.gitlab.cc-asp.fraunhofer.de/ccit-glue/usage-control/container-pipeline/proxy:latest",
+                                    "glue:hash": "sha256:de73eed48c460ac0d82b13ffeceaa35752d28a1d147ece1257e6c00327038e13",
+                                    "glue:parameter": {
+                                      "@type": "http://fhg.de/glue/RestParameter",
+                                      "glue:httpUrl": "http://0.0.0.0:1234/dockerEndpoint?key1=value1",
+                                      "glue:httpType": "GET"
+                                    },
+                                    "glue:allowNetwork": true
+                                  },
+                                  {
+                                    "@type": "http://fhg.de/glue/Container",
+                                    "glue:image": "container-registry.gitlab.cc-asp.fraunhofer.de/ccit-glue/usage-control/container-pipeline/http-echo:latest",
+                                    "glue:hash": "sha256:47aa064ff5a86570e60236dc6423add55cf284b87c05a9e11db01e5fd8cc9789",
+                                    "glue:parameter": {
+                                      "@type": "http://fhg.de/glue/RestParameter",
+                                      "glue:httpUrl": "http://0.0.0.0:1234/dockerEndpoint?key1=value1",
+                                      "glue:httpType": "GET"
+                                    },
+                                    "glue:allowNetwork": true
+                                  }
+                                ]
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
