@@ -49,8 +49,9 @@ class ContainerInterfaceController(
             post("/policy-parameter") {
                 // TODO(long-term): Add some validation to detect if the container is allowed to supply that parameter
                 val parameters = call.receive<Map<String, JsonNode>>()
-                val pipeline = pipelineManager.getPipelineByIp(call.request.origin.remoteAddress)
-                pipeline?.placeholderValues?.putAll(parameters) ?: call.respond(HttpStatusCode.NotFound)
+                val pipeline = pipelineManager.getPipelineByIp(call.request.origin.remoteAddress) ?: throw NotFoundException()
+                pipeline.placeholderValues.putAll(parameters)
+                call.respond(HttpStatusCode.Created)
             }
 
             post("/proxy") {
@@ -91,13 +92,12 @@ class ContainerInterfaceController(
 
                 // HACK: This will not work in production since we will likely not be reachable by hostname alone
                 // This only works in docker compose or similar environments.
-                val originUrl = InetAddress.getLocalHost().hostName
-                val callbackUrl = URLBuilder(originUrl).appendPathSegments("negotiations").build()
+                val originUrl = InetAddress.getLocalHost().hostAddress
                 // TODO: Check if we already have an agreement with the destination node
                 val negotiation =
                     negotiationManager.startNegotiation(
                         Url("http://$destinationHost:8080/negotiations"),
-                        callbackUrl,
+                        Url("http://$originUrl:8080/negotiations"),
                         convertedNextPolicy
                     )
                 val newPolicy = negotiation.await()

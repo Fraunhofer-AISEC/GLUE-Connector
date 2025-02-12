@@ -15,6 +15,8 @@ import de.fraunhofer.aisec.glue.policy.PolicyEngine
 import de.fraunhofer.iosb.odrl.parser.OdrlParser
 import io.ktor.client.*
 import io.ktor.client.engine.okhttp.*
+import io.ktor.client.plugins.auth.*
+import io.ktor.client.plugins.auth.providers.*
 import io.ktor.http.*
 import io.ktor.serialization.*
 import io.ktor.serialization.jackson.*
@@ -54,6 +56,14 @@ val defaultDependencies by DI.Module {
             HttpClient(OkHttp) {
                 install(ClientContentNegotiation) {
                     register(ContentType.Application.Json, instance())
+                }
+                install(Auth) {
+                    basic {
+                        credentials {
+                            val(username, password) = Utils.getCredentials()
+                            BasicAuthCredentials(username, password)
+                        }
+                    }
                 }
             }
         }

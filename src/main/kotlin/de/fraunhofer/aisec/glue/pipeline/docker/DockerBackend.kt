@@ -21,9 +21,10 @@ class DockerBackend(
     private val objectMapper: ObjectMapper,
     private val dockerClient: DockerClient = createDockerClient(),
 ) : Backend {
+    private val dockerSubnet = System.getenv("DOCKER_SUBNET") ?: "10.1.0.0"
     private val subnetLen = 29
     private val subnets =
-        InetUtil.getSubnets(InetUtil.parseInet4Address("10.1.0.0"), 16, subnetLen)
+        InetUtil.getSubnets(InetUtil.parseInet4Address(dockerSubnet), 16, subnetLen)
             .iterator()
 
     // Note: This is an implementation detail of docker that should not be relied upon.
@@ -170,6 +171,16 @@ class DockerBackend(
 
         return networks
     }
+
+    /*private suspend fun connectController(id: String, containers: List<Container>, networks: List<Network>) {
+        if (selfContainer != null) {
+            // When we are running in a container, we just need to connect up to the link networks.
+            // In the special case where there is only one container, we don't have a link network and need to fall back
+            // to the non-dockerized behaviour.
+            networks.forEach { net -> net.connect(selfContainer!!) }
+            if ()
+        }
+    }*/
 
     override suspend fun createPipeline(
         id: String,

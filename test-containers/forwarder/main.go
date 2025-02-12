@@ -34,7 +34,7 @@ func makeHandler(connectorHost string, destination string) http.HandlerFunc {
 
     // Set up the parameter for the next connector's assignee here
     // for simplicity, this is just the full destination URI
-    parameterUrl := fmt.Sprintf("http://%s:8080/coordinator/policy-parameter")
+    parameterUrl := fmt.Sprintf("http://%s:8080/coordinator/policy-parameter", connectorHost)
     var paramsBuffer bytes.Buffer
     json.NewEncoder(&paramsBuffer).Encode(map[string]string{ "nextDataReceiverUid": destination })
     resp, err := httpClient.Post(parameterUrl, "application/json", &paramsBuffer)
@@ -88,6 +88,7 @@ func main() {
 		log.Fatalf("Could not parse config: %s", err)
 	}
 	log.Printf("Config: %+v", config)
+	log.Printf("Next hop is at %s", os.Args[1])
 
 	handler := makeHandler(config.Controller, os.Args[1])
 	http.ListenAndServe("0.0.0.0:8080", handler)

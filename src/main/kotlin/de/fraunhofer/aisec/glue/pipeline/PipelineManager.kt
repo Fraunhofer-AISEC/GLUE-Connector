@@ -69,6 +69,6 @@ class PipelineManager(
     suspend fun getPipelineById(id: String): ContainerPipeline? = pipelineMutex.withLock { pipelines[id] }
 
     suspend fun getPipelineByIp(ip: String): ContainerPipeline? = pipelineMutex.withLock {
-        backend.getPipelineFromIp(ip)?.let { id -> getPipelineById(id) }
+        backend.getPipelineFromIp(ip)?.let(pipelines::get)
     }
 }
