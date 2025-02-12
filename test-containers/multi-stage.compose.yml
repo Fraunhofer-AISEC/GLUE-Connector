@@ -1,0 +1,51 @@
+services:
+  initial-connector:
+    image: container-registry.gitlab.cc-asp.fraunhofer.de/ccit-glue/usage-control/container-pipeline:latest
+    environment:
+      # Take from .env file
+      - "AUTH_USERNAME=${AUTH_USERNAME}"
+      - "AUTH_PASSWORD=${AUTH_PASSWORD}"
+      - "AUTH_REGISTRY=${AUTH_REGISTRY}"
+      # The subnet used by this container's pipelines
+      - "DOCKER_SUBNET=10.1.0.0"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      default:
+        ipv4_address: 172.25.0.2
+
+  intermediary-connector:
+    image: container-registry.gitlab.cc-asp.fraunhofer.de/ccit-glue/usage-control/container-pipeline:latest
+    environment:
+      # Take from .env file
+      - "AUTH_USERNAME=${AUTH_USERNAME}"
+      - "AUTH_PASSWORD=${AUTH_PASSWORD}"
+      - "AUTH_REGISTRY=${AUTH_REGISTRY}"
+      # The subnet used by this container's pipelines
+      - "DOCKER_SUBNET=10.1.1.0"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      default:
+        ipv4_address: 172.25.0.3
+
+  final-connector:
+    image: container-registry.gitlab.cc-asp.fraunhofer.de/ccit-glue/usage-control/container-pipeline:latest
+    environment:
+      # Take from .env file
+      - "AUTH_USERNAME=${AUTH_USERNAME}"
+      - "AUTH_PASSWORD=${AUTH_PASSWORD}"
+      - "AUTH_REGISTRY=${AUTH_REGISTRY}"
+      # The subnet used by this container's pipelines
+      - "DOCKER_SUBNET=10.1.2.0"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      default:
+        ipv4_address: 172.25.0.4
+
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 172.25.0.0/24
