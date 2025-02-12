@@ -3,6 +3,7 @@ package de.fraunhofer.aisec.glue.negotiation
 import de.fraunhofer.iosb.odrl.OdrlAgreement
 import de.fraunhofer.iosb.odrl.OdrlOffer
 import de.fraunhofer.iosb.odrl.OdrlParty
+import de.fraunhofer.iosb.odrl.OdrlPolicy
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 import kotlin.reflect.full.primaryConstructor
@@ -31,5 +32,7 @@ fun <T : Any, R : Any> upcast(
         },
     )
 }
+
+fun OdrlPolicy.toOffer(assigner: OdrlParty) = upcast(this, OdrlOffer::class, mapOf(OdrlOffer::assigner.name to assigner))
 
 fun OdrlOffer.toAgreement(assignee: OdrlParty) = upcast(this, OdrlAgreement::class, mapOf(OdrlAgreement::assignee.name to assignee))
