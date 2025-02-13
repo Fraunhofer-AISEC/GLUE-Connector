@@ -9,7 +9,6 @@ import de.fraunhofer.aisec.glue.docker.model.*
 import de.fraunhofer.aisec.glue.pipeline.Backend
 import de.fraunhofer.aisec.glue.pipeline.ContainerInfo
 import de.fraunhofer.aisec.glue.pipeline.ContainerPipeline
-import de.fraunhofer.aisec.glue.pipeline.IPv4Address
 import de.fraunhofer.iosb.odrl.glue.GlueContainerPipeline
 import org.slf4j.LoggerFactory
 import java.io.File
@@ -245,16 +244,11 @@ class DockerBackend(
     }
 
     override suspend fun getPipelineFromIp(ipAddress: String): String? {
-        val netAddress = IPv4Address.parse(ipAddress).networkAddress(subnetLen)
-        val subnet = "$netAddress/$subnetLen"
-        return dockerClient.networks.list()
-            .map { n -> n.inspect() }
-            // As it may be valid for a docker network to have no IPAM config, don't throw an exception here.
-            // The ones we are interested in will always have one.
-            .filter { n -> n.ipam?.config?.any { i -> i.subnet == subnet } ?: false }
-            .map { n -> n.labels?.get("de.fraunhofer.aisec.glue.pipeline.id") }
-            // There will always only be one as docker does not allow more than one network assignment
-            .firstOrNull()
+        // Unfortunately, due to the highly nullable (defaultable?) nature of Go, we have to do a bunch of null checks
+        // on every property...
+        return dockerClient.containers.list()
+            .filter { c -> c.networkSettings?.networks?.values?.any { n -> n.ipAddress == ipAddress } ?: false }
+            .firstNotNullOfOrNull { c -> c.labels?.get("de.fraunhofer.aisec.glue.pipeline.id") }
     }
 
     companion object {
