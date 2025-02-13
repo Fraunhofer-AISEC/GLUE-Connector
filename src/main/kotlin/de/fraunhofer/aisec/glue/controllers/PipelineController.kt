@@ -68,6 +68,7 @@ class PipelineController(
                             ),
                         )
                     }.recover { err ->
+                        LOG.error("Error evaluating policy ${contract.uid} with action ${req.action} and target ${req.target}", err)
                         when (err) {
                             is PolicyViolationException -> call.respond(HttpStatusCode.Forbidden, err.message ?: "Unknown Error")
                             else -> call.respond(HttpStatusCode.InternalServerError, err.message ?: "Unknown Error")

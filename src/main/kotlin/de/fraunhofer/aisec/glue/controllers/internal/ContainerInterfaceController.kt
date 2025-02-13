@@ -26,6 +26,7 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.util.*
 import io.ktor.utils.io.*
+import org.slf4j.LoggerFactory
 import java.net.InetAddress
 import java.net.URI
 
@@ -122,10 +123,12 @@ class ContainerInterfaceController(
 
                 // Proxy the actual request to the next connector
 
-                val appUrl = "http://$destinationHost:${remotePipeline.pipelinePort}/$destinationPath"
+                val appUrl = "http://$destinationHost:${remotePipeline.pipelinePort}$destinationPath"
                 val appResponse = httpClient.post(appUrl) {
                     setBody(call.request.receiveChannel())
                 }
+
+                LOG.info("Proxy request returned ${appResponse.status}")
 
                 call.respond(object : OutgoingContent.WriteChannelContent() {
                     override suspend fun writeTo(channel: ByteWriteChannel) {
@@ -134,5 +137,9 @@ class ContainerInterfaceController(
                 })
             }
         }
+    }
+
+    companion object {
+        val LOG = LoggerFactory.getLogger(ContainerInterfaceController::class.java)
     }
 }
