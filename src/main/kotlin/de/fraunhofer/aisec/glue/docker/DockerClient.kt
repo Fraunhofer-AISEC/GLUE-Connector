@@ -2,10 +2,7 @@ package de.fraunhofer.aisec.glue.docker
 
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.DeserializationFeature
-import de.fraunhofer.aisec.glue.docker.model.ContainerCreateRequest
-import de.fraunhofer.aisec.glue.docker.model.HostConfig
-import de.fraunhofer.aisec.glue.docker.model.NetworkCreateRequest
-import de.fraunhofer.aisec.glue.docker.model.PortBinding
+import de.fraunhofer.aisec.glue.docker.model.*
 import de.fraunhofer.aisec.glue.docker.unix.UnixSocketFactory
 import io.ktor.client.*
 import io.ktor.client.call.*
@@ -108,6 +105,12 @@ class DockerClient(internal val httpClient: HttpClient, private val baseUrl: Url
             return container
         }
 
+        suspend fun list(): List<ContainerSummary> {
+            return httpClient.get(endpoint("containers/json")) {
+                contentType(ContentType.Application.Json)
+            }.body()
+        }
+
         fun get(name: String): Container {
             return Container(this@DockerClient, name)
         }
@@ -174,7 +177,7 @@ class DockerClient(internal val httpClient: HttpClient, private val baseUrl: Url
             LOG.debug("Attempting to pull the image \"$name\" from image registry...")
             httpClient.post(endpoint("images/create")) {
                 parameter("fromImage", name)
-                System.getenv("REGISTRY_AUTH_TOKEN")?.let { header("X-Registry-Auth", it) }
+                System.getenv("REGISTRY_AUTH_TOKEN")?.let { println("X-Registry-Auth: $it"); header("X-Registry-Auth", it) }
             }
 
             return Image(this@DockerClient, name)
