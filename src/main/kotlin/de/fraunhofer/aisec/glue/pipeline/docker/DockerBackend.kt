@@ -11,9 +11,7 @@ import de.fraunhofer.aisec.glue.pipeline.ContainerInfo
 import de.fraunhofer.aisec.glue.pipeline.ContainerPipeline
 import de.fraunhofer.iosb.odrl.glue.GlueContainerPipeline
 import org.slf4j.LoggerFactory
-import java.io.File
 import java.net.Inet4Address
-import java.net.InetAddress
 import kotlin.experimental.or
 
 class DockerBackend(
@@ -30,7 +28,8 @@ class DockerBackend(
     // Unfortunately, we don't have much of a choice.
     // TODO: Investigate the possibility of creating our own marker (e.g. a file or env var) with jib
     private val selfContainer: Container? by lazy {
-        if (File("/.dockerenv").exists()) {
+        null
+        /*if (File("/.dockerenv").exists()) {
             // Docker
             // This normally works fine, but can fail if the container has a different hostname set.
             // It may be better to fall back to get the PTR records for the local IP as one of the names is always the
@@ -43,7 +42,7 @@ class DockerBackend(
         } else {
             // No container
             null
-        }
+        }*/
     }
 
     private suspend fun convertPipeline(
