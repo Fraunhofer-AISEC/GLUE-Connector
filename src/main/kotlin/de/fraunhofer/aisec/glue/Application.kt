@@ -15,6 +15,7 @@ import de.fraunhofer.aisec.glue.policy.PolicyEngine
 import de.fraunhofer.iosb.odrl.parser.OdrlParser
 import io.ktor.client.*
 import io.ktor.client.engine.okhttp.*
+import io.ktor.client.plugins.*
 import io.ktor.client.plugins.auth.*
 import io.ktor.client.plugins.auth.providers.*
 import io.ktor.http.*
@@ -64,6 +65,9 @@ val defaultDependencies by DI.Module {
                             BasicAuthCredentials(username, password)
                         }
                     }
+                }
+                install(HttpTimeout) {
+                    socketTimeoutMillis = 30000
                 }
             }
         }
