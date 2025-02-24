@@ -3,12 +3,12 @@
   "@type": "Agreement",
   "uid": "http://example.com/policy",
   "profile": "http://example.com/profile",
-  "assigner": "http://example.com/assigner",
-  "assignee": "http://example.com/assignee",
   "permission": [
     {
       "uid": "http://example.com/permission",
       "target": "http://example.com/target",
+      "assigner": "http://example.com/assigner",
+      "assignee": "http://example.com/assignee",
       "action": "play",
       "constraint": {
         "leftOperand": "dateTime",

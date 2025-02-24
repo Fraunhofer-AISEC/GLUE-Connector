@@ -9,7 +9,7 @@ import io.konform.validation.ValidationError
 import java.net.URI
 
 @JsonLd(GlueIdentifiers.CONTEXT)
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type", defaultImpl = OdrlPermission::class)
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type", defaultImpl = OdrlProhibition::class)
 @JsonTypeName(OdrlIdentifiers.PROHIBITION)
 class OdrlProhibition(
     // Properties of superclass OdrlRule

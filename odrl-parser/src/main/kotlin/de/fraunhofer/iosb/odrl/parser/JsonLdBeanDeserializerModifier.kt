@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.DeserializationConfig
 import com.fasterxml.jackson.databind.JsonDeserializer
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.deser.BeanDeserializerModifier
+import de.fraunhofer.iosb.odrl.OdrlPolicy
 
 class JsonLdBeanDeserializerModifier(
     private val mapper: ObjectMapper,
@@ -19,8 +20,11 @@ class JsonLdBeanDeserializerModifier(
         beanDesc: BeanDescription?,
         deserializer: JsonDeserializer<*>
     ): JsonDeserializer<*> {
+        if (beanDesc != null && OdrlPolicy::class.java.isAssignableFrom(beanDesc.beanClass)) {
+            return JsonLdDeserializer(OdrlPolicyMapper(mapper, beanDesc.beanClass), options, documentLoader)
+        }
         if (beanDesc != null && beanDesc.beanClass.isAnnotationPresent(JsonLd::class.java)) {
-            return JsonLdDeserializer(mapper, options, documentLoader, beanDesc.beanClass)
+            return JsonLdDeserializer(JsonLdMapper(mapper, beanDesc.beanClass), options, documentLoader)
         }
         return super.modifyDeserializer(config, beanDesc, deserializer)
     }

@@ -45,7 +45,7 @@ open class OdrlPolicy(
 
     @field:JsonProperty(OdrlIdentifiers.CONFLICT)
     val conflict: OdrlConflictTerm? = null,
-): JsonLdBeanValidator {
+) : JsonLdBeanValidator {
 
     override fun validate(): List<ValidationError> {
         return validateOdrlPolicy.validate(this).errors
@@ -130,5 +130,4 @@ val validateOdrlPolicy = Validation<OdrlPolicy> {
     OdrlPolicy::conflict ifPresent {
         run(validateOdrlConflictTerm)
     }
-
 }

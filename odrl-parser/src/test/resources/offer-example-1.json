@@ -3,11 +3,11 @@
   "@type": "Offer",
   "uid": "http://example.com/policy",
   "profile": "http://example.com/profile",
-  "assigner": "http://example.com/assigner",
   "permission": [
     {
       "uid": "http://example.com/permission",
       "target": "http://example.com/target",
+      "assigner": "http://example.com/assigner",
       "action": "play",
       "constraint": {
         "leftOperand": "dateTime",

@@ -1,6 +1,7 @@
 package de.fraunhofer.iosb.odrl
 
-import com.fasterxml.jackson.annotation.*
+import com.fasterxml.jackson.annotation.JsonTypeInfo
+import com.fasterxml.jackson.annotation.JsonTypeName
 import de.fraunhofer.iosb.odrl.glue.GlueIdentifiers
 import de.fraunhofer.iosb.odrl.parser.JsonLd
 import de.fraunhofer.iosb.odrl.parser.JsonLdBeanValidator
@@ -20,13 +21,6 @@ class OdrlAgreement(
     profile: List<OdrlIri> = listOf(),
     inheritFrom: List<OdrlIri> = listOf(),
     conflict: OdrlConflictTerm? = null,
-
-    // Properties of OdrlAgreement
-    @JsonProperty(OdrlIdentifiers.ASSIGNER)
-    val assigner: OdrlParty = OdrlParty(),
-
-    @JsonProperty(OdrlIdentifiers.ASSIGNEE)
-    val assignee: OdrlParty = OdrlParty(),
 ) : OdrlPolicy(uid, permission, prohibition, obligation, profile, inheritFrom, conflict),
     JsonLdBeanValidator {
 
@@ -39,26 +33,11 @@ class OdrlAgreement(
         if (javaClass != other?.javaClass) return false
         if (!super.equals(other)) return false
 
-        other as OdrlAgreement
-
-        if (assigner != other.assigner) return false
-        if (assignee != other.assignee) return false
-
         return true
     }
 
     override fun hashCode(): Int {
-        var result = super.hashCode()
-        result = 31 * result + assigner.hashCode()
-        result = 31 * result + assignee.hashCode()
-        return result
-    }
-
-    override fun getPropertyMap(): MutableMap<String, Any> {
-        val map = super.getPropertyMap()
-        map["assigner"] = assigner
-        map["assignee"] = assignee
-        return map
+        return super.hashCode()
     }
 
     override fun toString(): String {
@@ -69,13 +48,18 @@ class OdrlAgreement(
 val validateOdrlAgreement = Validation {
     run(validateOdrlPolicy)
 
-    // An Agreement MUST have one assigner property value of type Party
-    OdrlAgreement::assigner {
-        run(validateOdrlParty)
+    // An Agreement MUST have one assigner property value in each rule
+    // An Agreement MUST have one assignee property value in each rule
+    OdrlAgreement::permission onEach {
+        OdrlPermission::assignee required {}
+        OdrlPermission::assigner required {}
     }
-
-    // An Agreement MUST have one assignee property value of type Party
-    OdrlAgreement::assignee {
-        run(validateOdrlParty)
+    OdrlAgreement::prohibition onEach {
+        OdrlProhibition::assignee required {}
+        OdrlProhibition::assigner required {}
+    }
+    OdrlAgreement::obligation onEach {
+        OdrlDuty::assignee required {}
+        OdrlDuty::assigner required {}
     }
 }

@@ -1,6 +1,5 @@
 package de.fraunhofer.iosb.odrl
 
-import com.fasterxml.jackson.databind.exc.InvalidFormatException
 import de.fraunhofer.iosb.odrl.Commons.Companion.loadFileOrDie
 import org.junit.jupiter.api.assertThrows
 import java.io.StringReader
@@ -25,6 +24,33 @@ class OdrlPolicyTest {
             ))
         ))
     )
+    private val compactPolicy1 = OdrlPolicy(
+        uid = URI.create("http://example.com/compactPolicy"),
+        profile = listOf(OdrlIri("http://example.com/profile")),
+        permission = listOf(
+            OdrlPermission(
+                uid = URI.create("http://example.com/permission1"),
+                assignee = OdrlParty("http://example.com/assignee1"),
+                assigner = OdrlParty("http://example.com/assigner"),
+                target = OdrlAsset("http://example.com/target"),
+                action = OdrlAction("http://www.w3.org/ns/odrl/2/play")
+            ),
+            OdrlPermission(
+                uid = URI.create("http://example.com/permission2"),
+                assignee = OdrlParty("http://example.com/assignee2"),
+                assigner = OdrlParty("http://example.com/assigner"),
+                target = OdrlAsset("http://example.com/target"),
+                action = OdrlAction("http://www.w3.org/ns/odrl/2/play")
+            )
+        ),
+        prohibition = listOf(OdrlProhibition(
+            uid = URI.create("http://example.com/prohibition1"),
+            assignee = OdrlParty("http://example.com/assignee3"),
+            assigner = OdrlParty("http://example.com/assigner"),
+            target = OdrlAsset("http://example.com/target"),
+            action = OdrlAction("http://www.w3.org/ns/odrl/2/play")
+        ))
+    )
 
     @Test
     fun testPolicyDeserialization() {
@@ -41,7 +67,7 @@ class OdrlPolicyTest {
 
     @Test
     fun testPolicyDeserializationWithInvalidUri() {
-        assertThrows<InvalidFormatException> {
+        assertThrows<IllegalArgumentException> {
             parser.readOdrlPolicy(StringReader(
                 "{\n" +
                     "  \"@context\": \"http://www.w3.org/ns/odrl.jsonld\",\n" +
@@ -50,5 +76,18 @@ class OdrlPolicyTest {
                     "}"
             ))
         }
+    }
+
+    @Test
+    fun testCompactPolicyDeserialization() {
+        val policy = parser.readOdrlPolicy(loadFileOrDie("/compact-policy-example-1.json"))
+        assertEquals(compactPolicy1, policy)
+    }
+
+    @Test
+    fun testCompactPolicySerializationAndDeserialization() {
+        val string = parser.writeOdrlPolicy(compactPolicy1)
+        val policy = parser.readOdrlPolicy(StringReader(string))
+        assertEquals(compactPolicy1, policy)
     }
 }

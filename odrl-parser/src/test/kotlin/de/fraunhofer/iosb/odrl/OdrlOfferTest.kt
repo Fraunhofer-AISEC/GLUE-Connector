@@ -1,6 +1,6 @@
 package de.fraunhofer.iosb.odrl
 
-import com.fasterxml.jackson.databind.exc.InvalidFormatException
+import com.fasterxml.jackson.databind.JsonMappingException
 import de.fraunhofer.iosb.odrl.Commons.Companion.loadFileOrDie
 import org.junit.jupiter.api.assertThrows
 import java.io.StringReader
@@ -14,17 +14,21 @@ class OdrlOfferTest {
     private val offer1 = OdrlOffer(
         uid = URI.create("http://example.com/policy"),
         profile = listOf(OdrlIri("http://example.com/profile")),
-        assigner = OdrlParty("http://example.com/assigner"),
-        permission = listOf(OdrlPermission(
-            uid = URI.create("http://example.com/permission"),
-            target = OdrlAsset("http://example.com/target"),
-            action = OdrlAction("http://www.w3.org/ns/odrl/2/play"),
-            constraint = listOf(OdrlConstraint(
-                leftOperand = OdrlLeftOperand("http://www.w3.org/ns/odrl/2/dateTime"),
-                operator = OdrlOperator("http://www.w3.org/ns/odrl/2/lteq"),
-                rightOperand = listOf(XmlDate(LocalDate.of(2045, 12, 31)))
-            ))
-        ))
+        permission = listOf(
+            OdrlPermission(
+                uid = URI.create("http://example.com/permission"),
+                target = OdrlAsset("http://example.com/target"),
+                assigner = OdrlParty("http://example.com/assigner"),
+                action = OdrlAction("http://www.w3.org/ns/odrl/2/play"),
+                constraint = listOf(
+                    OdrlConstraint(
+                        leftOperand = OdrlLeftOperand("http://www.w3.org/ns/odrl/2/dateTime"),
+                        operator = OdrlOperator("http://www.w3.org/ns/odrl/2/lteq"),
+                        rightOperand = listOf(XmlDate(LocalDate.of(2045, 12, 31)))
+                    )
+                )
+            )
+        )
     )
 
     @Test
@@ -42,12 +46,28 @@ class OdrlOfferTest {
 
     @Test
     fun testOfferDeserializationWithInvalidUri() {
-        assertThrows<InvalidFormatException> {
+        assertThrows<IllegalArgumentException> {
             parser.readOdrlPolicy(StringReader(
                 "{\n" +
                     "  \"@context\": \"http://www.w3.org/ns/odrl.jsonld\",\n" +
                     "  \"@type\": \"Offer\",\n" +
                     "  \"@id\": \":::invalid-uri:::\"\n" +
+                    "}"
+            ))
+        }
+    }
+
+    @Test
+    fun testOfferDeserializationWithoutAssigner() {
+        assertThrows<JsonMappingException> {
+            parser.readOdrlPolicy(StringReader(
+                "{\n" +
+                    "  \"@context\": \"http://www.w3.org/ns/odrl.jsonld\",\n" +
+                    "  \"@type\": \"Offer\",\n" +
+                    "  \"permission\": {\n" +
+                    "    \"target\": \"http://example.com/target\",\n" +
+                    "    \"action\": \"play\"\n" +
+                    "  }\n" +
                     "}"
             ))
         }
