@@ -74,7 +74,7 @@ abstract class OdrlRule(
     val trackingParty: OdrlParty? = null,
 
     @field:JsonProperty(OdrlIdentifiers.HAS_CONSTRAINT)
-    @JsonSetter(nulls = Nulls.AS_EMPTY)
+    @field:JsonSetter(nulls = Nulls.AS_EMPTY)
     val constraint: List<OdrlConstraintRepresentation> = listOf(),
 ): JsonLdBeanValidator {
 
