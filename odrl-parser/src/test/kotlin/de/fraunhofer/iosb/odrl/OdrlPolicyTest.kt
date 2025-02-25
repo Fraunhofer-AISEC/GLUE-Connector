@@ -51,6 +51,70 @@ class OdrlPolicyTest {
             action = OdrlAction("http://www.w3.org/ns/odrl/2/play")
         ))
     )
+    private val compositionPolicy1 = OdrlPolicy(
+        uid = URI.create("http://example.com/compositionPolicy"),
+        profile = listOf(OdrlIri("http://example.com/profile")),
+        permission = listOf(
+            OdrlPermission(
+                assigner = OdrlParty("http://example.com/assigner"),
+                target = OdrlAsset("http://example.com/target1"),
+                action = OdrlAction("http://www.w3.org/ns/odrl/2/play")
+            ),
+            OdrlPermission(
+                assigner = OdrlParty("http://example.com/assigner"),
+                target = OdrlAsset("http://example.com/target2"),
+                action = OdrlAction("http://www.w3.org/ns/odrl/2/play")
+            ),
+            OdrlPermission(
+                assigner = OdrlParty("http://example.com/assigner"),
+                target = OdrlAsset("http://example.com/target1"),
+                action = OdrlAction("http://www.w3.org/ns/odrl/2/stream")
+            ),
+            OdrlPermission(
+                assigner = OdrlParty("http://example.com/assigner"),
+                target = OdrlAsset("http://example.com/target2"),
+                action = OdrlAction("http://www.w3.org/ns/odrl/2/stream")
+            )
+        )
+    )
+    private val compositionPolicy2 = OdrlPolicy(
+        uid = URI.create("http://example.com/compositionPolicy"),
+        profile = listOf(OdrlIri("http://example.com/profile")),
+        permission = listOf(
+            OdrlPermission(
+                assigner = OdrlParty("http://example.com/assigner"),
+                target = OdrlAsset("http://example.com/target1"),
+                action = OdrlAction("http://www.w3.org/ns/odrl/2/use")
+            ),
+            OdrlPermission(
+                assigner = OdrlParty("http://example.com/assigner"),
+                target = OdrlAsset("http://example.com/target2"),
+                action = OdrlAction("http://www.w3.org/ns/odrl/2/use")
+            )
+        ),
+        prohibition = listOf(
+            OdrlProhibition(
+                assigner = OdrlParty("http://example.com/assigner"),
+                target = OdrlAsset("http://example.com/target1"),
+                action = OdrlAction("http://www.w3.org/ns/odrl/2/play")
+            ),
+            OdrlProhibition(
+                assigner = OdrlParty("http://example.com/assigner"),
+                target = OdrlAsset("http://example.com/target2"),
+                action = OdrlAction("http://www.w3.org/ns/odrl/2/play")
+            ),
+            OdrlProhibition(
+                assigner = OdrlParty("http://example.com/assigner"),
+                target = OdrlAsset("http://example.com/target1"),
+                action = OdrlAction("http://www.w3.org/ns/odrl/2/stream")
+            ),
+            OdrlProhibition(
+                assigner = OdrlParty("http://example.com/assigner"),
+                target = OdrlAsset("http://example.com/target2"),
+                action = OdrlAction("http://www.w3.org/ns/odrl/2/stream")
+            )
+        )
+    )
 
     @Test
     fun testPolicyDeserialization() {
@@ -89,5 +153,31 @@ class OdrlPolicyTest {
         val string = parser.writeOdrlPolicy(compactPolicy1)
         val policy = parser.readOdrlPolicy(StringReader(string))
         assertEquals(compactPolicy1, policy)
+    }
+
+    @Test
+    fun testCompositionPolicy1Deserialization() {
+        val policy = parser.readOdrlPolicy(loadFileOrDie("/composition-policy-example-1.json"))
+        assertEquals(compositionPolicy1, policy)
+    }
+
+    @Test
+    fun testCompositionPolicy1SerializationAndDeserialization() {
+        val string = parser.writeOdrlPolicy(compositionPolicy1)
+        val policy = parser.readOdrlPolicy(StringReader(string))
+        assertEquals(compositionPolicy1, policy)
+    }
+
+    @Test
+    fun testCompositionPolicy2Deserialization() {
+        val policy = parser.readOdrlPolicy(loadFileOrDie("/composition-policy-example-2.json"))
+        assertEquals(compositionPolicy2, policy)
+    }
+
+    @Test
+    fun testCompositionPolicy2SerializationAndDeserialization() {
+        val string = parser.writeOdrlPolicy(compositionPolicy2)
+        val policy = parser.readOdrlPolicy(StringReader(string))
+        assertEquals(compositionPolicy2, policy)
     }
 }

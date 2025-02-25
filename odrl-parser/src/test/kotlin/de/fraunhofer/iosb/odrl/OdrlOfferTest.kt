@@ -12,7 +12,7 @@ import kotlin.test.assertEquals
 class OdrlOfferTest {
     private val parser = Commons.parserInstance
     private val offer1 = OdrlOffer(
-        uid = URI.create("http://example.com/policy"),
+        uid = URI.create("http://example.com/offer"),
         profile = listOf(OdrlIri("http://example.com/profile")),
         permission = listOf(
             OdrlPermission(
