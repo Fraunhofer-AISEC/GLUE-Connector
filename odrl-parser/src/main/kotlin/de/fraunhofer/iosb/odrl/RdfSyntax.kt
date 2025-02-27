@@ -2,11 +2,9 @@ package de.fraunhofer.iosb.odrl
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonTypeInfo
-import com.fasterxml.jackson.annotation.JsonTypeName
 import java.net.URI
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type", defaultImpl = RdfValue::class)
-@JsonTypeName(RdfIdentifiers.VALUE)
+@JsonTypeInfo(use = JsonTypeInfo.Id.NONE, defaultImpl = RdfValue::class)
 data class RdfValue(
     @JsonProperty("@id")
     val uid: URI,
