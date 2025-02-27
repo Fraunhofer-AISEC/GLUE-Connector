@@ -107,7 +107,7 @@ class NegotiationImpl(
         LOG.debug("Negotiation completed")
         state = NegotiationState.FINALIZED
         // The non-null assertion here is safe since the negotiation may only be completed with a contract
-        completionCallback(Result.success(currentPolicy!!))
+        completionCallback(Result.success(currentPolicy ?: throw IllegalStateException("No policy available")))
     }
 
     /**

@@ -1,6 +1,7 @@
 package de.fraunhofer.aisec.glue.controllers.api
 
 import de.fraunhofer.aisec.glue.ContractStore
+import de.fraunhofer.aisec.glue.Utils
 import de.fraunhofer.aisec.glue.Utils.hexEncode
 import de.fraunhofer.aisec.glue.controllers.Controller
 import de.fraunhofer.aisec.glue.models.api.RemotePipelineCreationRequest
@@ -11,7 +12,6 @@ import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
-import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -61,6 +61,8 @@ class RemotePipelineApiController(
                     httpClient.post(peerUrl) {
                         header("Content-Type", ContentType.Application.Json)
                         setBody(req.request)
+                        val (username, password) = Utils.getCredentials()
+                        basicAuth(username, password)
                     }
 
                 if (!resp.status.isSuccess()) {
@@ -74,7 +76,7 @@ class RemotePipelineApiController(
                 val remotePipeline =
                     try {
                         resp.body<PipelineCreateResponse>()
-                    } catch (e: NoTransformationFoundException) {
+                    } catch (_: NoTransformationFoundException) {
                         call.respond(
                             HttpStatusCode.BadGateway,
                             "Could not deserialize the response from the remote connector",
@@ -93,7 +95,7 @@ class RemotePipelineApiController(
             }
 
             delete("{id}") {
-                val id = call.parameters["id"]!!
+                val id = call.parameters["id"] ?: throw IllegalStateException("ID not found")
                 // TODO: To maintain consistency, we can technically only remove the local pipeline entry once the
                 //  remote pipeline is actually deleted.
                 //  If we don't do this, the remote pipeline may stay around if the later delete request to the peer

@@ -18,10 +18,10 @@ class PipelineManager(
     private fun createPipelineName(): String =
         generateSequence { Random.Default.nextBytes(8).hexEncode() }.first { n -> !pipelines.contains(n) }
 
-    suspend fun createPipeline(pipelineSpec: GlueContainerPipeline): ContainerPipeline =
+    suspend fun createPipeline(pipelineSpec: GlueContainerPipeline, contractId: String, targetId: String): ContainerPipeline =
         pipelineMutex.withLock {
             val name = createPipelineName()
-            val pipeline = backend.createPipeline(name, pipelineSpec)
+            val pipeline = backend.createPipeline(name, pipelineSpec, contractId, targetId)
 
             try {
                 val containerInfo = pipeline.getContainerInfo()
@@ -65,4 +65,10 @@ class PipelineManager(
             // TODO: Check the integrity of the running containers (using healthchecks if available)
             return true
         }
+
+    suspend fun getPipelineById(id: String): ContainerPipeline? = pipelineMutex.withLock { pipelines[id] }
+
+    suspend fun getPipelineByIp(ip: String): ContainerPipeline? = pipelineMutex.withLock {
+        backend.getPipelineFromIp(ip)?.let(pipelines::get)
+    }
 }

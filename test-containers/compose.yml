@@ -6,3 +6,7 @@ services:
   proxy:
     build: ./proxy
     image: ${PREFIX:-copi}/proxy:latest
+
+  forwarder:
+    build: ./forwarder
+    image: ${PREFIX:-copi}/forwarder:latest

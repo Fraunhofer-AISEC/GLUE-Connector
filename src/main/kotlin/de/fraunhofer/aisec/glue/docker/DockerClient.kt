@@ -2,24 +2,21 @@ package de.fraunhofer.aisec.glue.docker
 
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.DeserializationFeature
-import de.fraunhofer.aisec.glue.docker.model.ContainerCreateRequest
-import de.fraunhofer.aisec.glue.docker.model.HostConfig
-import de.fraunhofer.aisec.glue.docker.model.NetworkCreateRequest
-import de.fraunhofer.aisec.glue.docker.model.PortBinding
+import de.fraunhofer.aisec.glue.docker.model.*
 import de.fraunhofer.aisec.glue.docker.unix.UnixSocketFactory
 import io.ktor.client.*
+import io.ktor.client.call.*
 import io.ktor.client.engine.okhttp.*
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
-import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.jackson.*
-import io.ktor.util.*
 import org.slf4j.LoggerFactory
 import java.io.Closeable
 import java.net.URI
 import java.nio.file.Path
+import de.fraunhofer.aisec.glue.docker.model.Network as NetworkInspectResponse
 
 class DockerClient(internal val httpClient: HttpClient, private val baseUrl: Url) : Closeable {
     /**
@@ -108,6 +105,12 @@ class DockerClient(internal val httpClient: HttpClient, private val baseUrl: Url
             return container
         }
 
+        suspend fun list(): List<ContainerSummary> {
+            return httpClient.get(endpoint("containers/json")) {
+                contentType(ContentType.Application.Json)
+            }.body()
+        }
+
         fun get(name: String): Container {
             return Container(this@DockerClient, name)
         }
@@ -158,6 +161,11 @@ class DockerClient(internal val httpClient: HttpClient, private val baseUrl: Url
         fun get(name: String): Network {
             return Network(this@DockerClient, name)
         }
+
+        suspend fun list(): List<Network> {
+            val nets = httpClient.get(endpoint("networks")).body<List<NetworkInspectResponse>>()
+            return nets.map { n -> Network(this@DockerClient, n.name ?: throw NullPointerException("Received unnamed network from docker")) }
+        }
     }
 
     val networks = Networks()
@@ -169,7 +177,7 @@ class DockerClient(internal val httpClient: HttpClient, private val baseUrl: Url
             LOG.debug("Attempting to pull the image \"$name\" from image registry...")
             httpClient.post(endpoint("images/create")) {
                 parameter("fromImage", name)
-                System.getenv("REGISTRY_AUTH_TOKEN")?.let { header("X-Registry-Auth", it) }
+                System.getenv("REGISTRY_AUTH_TOKEN")?.let { println("X-Registry-Auth: $it"); header("X-Registry-Auth", it) }
             }
 
             return Image(this@DockerClient, name)

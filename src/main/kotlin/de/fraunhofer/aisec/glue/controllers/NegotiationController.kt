@@ -74,7 +74,7 @@ class NegotiationController(private val negotiationManager: NegotiationManager) 
         route("/{id}") {
             get {
                 val principal = call.principal<UserIdPrincipal>()!!
-                val id = call.parameters["id"]!!
+                val id = call.parameters["id"] ?: throw IllegalStateException("ID not found")
 
                 // This endpoint is only defined on the provider side, so only lookup negotiations where we are the
                 // provider
@@ -89,7 +89,7 @@ class NegotiationController(private val negotiationManager: NegotiationManager) 
 
             post("/request") {
                 val principal = call.principal<UserIdPrincipal>()!!
-                val id = call.parameters["id"]!!
+                val id = call.parameters["id"] ?: throw IllegalStateException("ID not found")
                 val req = call.receive<ContractRequestMessage>()
 
                 if (id != req.providerPid) {
@@ -116,7 +116,7 @@ class NegotiationController(private val negotiationManager: NegotiationManager) 
 
             post("/offers") {
                 val principal = call.principal<UserIdPrincipal>()!!
-                val id = call.parameters["id"]!!
+                val id = call.parameters["id"] ?: throw IllegalStateException("ID not found")
                 val req = call.receive<ContractOfferMessage>()
 
                 if (id != req.consumerPid) {
@@ -142,7 +142,7 @@ class NegotiationController(private val negotiationManager: NegotiationManager) 
 
             post("/events") {
                 val principal = call.principal<UserIdPrincipal>()!!
-                val id = call.parameters["id"]!!
+                val id = call.parameters["id"] ?: throw IllegalStateException("ID not found")
                 val req = call.receive<ContractNegotiationEventMessage>()
 
                 // This endpoint is valid for both provider and consumer, so handle it in two different ways
@@ -199,7 +199,7 @@ class NegotiationController(private val negotiationManager: NegotiationManager) 
 
             post("/agreement") {
                 val principal = call.principal<UserIdPrincipal>()!!
-                val id = call.parameters["id"]!!
+                val id = call.parameters["id"] ?: throw IllegalStateException("ID not found")
                 val req = call.receive<ContractAgreementMessage>()
 
                 if (id != req.consumerPid) {
@@ -224,7 +224,7 @@ class NegotiationController(private val negotiationManager: NegotiationManager) 
 
             post("/agreement/verification") {
                 val principal = call.principal<UserIdPrincipal>()!!
-                val id = call.parameters["id"]!!
+                val id = call.parameters["id"] ?: throw IllegalStateException("ID not found")
                 val req = call.receive<ContractAgreementVerificationMessage>()
 
                 if (id != req.providerPid) {
@@ -249,7 +249,7 @@ class NegotiationController(private val negotiationManager: NegotiationManager) 
 
             post("/termination") {
                 val principal = call.principal<UserIdPrincipal>()!!
-                val id = call.parameters["id"]!!
+                val id = call.parameters["id"] ?: throw IllegalStateException("ID not found")
                 val req = call.receive<ContractNegotiationTerminationMessage>()
 
                 // This handler is a bit awkward since termination messages are the same for provider and consumer
