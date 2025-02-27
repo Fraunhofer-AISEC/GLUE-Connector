@@ -23,8 +23,8 @@
                 "glue:container": [
                   {
                     "@type": "http://fhg.de/glue/Container",
-                    "glue:image": "container-pipeline/proxy",
-                    "glue:hash": "sha256:a4531b520e7053a1b43894e83d4bd53d9f350706c51e27fbc1aa54b4f2999890",
+                    "glue:image": "container-registry.gitlab.cc-asp.fraunhofer.de/ccit-glue/usage-control/container-pipeline/proxy:latest",
+                    "glue:hash": "sha256:de73eed48c460ac0d82b13ffeceaa35752d28a1d147ece1257e6c00327038e13",
                     "glue:parameter": {
                       "@type": "http://fhg.de/glue/RestParameter",
                       "glue:httpUrl": "http://0.0.0.0:1234/dockerEndpoint?key1=value1",
@@ -35,7 +35,7 @@
                   {
                     "@type": "http://fhg.de/glue/Container",
                     "glue:image": "container-registry.gitlab.cc-asp.fraunhofer.de/ccit-glue/usage-control/container-pipeline/http-echo:latest",
-                    "glue:hash": "sha256:3e4ea72c21f9e73e2ab39735a9e1c50bdb4447ee96d2ad9e2911187b9aa35e39",
+                    "glue:hash": "sha256:47aa064ff5a86570e60236dc6423add55cf284b87c05a9e11db01e5fd8cc9789",
                     "glue:parameter": {
                       "@type": "http://fhg.de/glue/RestParameter",
                       "glue:httpUrl": "http://0.0.0.0:1234/dockerEndpoint?key1=value1",
@@ -70,22 +70,23 @@
           "@id": "http://www.w3.org/ns/odrl/2/nextPolicy",
           "odrl:refinement": [
             {
-              "odrl:leftOperand": "http://fhg.de/glue/containerPipeline",
+              "odrl:leftOperand": "http://fhg.de/glue/policyTemplate",
               "odrl:operator": "http://www.w3.org/ns/odrl/2/eq",
               "odrl:rightOperand": {
-                "@type": "http://fhg.de/glue/ContainerPipeline",
-                "glue:container": {
-                  "@type": "http://fhg.de/glue/Container",
-                  "glue:image": "test/policyCompiler",
-                  "glue:hash": "sha256:5e7ef9594b0b96c5f591dc9d3462943e340941c770e5e3885a1864b998de016f",
-                  "glue:parameter": [
+                "@type": "http://fhg.de/glue/Value",
+                "glue:json": {
+                  "@context": "http://www.w3.org/ns/odrl.jsonld",
+                  "@type": "Policy",
+                  "uid": "http://dataowner.com/policy:987",
+                  "permission": [
                     {
-                      "@type": "http://fhg.de/glue/RestParameter",
-                      "glue:httpUrl": "http://0.0.0.0:1234/dockerEndpoint",
-                      "glue:httpType": "POST",
-                      "glue:value": {
-                        "key": "value",
-                        "placeholder": "http://fhg.de/glue/ParameterPlaceholder?key=computedPlaceholder"
+                      "target": "http://dataowner.com/document:1234",
+                      "assigner": "http://dataconsumer.com/org",
+                      "assignee": "http://fhg.de/glue/ParameterPlaceholder?key=nextDataReceiverUid",
+                      "action": "use",
+                      "constraint": {
+                        "@type": "http://fhg.de/glue/ParameterPlaceholder",
+                        "glue:key": "nextDataReceiverConstraint"
                       }
                     }
                   ]

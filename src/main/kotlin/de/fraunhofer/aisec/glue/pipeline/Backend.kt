@@ -13,10 +13,18 @@ interface Backend {
     suspend fun createPipeline(
         id: String,
         policyObject: GlueContainerPipeline,
+        contractId: String,
+        targetId: String,
     ): ContainerPipeline
 
     /**
      * Get the IP address of the coordinator relative to a container.
      */
     suspend fun getConnectorIp(relativeTo: ContainerInfo): String
+
+    /**
+     * Get the pipeline ID from an IP address belonging to a container.
+     * This operation return null in cases where the IP does not belong to any pipeline
+     */
+    suspend fun getPipelineFromIp(ipAddress: String): String?
 }

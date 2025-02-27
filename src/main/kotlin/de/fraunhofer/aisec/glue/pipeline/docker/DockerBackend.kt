@@ -11,24 +11,24 @@ import de.fraunhofer.aisec.glue.pipeline.ContainerInfo
 import de.fraunhofer.aisec.glue.pipeline.ContainerPipeline
 import de.fraunhofer.iosb.odrl.glue.GlueContainerPipeline
 import org.slf4j.LoggerFactory
-import java.io.File
 import java.net.Inet4Address
-import java.net.InetAddress
 import kotlin.experimental.or
 
 class DockerBackend(
     private val objectMapper: ObjectMapper,
     private val dockerClient: DockerClient = createDockerClient(),
 ) : Backend {
+    private val dockerSubnet = System.getenv("DOCKER_SUBNET") ?: "10.1.0.0"
     private val subnetLen = 29
     private val subnets =
-        InetUtil.getSubnets(InetUtil.parseInet4Address("10.1.0.0"), 16, subnetLen)
+        InetUtil.getSubnets(InetUtil.parseInet4Address(dockerSubnet), 16, subnetLen)
             .iterator()
 
     // Note: This is an implementation detail of docker that should not be relied upon.
     // Unfortunately, we don't have much of a choice.
     private val selfContainer: Container? by lazy {
-        if (File("/.dockerenv").exists()) {
+        null
+        /*if (File("/.dockerenv").exists()) {
             // Docker
             // This normally works fine, but can fail if the container has a different hostname set.
             // It may be better to fall back to get the PTR records for the local IP as one of the names is always the
@@ -41,12 +41,14 @@ class DockerBackend(
         } else {
             // No container
             null
-        }
+        }*/
     }
 
     private suspend fun convertPipeline(
         id: String,
         pipelineDef: GlueContainerPipeline,
+        contractId: String,
+        targetId: String,
     ): MutableList<ContainerCreateRequest> {
         checkHashes(pipelineDef)
         return pipelineDef.container.map { c ->
@@ -61,7 +63,8 @@ class DockerBackend(
                 labels =
                     mapOf(
                         "de.fraunhofer.aisec.glue.pipeline.id" to id,
-                        "de.fraunhofer.aisec.glue.pipeline.contract" to "TODO: Put contract ID here",
+                        "de.fraunhofer.aisec.glue.pipeline.contract" to contractId,
+                        "de.fraunhofer.aisec.glue.pipeline.target" to targetId,
                         "de.fraunhofer.aisec.glue.pipeline.owner" to "TODO: Put identity of whoever spawned the pipeline here",
                     ),
             )
@@ -115,6 +118,8 @@ class DockerBackend(
     private suspend fun linkContainers(
         id: String,
         containers: List<Container>,
+        contractId: String,
+        targetId: String,
     ): List<Network> {
         val containerPairs = containers.windowed(2)
         val networks = mutableListOf<Network>()
@@ -139,6 +144,11 @@ class DockerBackend(
                                             ),
                                         ),
                                 ),
+                            labels = mapOf(
+                                "de.fraunhofer.aisec.glue.pipeline.id" to id,
+                                "de.fraunhofer.aisec.glue.pipeline.contract" to contractId,
+                                "de.fraunhofer.aisec.glue.pipeline.target" to targetId,
+                            )
                         ),
                     )
 
@@ -156,13 +166,23 @@ class DockerBackend(
         return networks
     }
 
+    /*private suspend fun connectController(id: String, containers: List<Container>, networks: List<Network>) {
+        if (selfContainer != null) {
+            // When we are running in a container, we just need to connect up to the link networks.
+            // In the special case where there is only one container, we don't have a link network and need to fall back
+            // to the non-dockerized behaviour.
+            networks.forEach { net -> net.connect(selfContainer!!) }
+            if ()
+        }
+    }*/
+
     override suspend fun createPipeline(
         id: String,
         policyObject: GlueContainerPipeline,
+        contractId: String,
+        targetId: String,
     ): ContainerPipeline {
-        //       Feel free to extract that into a different function or class
-
-        val containerCreateReqs = convertPipeline(id, policyObject)
+        val containerCreateReqs = convertPipeline(id, policyObject, contractId, targetId)
 
         if (containerCreateReqs.isEmpty()) {
             throw IllegalArgumentException("The provided spec contains no containers")
@@ -191,13 +211,13 @@ class DockerBackend(
         val containers = createContainers(id, containerCreateReqs)
         val networks =
             try {
-                linkContainers(id, containers)
+                linkContainers(id, containers, contractId, targetId)
             } catch (e: Exception) {
                 containers.forEach { c -> c.runCatching { remove() } }
                 throw e
             }
 
-        return DockerContainerPipeline(id, objectMapper, containers, networks)
+        return DockerContainerPipeline(id, contractId, targetId, objectMapper, containers, networks)
     }
 
     override suspend fun getConnectorIp(relativeTo: ContainerInfo): String {
@@ -220,6 +240,14 @@ class DockerBackend(
                 }
             }
         return address ?: throw IllegalStateException("No shared address exists with container ${relativeTo.name}")
+    }
+
+    override suspend fun getPipelineFromIp(ipAddress: String): String? {
+        // Unfortunately, due to the highly nullable (defaultable?) nature of Go, we have to do a bunch of null checks
+        // on every property...
+        return dockerClient.containers.list()
+            .filter { c -> c.networkSettings?.networks?.values?.any { n -> n.ipAddress == ipAddress } ?: false }
+            .firstNotNullOfOrNull { c -> c.labels?.get("de.fraunhofer.aisec.glue.pipeline.id") }
     }
 
     companion object {

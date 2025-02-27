@@ -9,6 +9,7 @@ import java.io.StringReader
 import java.net.URI
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
 
 class GlueContainerPipelineTest {
     private val mapper = Commons.parserInstance.mapper
@@ -49,7 +50,7 @@ class GlueContainerPipelineTest {
                     parameter = listOf(GlueRestParameter(
                         httpType = GlueHttpType.POST,
                         httpUrl = URI.create("http://0.0.0.0:1234/dockerEndpoint"),
-                        value = GlueValue.create(mapper.readValue(
+                        value = GlueValue(mapper.readValue(
                         "{\n" +
                                 "  \"http://example.com/valueProperty1\": \"testProperty\",\n" +
                                 "  \"http://example.com/valueProperty2\": [42, 43, 44]\n" +
@@ -60,6 +61,37 @@ class GlueContainerPipelineTest {
             )
         )
     )
+
+    @Test
+    fun testGlueContainerPipelineEquality() {
+        val pipeline = GlueContainerPipeline(
+            container = listOf(
+                GlueContainer(
+                    image = "test/container1",
+                    hash = "364a4787748a98c1c28085d4154a06c3a9be9a67c0b08a56b3f69fa8fabf172e",
+                    allowNetwork = true,
+                    parameter = listOf(GlueRestParameter(
+                        httpType = GlueHttpType.GET,
+                        httpUrl = URI.create("http://0.0.0.0:1234/dockerEndpoint?key1=value1")
+                    ))
+                ),
+                GlueContainer(
+                    image = "test/container2",
+                    hash = "ac924fdd26993b2ad157e3512c4a36ad293491f6eb8d268d6d4e1bf1c5c307ad",
+                    allowNetwork = false
+                )
+            )
+        )
+        assertEquals(pipeline, pipelines[0]);
+        assertNotEquals(pipeline, pipelines[1]);
+    }
+
+    @Test
+    fun testGlueContainerPipelineComparison() {
+        assertThrows<UnsupportedOperationException> {
+            pipelines[0] <= pipelines[1]
+        }
+    }
 
     @Test
     fun testGlueContainerPipelineDeserialization() {

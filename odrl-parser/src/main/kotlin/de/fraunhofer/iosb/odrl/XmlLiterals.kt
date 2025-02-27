@@ -27,7 +27,7 @@ data class XmlByte(
 ): OdrlRightOperand() {
     override fun compareTo(other: OdrlRightOperand) = compareInt(value, other)
     override fun equals(other: Any?) = super.equals(other)
-    override fun hashCode(): Int { return value.hashCode() }
+    override fun hashCode() = value.hashCode()
 }
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type", defaultImpl = XmlInt::class)
@@ -38,7 +38,7 @@ data class XmlInt(
 ): OdrlRightOperand() {
     override fun compareTo(other: OdrlRightOperand) = compareInt(value, other)
     override fun equals(other: Any?) = super.equals(other)
-    override fun hashCode(): Int { return value.hashCode() }
+    override fun hashCode() = value.hashCode()
 }
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type", defaultImpl = XmlInteger::class)
@@ -49,7 +49,7 @@ data class XmlInteger(
 ): OdrlRightOperand() {
     override fun compareTo(other: OdrlRightOperand) = compareInt(value, other)
     override fun equals(other: Any?) = super.equals(other)
-    override fun hashCode(): Int { return value.hashCode() }
+    override fun hashCode() = value.hashCode()
 }
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type", defaultImpl = XmlLong::class)
@@ -68,11 +68,11 @@ data class XmlLong(
             is XmlLong -> value.compareTo(other.value)
             is XmlDouble -> value.toDouble().compareTo(other.value)
             is XmlFloat -> value.toDouble().compareTo(other.value)
-            else -> throw OdrlException("Cannot compare Long to ${other.javaClass.simpleName}")
+            else -> throw UnsupportedOperationException("Cannot compare Long to ${other.javaClass.simpleName}")
         }
     }
     override fun equals(other: Any?) = super.equals(other)
-    override fun hashCode(): Int { return value.hashCode() }
+    override fun hashCode() = value.hashCode()
 }
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type", defaultImpl = XmlDouble::class)
@@ -83,18 +83,18 @@ data class XmlDouble(
 ): OdrlRightOperand() {
     override fun compareTo(other: OdrlRightOperand) = compareDouble(value, other)
     override fun equals(other: Any?) = super.equals(other)
-    override fun hashCode(): Int { return value.hashCode() }
+    override fun hashCode() = value.hashCode()
 }
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type", defaultImpl = XmlFloat::class)
 @JsonTypeName(XmlIdentifiers.FLOAT)
 data class XmlFloat(
     @JsonProperty("@value")
-    val value: Double,
+    val value: Float,
 ): OdrlRightOperand() {
-    override fun compareTo(other: OdrlRightOperand) = compareDouble(value, other)
+    override fun compareTo(other: OdrlRightOperand) = compareDouble(value.toDouble(), other)
     override fun equals(other: Any?) = super.equals(other)
-    override fun hashCode(): Int { return value.hashCode() }
+    override fun hashCode() = value.hashCode()
 }
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type", defaultImpl = XmlString::class)
@@ -105,7 +105,7 @@ data class XmlString(
 ): OdrlRightOperand() {
     override fun compareTo(other: OdrlRightOperand) = compareString(value, other)
     override fun equals(other: Any?) = super.equals(other)
-    override fun hashCode(): Int { return value.hashCode() }
+    override fun hashCode() = value.hashCode()
 }
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type", defaultImpl = XmlDateTime::class)
@@ -119,11 +119,11 @@ data class XmlDateTime(
             is XmlDateTime -> value.compareTo(other.value)
             is XmlDate -> value.toLocalDate().compareTo(other.value)
             is XmlTime -> value.toLocalTime().compareTo(other.value)
-            else -> throw OdrlException("Cannot compare DateTime to ${other.javaClass.simpleName}")
+            else -> throw UnsupportedOperationException("Cannot compare DateTime to ${other.javaClass.simpleName}")
         }
     }
     override fun equals(other: Any?) = super.equals(other)
-    override fun hashCode(): Int { return value.hashCode() }
+    override fun hashCode() = value.hashCode()
 }
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type", defaultImpl = XmlDate::class)
@@ -136,11 +136,11 @@ data class XmlDate(
         return when (other) {
             is XmlDateTime -> value.compareTo(other.value.toLocalDate())
             is XmlDate -> value.compareTo(other.value)
-            else -> throw OdrlException("Cannot compare Date to ${other.javaClass.simpleName}")
+            else -> throw UnsupportedOperationException("Cannot compare Date to ${other.javaClass.simpleName}")
         }
     }
     override fun equals(other: Any?) = super.equals(other)
-    override fun hashCode(): Int { return value.hashCode() }
+    override fun hashCode() = value.hashCode()
 }
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type", defaultImpl = XmlTime::class)
@@ -153,11 +153,11 @@ data class XmlTime(
         return when (other) {
             is XmlDateTime -> value.compareTo(other.value.toLocalTime())
             is XmlTime -> value.compareTo(other.value)
-            else -> throw OdrlException("Cannot compare Time to ${other.javaClass.simpleName}")
+            else -> throw UnsupportedOperationException("Cannot compare Time to ${other.javaClass.simpleName}")
         }
     }
     override fun equals(other: Any?) = super.equals(other)
-    override fun hashCode(): Int { return value.hashCode() }
+    override fun hashCode() = value.hashCode()
 }
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type", defaultImpl = XmlAnyUri::class)
@@ -172,7 +172,7 @@ data class XmlAnyUri(
 
     override fun compareTo(other: OdrlRightOperand) = compareString(value.toString(), other)
     override fun equals(other: Any?) = super.equals(other)
-    override fun hashCode(): Int { return value.hashCode() }
+    override fun hashCode() = value.hashCode()
 }
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type", defaultImpl = XmlAnyType::class)
@@ -187,5 +187,5 @@ data class XmlAnyType(
 
     override fun compareTo(other: OdrlRightOperand) = compareString(value.toString(), other)
     override fun equals(other: Any?) = super.equals(other)
-    override fun hashCode(): Int { return value.hashCode() }
+    override fun hashCode() = value.hashCode()
 }

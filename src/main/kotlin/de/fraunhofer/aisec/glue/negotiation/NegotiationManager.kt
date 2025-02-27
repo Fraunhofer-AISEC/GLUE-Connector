@@ -65,7 +65,7 @@ class NegotiationManager(
             httpClient.post(requestUrl) {
                 contentType(ContentType.Application.Json)
                 setBody(contractRequestMessage)
-                // Authentication should be handled by the HTTP client via plugin
+                // Authentication will be handled on (A)TLS layer
             }
 
         if (!resp.status.isSuccess()) {

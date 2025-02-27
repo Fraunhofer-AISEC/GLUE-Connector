@@ -43,17 +43,17 @@ class GlueValueProcessorTest {
 
     @Test
     fun testPrimitiveParameterReplacement() {
-        val v = GlueValue.create(TextNode.valueOf("http://fhg.de/glue/ParameterPlaceholder?key=testKeyString"))
+        val v = GlueValue(TextNode.valueOf("http://fhg.de/glue/ParameterPlaceholder?key=testKeyString"))
         runBlocking {
-            assertEquals(GlueValue.create(TextNode.valueOf("testValue")), processor.resolvePlaceholders(v, callback))
+            assertEquals(GlueValue(TextNode.valueOf("testValue")), processor.resolvePlaceholders(v, callback))
         }
     }
 
     @Test
     fun testComplexParameterReplacement() {
-        val v = GlueValue.create(mapper.convertValue(GlueParameterPlaceholder("testKeyBool"), JsonNode::class.java))
+        val v = GlueValue(mapper.convertValue(GlueParameterPlaceholder("testKeyBool"), JsonNode::class.java))
         runBlocking {
-            assertEquals(GlueValue.create(BooleanNode.valueOf(true)), processor.resolvePlaceholders(v, callback))
+            assertEquals(GlueValue(BooleanNode.valueOf(true)), processor.resolvePlaceholders(v, callback))
         }
     }
 
@@ -64,29 +64,32 @@ class GlueValueProcessorTest {
                 "  \"http://fhg.de/glue/httpUrl\": \"http://0.0.0.0:1234/dockerEndpoint\",\n" +
                 "  \"http://fhg.de/glue/httpType\": \"POST\",\n" +
                 "  \"http://fhg.de/glue/value\": {\n" +
-                "    \"@context\": \"http://www.w3.org/ns/odrl.jsonld\",\n" +
-                "    \"@type\": \"Policy\",\n" +
-                "    \"uid\": \"http://dataowner.com/policy:987\",\n" +
-                "    \"permission\": [\n" +
-                "      {\n" +
-                "        \"target\": \"http://dataowner.com/document:1234\",\n" +
-                "        \"assigner\": \"http://dataconsumer.com/org\",\n" +
-                "        \"assignee\": \"http://fhg.de/glue/ParameterPlaceholder?key=nextDataReceiverUid\",\n" +
-                "        \"action\": \"use\",\n" +
-                "        \"constraint\": {\n" +
-                "          \"@type\": \"http://fhg.de/glue/ParameterPlaceholder\",\n" +
-                "          \"http://fhg.de/glue/key\": \"nextDataReceiverConstraint\"\n" +
+                "    \"@type\": \"http://fhg.de/glue/Value\",\n" +
+                "    \"http://fhg.de/glue/json\": {\n" +
+                "      \"@context\": \"http://www.w3.org/ns/odrl.jsonld\",\n" +
+                "      \"@type\": \"Policy\",\n" +
+                "      \"uid\": \"http://dataowner.com/policy:987\",\n" +
+                "      \"permission\": [\n" +
+                "        {\n" +
+                "          \"target\": \"http://dataowner.com/document:1234\",\n" +
+                "          \"assigner\": \"http://dataconsumer.com/org\",\n" +
+                "          \"assignee\": \"http://fhg.de/glue/ParameterPlaceholder?key=nextDataReceiverUid\",\n" +
+                "          \"action\": \"use\",\n" +
+                "          \"constraint\": {\n" +
+                "            \"@type\": \"http://fhg.de/glue/ParameterPlaceholder\",\n" +
+                "            \"http://fhg.de/glue/key\": \"nextDataReceiverConstraint\"\n" +
+                "          }\n" +
                 "        }\n" +
-                "      }\n" +
-                "    ]\n" +
+                "      ]\n" +
+                "    }\n" +
                 "  }\n" +
                 "}"
 
         val param = mapper.readValue(s, GlueRestParameter::class.java)
         runBlocking {
             val v = processor.resolvePlaceholders(param.value!!, callback)
-            val nextDataReceiverUid = v.jsonNode.findValue(OdrlIdentifiers.ASSIGNEE).get("@id")
-            val nextDataReceiverConstraint = v.jsonNode.findValue(OdrlIdentifiers.HAS_CONSTRAINT)
+            val nextDataReceiverUid = v.json.findValue(OdrlIdentifiers.ASSIGNEE).get("@id")
+            val nextDataReceiverConstraint = v.json.findValue(OdrlIdentifiers.HAS_CONSTRAINT)
             assertEquals(getTestNextDataReceiverUid(), nextDataReceiverUid)
             assertEquals(getTestNextDataReceiverConstraint(), nextDataReceiverConstraint)
         }
