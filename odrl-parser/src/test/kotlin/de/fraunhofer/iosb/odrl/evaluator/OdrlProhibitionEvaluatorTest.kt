@@ -100,7 +100,7 @@ class OdrlProhibitionEvaluatorTest {
                     ),
                     infringementCallback = {
                         // Prohibition action is not infringed
-                        it.uid.toString() != "http://example.com/action"
+                        it.value.uid.toString() != "http://example.com/action"
                     },
                     actionCallback = {
                         // Prohibition is not infringed, even if remedy action cannot be exercised
@@ -121,7 +121,7 @@ class OdrlProhibitionEvaluatorTest {
                     ),
                     infringementCallback = {
                         // Prohibition action is infringed
-                        it.uid.toString() == "http://example.com/action"
+                        it.value.uid.toString() == "http://example.com/action"
                     },
                     actionCallback = {
                         Result(false) // Remedy action could not be exercised
@@ -139,11 +139,11 @@ class OdrlProhibitionEvaluatorTest {
                     ),
                     infringementCallback = {
                         // Prohibition action is infringed
-                        it.uid.toString() == "http://example.com/action"
+                        it.value.uid.toString() == "http://example.com/action"
                     },
                     actionCallback = {
                         // Remedy action exercised successfully
-                        Result(it.uid.toString() == "http://example.com/remedyAction")
+                        Result(it.value.uid.toString() == "http://example.com/remedyAction")
                     }
                 ).success
             )

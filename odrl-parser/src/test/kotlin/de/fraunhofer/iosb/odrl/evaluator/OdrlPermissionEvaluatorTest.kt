@@ -106,7 +106,7 @@ class OdrlPermissionEvaluatorTest {
                     )
                 ) {
                     // Duty action exercised successfully
-                    Result(it.uid.toString() == "http://example.com/dutyAction")
+                    Result(it.value.uid.toString() == "http://example.com/dutyAction")
                 }.success
             )
         }

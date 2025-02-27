@@ -72,7 +72,7 @@ class OdrlPolicyEvaluatorTest {
     }
 
     private suspend fun onActionCallback(action: OdrlAction): Result {
-        when (action.uid.toString()) {
+        when (action.value.uid.toString()) {
             GlueIdentifiers.DEPLOY_PIPELINE -> {
                 try {
                     for (pipeline in extractGluePipelinesOrThrow(action))

@@ -19,7 +19,9 @@
       ],
       "duty": {
         "action": {
-          "@id": "http://fhg.de/glue/deployPipeline",
+          "rdf:value": {
+            "@id": "http://fhg.de/glue/deployPipeline"
+          },
           "refinement": [
             {
               "leftOperand": "containerPipeline",
@@ -57,7 +59,9 @@
       "action": "distribute",
       "duty": {
         "action": {
-          "@id": "http://www.w3.org/ns/odrl/2/nextPolicy",
+          "rdf:value": {
+            "@id": "http://www.w3.org/ns/odrl/2/nextPolicy"
+          },
           "refinement": [
             {
               "leftOperand": "containerPipeline",

@@ -64,7 +64,7 @@ class OdrlDutyEvaluatorTest {
                     )
                 ) {
                     // Duty action exercised successfully
-                    Result(it.uid.toString() == "http://example.com/actionToBeExercised")
+                    Result(it.value.uid.toString() == "http://example.com/actionToBeExercised")
                 }.success
             )
 

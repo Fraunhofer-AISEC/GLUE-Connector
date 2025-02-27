@@ -9,7 +9,7 @@ class OdrlAssetEvaluator {
     ): Result {
         return Result(
             ctx.params["targetUid"] == asset.uid,
-            "Context uid ${ctx.params["actionUid"]} does not match asset uid ${asset.uid}"
+            "Context uid ${ctx.params["targetUid"]} does not match asset uid ${asset.uid}"
         )
     }
 }

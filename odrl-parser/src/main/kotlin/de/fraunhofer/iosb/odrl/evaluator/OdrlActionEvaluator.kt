@@ -12,8 +12,8 @@ class OdrlActionEvaluator(
         ctx: Context,
         action: OdrlAction,
     ): Result {
-        if (ctx.params["actionUid"] != action.uid)
-            return Result(false, "Context uid ${ctx.params["actionUid"]} does not match action uid ${action.uid}")
+        if (ctx.params["actionUid"] != action.value.uid)
+            return Result(false, "Context uid ${ctx.params["actionUid"]} does not match action uid ${action.value.uid}")
 
         // Refinements have to be satisfied
         for (r in action.refinement) {

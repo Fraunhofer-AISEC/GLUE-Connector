@@ -2,7 +2,6 @@ package de.fraunhofer.iosb.odrl.evaluator
 
 import de.fraunhofer.iosb.odrl.*
 import kotlinx.coroutines.runBlocking
-import java.net.URI
 import java.time.LocalDate
 import java.time.LocalDateTime
 import kotlin.test.Test
@@ -29,13 +28,13 @@ class OdrlActionEvaluatorTest {
         assertTrue(
             evaluator.matches(
                 Context("http://example.com/action", "http://example.com/asset"),
-                OdrlAction(URI.create("http://example.com/action"))
+                OdrlAction(RdfValue("http://example.com/action"))
             ).success
         )
         assertFalse(
             evaluator.matches(
                 Context("http://example.com/action", "http://example.com/asset"),
-                OdrlAction(URI.create("http://example.com/anotherAction"))
+                OdrlAction(RdfValue("http://example.com/anotherAction"))
             ).success
         )
     }
@@ -46,7 +45,7 @@ class OdrlActionEvaluatorTest {
             evaluator.matches(
                 Context("http://example.com/action", "http://example.com/asset"),
                 OdrlAction(
-                    uid = URI.create("http://example.com/action"),
+                    value = RdfValue("http://example.com/action"),
                     refinement = listOf(satisfiedConstraint)
                 )
             ).success
@@ -55,7 +54,7 @@ class OdrlActionEvaluatorTest {
             evaluator.matches(
                 Context("http://example.com/action", "http://example.com/asset"),
                 OdrlAction(
-                    uid = URI.create("http://example.com/action"),
+                    value = RdfValue("http://example.com/action"),
                     refinement = listOf(unsatisfiedConstraint)
                 )
             ).success
@@ -68,13 +67,13 @@ class OdrlActionEvaluatorTest {
             assertTrue(
                 evaluator.exercise(
                     Context("http://example.com/action", "http://example.com/asset"),
-                    OdrlAction(URI.create("http://example.com/action"))
+                    OdrlAction(RdfValue("http://example.com/action"))
                 ) { Result(true) }.success
             )
             assertFalse(
                 evaluator.exercise(
                     Context("http://example.com/action", "http://example.com/asset"),
-                    OdrlAction(URI.create("http://example.com/action"))
+                    OdrlAction(RdfValue("http://example.com/action"))
                 ) { Result(false) }.success
             )
         }

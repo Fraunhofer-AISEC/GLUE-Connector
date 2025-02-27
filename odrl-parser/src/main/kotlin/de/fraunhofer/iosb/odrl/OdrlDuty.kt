@@ -14,7 +14,7 @@ import java.net.URI
 class OdrlDuty(
     // Properties of superclass OdrlRule
     uid: URI? = null,
-    action: OdrlAction = OdrlAction(URI.create("")),
+    action: OdrlAction = OdrlAction(RdfValue("")),
     target: OdrlAsset? = null,
     output: OdrlAsset? = null,
     assignee: OdrlParty? = null,

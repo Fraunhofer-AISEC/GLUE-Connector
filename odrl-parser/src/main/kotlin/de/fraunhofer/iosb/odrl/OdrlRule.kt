@@ -23,7 +23,7 @@ abstract class OdrlRule(
     val uid: URI? = null,
 
     @field:JsonProperty(OdrlIdentifiers.HAS_ACTION)
-    val action: OdrlAction = OdrlAction(URI.create("")),
+    val action: OdrlAction = OdrlAction(RdfValue("")),
 
     @field:JsonProperty(OdrlIdentifiers.TARGET)
     val target: OdrlAsset? = null,
