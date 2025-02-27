@@ -19,17 +19,14 @@ class OdrlParser(
     documentLoader: DocumentLoader = createDocumentLoader(),
 ) {
     init {
-        configureMapper()
-        mapper.registerModules(JsonLdModule(mapper.copy(), options, documentLoader))
-    }
-
-    private fun configureMapper() {
-        mapper
-            .registerKotlinModule()
+        mapper.registerKotlinModule()
+        val odrlMapper = mapper.copy()
+            .registerModule(OdrlModule())
             .registerModule(JavaTimeModule())
             .setDateFormat(StdDateFormat().withColonInTimeZone(true)) // Provides ISO time support
             .setSerializationInclusion(JsonInclude.Include.NON_EMPTY)    // Hides empty properties in serialized policies
             .enable(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY) // Accepts single properties as list
+        mapper.registerModules(JsonLdModule(odrlMapper, options, documentLoader))
     }
 
     fun readOdrlPolicy(r: Reader): OdrlPolicy {

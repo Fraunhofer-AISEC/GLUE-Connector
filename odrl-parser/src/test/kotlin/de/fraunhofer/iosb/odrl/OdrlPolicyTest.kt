@@ -1,5 +1,6 @@
 package de.fraunhofer.iosb.odrl
 
+import com.fasterxml.jackson.databind.exc.InvalidFormatException
 import de.fraunhofer.iosb.odrl.Commons.Companion.loadFileOrDie
 import org.junit.jupiter.api.assertThrows
 import java.io.StringReader
@@ -131,7 +132,7 @@ class OdrlPolicyTest {
 
     @Test
     fun testPolicyDeserializationWithInvalidUri() {
-        assertThrows<IllegalArgumentException> {
+        assertThrows<InvalidFormatException> {
             parser.readOdrlPolicy(StringReader(
                 "{\n" +
                     "  \"@context\": \"http://www.w3.org/ns/odrl.jsonld\",\n" +
