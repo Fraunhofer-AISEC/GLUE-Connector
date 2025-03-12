@@ -13,7 +13,7 @@ before_script:
     else \
       export IMAGE_TAG="${CI_COMMIT_REF_SLUG}"; \
     fi
-  - echo "Using Docker image tag: $IMAGE_TAG"
+  - "echo \"Using Docker image tag: $IMAGE_TAG\""
 
 variables:
   GIT_SUBMODULE_STRATEGY: recursive
@@ -68,7 +68,7 @@ container_test:
   stage: test
   script: ./execute
   tags:
-      - munich-glue-local
+    - munich-glue-local
 
 after_script:
   - echo "End CI"
