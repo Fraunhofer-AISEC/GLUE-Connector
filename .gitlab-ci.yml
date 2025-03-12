@@ -29,7 +29,8 @@ jib_container_pipeline_build:
     - ./gradlew jib
       -Djib.to.auth.username=${CI_REGISTRY_USER}
       -Djib.to.auth.password=${CI_REGISTRY_PASSWORD}
-      -Djib.to.image=${CI_REGISTRY_IMAGE}/container-pipeline:$IMAGE_TAG
+      -Djib.to.image=${CI_REGISTRY_IMAGE}/container-pipeline
+      -Djib.to.tags=$IMAGE_TAG,$CI_PIPELINE_ID
   tags:
     - munich-glue-local
 
@@ -50,6 +51,7 @@ kaniko-http-echo-build:
       --context $CONTEXT_DIR
       --dockerfile $DOCKERFILE
       --destination $DOCKER_IMAGE:$IMAGE_TAG
+      --destination $DOCKER_IMAGE:$CI_PIPELINE_ID
     - rm -rf /kaniko/0
   tags:
     - munich-glue-local
@@ -57,12 +59,12 @@ kaniko-http-echo-build:
 container_test:
   image: eclipse-temurin:21
   services:
-    - name: $CI_REGISTRY_IMAGE/http-echo:$IMAGE_TAG
+    - name: $CI_REGISTRY_IMAGE/http-echo:$CI_PIPELINE_ID
       command: [ "/http-echo" ]
-    - name: $CI_REGISTRY_IMAGE/container-pipeline:$IMAGE_TAG
+    - name: $CI_REGISTRY_IMAGE/container-pipeline:$CI_PIPELINE_ID
       alias: connector1
       command: [ "/execute" ]
-    - name: $CI_REGISTRY_IMAGE/container-pipeline:$IMAGE_TAG
+    - name: $CI_REGISTRY_IMAGE/container-pipeline:$CI_PIPELINE_ID
       alias: connector2
       command: [ "/execute" ]
   stage: test
