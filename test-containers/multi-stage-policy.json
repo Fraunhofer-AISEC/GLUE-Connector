@@ -90,7 +90,7 @@
                                   {
                                     "@type": "http://fhg.de/glue/Container",
                                     "glue:image": "container-registry.gitlab.cc-asp.fraunhofer.de/ccit-glue/usage-control/container-pipeline/http-echo:latest",
-                                    "glue:hash": "sha256:82fb975b5d964fc96496b2407e256a70d6012b9fa485aa7cfd0269be43befd51",
+                                    "glue:hash": "${HTTP_ECHO_HASH}",
                                     "glue:parameter": {
                                       "@type": "http://fhg.de/glue/RestParameter",
                                       "glue:httpUrl": "http://0.0.0.0:1234/dockerEndpoint?key1=value1",
