@@ -8,11 +8,11 @@ before_script:
 #  - echo `pwd` # debug
 #  - echo "$CI_BUILD_NAME, $CI_BUILD_REF_NAME $CI_BUILD_STAGE" # debug
   - export GRADLE_USER_HOME=`pwd`/.gradle
-  - if [ "$CI_COMMIT_REF_NAME" == "main" ]; then;
+  - if [ "$CI_COMMIT_REF_NAME" == "main" ]; then
       export IMAGE_TAG="latest";
-    else;
+    else
       export IMAGE_TAG="${CI_COMMIT_REF_SLUG}";
-    fi;
+    fi
   - "echo \"Using Docker image tag: $IMAGE_TAG\""
 
 variables:
