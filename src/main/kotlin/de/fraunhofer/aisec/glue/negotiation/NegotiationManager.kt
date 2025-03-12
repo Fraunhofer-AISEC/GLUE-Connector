@@ -8,6 +8,7 @@ import de.fraunhofer.aisec.glue.models.negotiation.ContractRequestMessage
 import de.fraunhofer.aisec.glue.models.negotiation.NegotiationState
 import de.fraunhofer.iosb.odrl.OdrlOffer
 import de.fraunhofer.iosb.odrl.OdrlPolicy
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
@@ -18,7 +19,6 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.Collections.synchronizedSet
 import java.util.concurrent.ConcurrentHashMap
@@ -46,11 +46,10 @@ class NegotiationManager(
         odrlRequest: OdrlOffer,
         negotiator: Negotiator? = null,
     ): Deferred<OdrlPolicy> {
+        val logParams = mutableMapOf<String, Any>()
         val consumerPid = newProcessId()
         pendingConsumerNegotiations[consumerPid] = MutableSharedFlow()
 
-        //       automatic jsonld serialization.
-        //       Maybe we can get away with setting the base to the ODRL namespace.
         val contractRequestMessage =
             ContractRequestMessage(
                 providerPid = null,
@@ -58,6 +57,15 @@ class NegotiationManager(
                 callbackUrl.toString(),
                 odrlRequest,
             )
+
+        logParams["consumerPid"] = consumerPid
+        logParams["peerUrl"] = provider
+        logParams["callbackUrl"] = callbackUrl
+        logParams["contractOffer"] = odrlRequest.uid
+        LOG.atDebug {
+            message = "Creating new negotiation object"
+            payload = logParams
+        }
 
         val requestUrl = URLBuilder(provider).appendPathSegments("request").build()
 
@@ -69,18 +77,41 @@ class NegotiationManager(
             }
 
         if (!resp.status.isSuccess()) {
+            val body = resp.bodyAsText()
+            LOG.atInfo {
+                message = "Starting negotiation failed due to peer returning an error"
+                payload = buildMap {
+                    putAll(logParams)
+                    put("status", resp.status)
+                    put("description", body)
+                }
+            }
             return CompletableDeferred<OdrlPolicy>().apply {
-                cancel("Initial HTTP request failed with code ${resp.status}: ${resp.bodyAsText()}")
+                cancel("Initial HTTP request failed with code ${resp.status}: $body")
             }
         }
 
         val deserializedResponse = resp.body<ContractNegotiation>()
+
+        logParams["providerPid"] = deserializedResponse.providerPid
+        LOG.atDebug {
+            message = "Initial negotiation setup successful"
+            payload = buildMap {
+                putAll(logParams)
+                put("state", deserializedResponse.state)
+            }
+        }
 
         when (deserializedResponse.state) {
             // The negotiation has started, should get a contract offer soon
             NegotiationState.REQUESTED -> {}
             // The provider terminated the negotiation
             NegotiationState.TERMINATED -> {
+                LOG.atInfo {
+                    message = "Peer terminated the negotiation after the initial request"
+                    payload = logParams
+                }
+
                 assignedIds.remove(consumerPid)
                 pendingConsumerNegotiations.remove(consumerPid)!!.tryEmit(null)
                 return CompletableDeferred<OdrlPolicy>().apply {
@@ -89,6 +120,11 @@ class NegotiationManager(
             }
 
             else -> {
+                LOG.atInfo {
+                    message = "Peer sent response message indicating an invalid state"
+                    payload = logParams
+                }
+
                 assignedIds.remove(consumerPid)
                 pendingConsumerNegotiations.remove(consumerPid)!!.tryEmit(null)
                 return CompletableDeferred<OdrlPolicy>().apply {
@@ -97,6 +133,8 @@ class NegotiationManager(
             }
         }
 
+        // We return a future object that we use to notify code of when a negotiation is finished.
+        // Note that this is not good enough for when negotiation takes really long.
         val policyFuture = CompletableDeferred<OdrlPolicy>()
 
         // Create the final negotiation object now that we have all the information required.
@@ -122,6 +160,9 @@ class NegotiationManager(
                     },
             )
 
+        // This call here is kind of hacky since kotlin coroutines does not have condition variables.
+        // In case the peer sends a message to our negotiation object before this function returns, we have it wait.
+        // We use this channel to notify any waiting coroutines that this negotiation is usable.
         pendingConsumerNegotiations.remove(consumerPid)!!.tryEmit(negotiation)
         consumerNegotiations[consumerPid] = negotiation
 
@@ -137,11 +178,29 @@ class NegotiationManager(
         originUrl: Url,
         peerIdent: String,
     ): Negotiation? {
+        val logParams = mutableMapOf("consumerPid" to request.consumerPid, "peerIdentity" to peerIdent)
+
+        // We call this function when we receive a new contract request message, which can also happen for a follow-up
+        // request in case we reject the initial contract.
+        // In that special case, the negotiation already exists and we use the getter instead.
         if (request.providerPid != null) {
+            LOG.atDebug {
+                message = "This negotiation already exists, switching to getter"
+                payload = buildMap {
+                    putAll(logParams)
+                    put("providerPid", request.providerPid)
+                }
+            }
             return getAsProvider(request.providerPid, request.consumerPid, peerIdent)
         }
 
         val providerPid = newProcessId()
+
+        logParams["providerPid"] = providerPid
+        LOG.atDebug {
+            message = "Creating new negotiation object as provider for request"
+            payload = logParams
+        }
 
         val negotiation =
             NegotiationImpl(
@@ -172,11 +231,26 @@ class NegotiationManager(
         originUrl: Url,
         peerIdent: String,
     ): Negotiation? {
+        val logParams = mutableMapOf("providerPid" to request.providerPid, "peerIdentity" to peerIdent)
+
         if (request.consumerPid != null) {
+            LOG.atDebug {
+                message = "This negotiation already exists, switching to getter"
+                payload = buildMap {
+                    putAll(logParams)
+                    put("consumerPid", request.consumerPid)
+                }
+            }
             return getAsConsumer(request.consumerPid, request.providerPid, peerIdent)
         }
 
         val consumerPid = newProcessId()
+
+        logParams["consumerPid"] = consumerPid
+        LOG.atDebug {
+            message = "Creating new negotiation object for offer as consumer"
+            payload = logParams
+        }
 
         val negotiation =
             NegotiationImpl(
@@ -208,15 +282,35 @@ class NegotiationManager(
         consumerPid: String?,
         peerIdent: String,
     ): Negotiation? {
+        val logParams = mutableMapOf<String, Any>()
         val negotiation = providerNegotiations[providerPid] ?: return null
 
+        logParams["providerPid"] to providerPid
+        logParams["consumerPid"] = consumerPid ?: "unset"
+        logParams["peerIdentity"] = peerIdent
+
         if (consumerPid != null && negotiation.peerPid != consumerPid) {
+            LOG.atDebug {
+                message = "Cannot get negotiation as provider as the consumer pid does not match"
+                payload = buildMap {
+                    putAll(logParams)
+                    put("expectedConsumerPid", negotiation.peerPid)
+                }
+            }
             // While this would be more of a bad request scenario, but we just return not found in order to prevent
             // even the remote possibility of probing for negotiations
             return null
         }
 
+        // We check if the identity of the negotiation partner is set correctly
         if (negotiation.peerIdentity != null && negotiation.peerIdentity != peerIdent) {
+            LOG.atDebug {
+                message = "Cannot get negotiation as provider as the peer identity does not match"
+                payload = buildMap {
+                    putAll(logParams)
+                    put("expectedPeerIdentity", negotiation.peerIdentity)
+                }
+            }
             return null
         }
 
@@ -228,13 +322,29 @@ class NegotiationManager(
         providerPid: String?,
         peerIdent: String,
     ): Negotiation? {
-        // This is needed since kotlinx coroutines does not support condition variables...
+        val logParams = mutableMapOf<String, Any>("consumerPid" to consumerPid, "providerPid" to (providerPid ?: "unset"), "peerIdentity" to peerIdent)
+
+        // We have to be careful when getting the negotiation object as a consumer since we are the initiator here.
+        // When the peer is implemented in a way that it sends out callbacks before we're ready the negotiation object
+        // may not be in the consumerNegotiations map yet.
+        // To avoid this, we use a channel that this function can block on.
+        // Note that this is not perfect since there is a (theoretical) race condition here when the initial negotiation
+        // resolves at the same time we try to get the channel here.
+        // This is incredibly unlikely, but may cause some requests to fail.
         val negotiationProducer =
             if (consumerNegotiations.containsKey(consumerPid)) {
                 val negotiation = consumerNegotiations[consumerPid]!!
+                LOG.atDebug {
+                    message = "Using existing negotiation object"
+                    payload = logParams
+                }
                 suspend { negotiation }
             } else if (pendingConsumerNegotiations.containsKey(consumerPid)) {
                 val channel = pendingConsumerNegotiations[consumerPid]!!
+                LOG.atDebug {
+                    message = "Waiting for pending negotiation object"
+                    payload = logParams
+                }
                 suspend { channel.first() }
             } else {
                 suspend { null }
@@ -242,10 +352,24 @@ class NegotiationManager(
         val negotiation = negotiationProducer() ?: return null
 
         if (providerPid != null && negotiation.peerPid != providerPid) {
+            LOG.atDebug {
+                message = "Cannot get negotiation as consumer as the provider pid does not match"
+                payload = buildMap {
+                    putAll(logParams)
+                    put("expectedProviderPid", negotiation.peerPid)
+                }
+            }
             return null
         }
 
         if (negotiation.peerIdentity != null && negotiation.peerIdentity != peerIdent) {
+            LOG.atDebug {
+                message = "Cannot get negotiation as consumer as the peer identity does not match"
+                payload = buildMap {
+                    putAll(logParams)
+                    put("expectedPeerIdentity", negotiation.peerIdentity)
+                }
+            }
             return null
         }
 
@@ -271,7 +395,7 @@ class NegotiationManager(
         return { result: Result<OdrlPolicy> ->
             result.fold(
                 onSuccess = { contract -> contractStore.addContract(contract) },
-                onFailure = { err -> LOG.info("Policy negotiation failed", err) },
+                onFailure = { err -> LOG.info(err) { "Policy negotiation failed" } },
             )
             // We call the next callback asynchronously since it may need to acquire locks that are held up the call
             // stack.
@@ -284,6 +408,6 @@ class NegotiationManager(
     }
 
     companion object {
-        private val LOG = LoggerFactory.getLogger(NegotiationManager::class.java)
+        private val LOG = KotlinLogging.logger {}
     }
 }

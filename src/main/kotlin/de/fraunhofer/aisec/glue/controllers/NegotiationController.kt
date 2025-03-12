@@ -4,6 +4,7 @@ import de.fraunhofer.aisec.glue.Utils
 import de.fraunhofer.aisec.glue.models.negotiation.*
 import de.fraunhofer.aisec.glue.negotiation.Negotiation
 import de.fraunhofer.aisec.glue.negotiation.NegotiationManager
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ktor.http.*
 import io.ktor.server.auth.*
 import io.ktor.server.plugins.*
@@ -291,5 +292,9 @@ class NegotiationController(private val negotiationManager: NegotiationManager) 
                 registerRoutes20241()
             }
         }
+    }
+
+    companion object {
+        private val LOG = KotlinLogging.logger {}
     }
 }

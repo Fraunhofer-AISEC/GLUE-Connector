@@ -6,13 +6,13 @@ import de.fraunhofer.iosb.odrl.OdrlAgreement
 import de.fraunhofer.iosb.odrl.OdrlOffer
 import de.fraunhofer.iosb.odrl.OdrlParty
 import de.fraunhofer.iosb.odrl.OdrlPolicy
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import org.slf4j.LoggerFactory
 
 class NegotiationImpl(
     state: NegotiationState,
@@ -81,13 +81,16 @@ class NegotiationImpl(
         code: String,
         reason: String? = null,
     ) {
-        LOG.debug("Negotiation has been terminated by the application, notify peer")
         // Note: The spec technically disallows us from terminating in some states, but it's probably better to not
         // care and terminate anyway.
         // What's the worst that can happen? The peer terminating the connection for a protocol violation? :)
         state = NegotiationState.TERMINATED
-        completionCallback(Result.failure(NegotiationException(reason ?: "Unknown error")))
         val (providerPid, consumerPid) = getProviderAndConsumerPid()
+        LOG.atDebug {
+            message = "Negotiation has been terminated by the application, notifying peer"
+            payload = mapOf("role" to role, "state" to state, "providerPid" to providerPid, "consumerPid" to consumerPid)
+        }
+        completionCallback(Result.failure(NegotiationException(reason ?: "Unknown error")))
         sendMessage(
             "$peerPid/termination",
             ContractNegotiationTerminationMessage(
@@ -103,8 +106,12 @@ class NegotiationImpl(
      * Report completion of the negotiation and the resulting policy.
      */
     private suspend fun completeNegotiation() {
-        LOG.debug("Negotiation completed")
         state = NegotiationState.FINALIZED
+        val (providerPid, consumerPid) = getProviderAndConsumerPid()
+        LOG.atDebug {
+            message = "Negotiation completed successfully"
+            payload = mapOf("role" to role, "state" to state, "providerPid" to providerPid, "consumerPid" to consumerPid)
+        }
         // The non-null assertion here is safe since the negotiation may only be completed with a contract
         completionCallback(Result.success(currentPolicy ?: throw IllegalStateException("No policy available")))
     }
@@ -119,6 +126,8 @@ class NegotiationImpl(
         initial: Boolean,
         responseCallback: suspend (Boolean) -> Unit,
     ) = mutex.withLock {
+        val (providerPid, consumerPid) = getProviderAndConsumerPid()
+        val logParams = mutableMapOf<String, Any>("role" to role, "state" to state, "providerPid" to providerPid, "consumerPid" to consumerPid)
         // When we first construct a negotiation, we initialize it to the requested state right away.
         // For later stages, we only allow the consumer to request new contract offers if we have already offered a
         // contract.
@@ -129,13 +138,25 @@ class NegotiationImpl(
                 NegotiationState.OFFERED
             }
         if (!precondition(allowedState, Negotiation.Role.PROVIDER)) {
+            LOG.atDebug {
+                message = "Negotiation is in an invalid state to process a request"
+                payload = logParams + ("expectedState" to allowedState)
+            }
             responseCallback(false)
             return
         }
 
+        LOG.atTrace {
+            message = "State looks OK, send response to peer"
+            payload = logParams
+        }
         responseCallback(true)
 
         val (ok, counter) = negotiator.evaluateRequest(req.offer)
+        LOG.atDebug {
+            message = "Negotiator evaluates the request as ${if(ok) { "acceptable" } else { "not acceptable" }}"
+            payload = logParams
+        }
 
         if (!ok) {
             if (counter != null) {
@@ -385,6 +406,6 @@ class NegotiationImpl(
     }
 
     companion object {
-        private val LOG = LoggerFactory.getLogger(NegotiationImpl::class.java)
+        private val LOG = KotlinLogging.logger {}
     }
 }

@@ -14,6 +14,7 @@ import de.fraunhofer.iosb.odrl.OdrlIdentifiers
 import de.fraunhofer.iosb.odrl.OdrlParty
 import de.fraunhofer.iosb.odrl.glue.GlueValueProcessor
 import de.fraunhofer.iosb.odrl.parser.OdrlParser
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
@@ -26,7 +27,6 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.util.*
 import io.ktor.utils.io.*
-import org.slf4j.LoggerFactory
 import java.net.InetAddress
 import java.net.URI
 
@@ -38,7 +38,7 @@ class ContainerInterfaceController(
     private val pipelineManager: PipelineManager,
     private val contractStore: ContractStore,
     private val policyEngine: PolicyEngine,
-    private val httpClient: HttpClient
+    private val httpClient: HttpClient,
 ) : Controller {
     override fun Route.registerRoutes() {
         // TOOD: Insert some container-side authentication
@@ -47,34 +47,67 @@ class ContainerInterfaceController(
         route("/coordinator") {
             // Add a value for a pre-defined policy parameter
             post("/policy-parameter") {
+                val caller = call.request.local.remoteAddress
                 val parameters = call.receive<Map<String, JsonNode>>()
-                val pipeline = pipelineManager.getPipelineByIp(call.request.origin.remoteAddress) ?: throw NotFoundException()
+                val pipeline = pipelineManager.getPipelineByIp(caller)
+                    ?: throw NotFoundException("No associated pipeline could be found for caller with IP $caller")
+
+                LOG.atDebug {
+                    message = "Updating parameters for pipeline"
+                    payload = buildMap {
+                        put("origin", caller)
+                        put("oldParams", pipeline.placeholderValues)
+                        put("newParams", parameters)
+                        put("pipeline", pipeline.name)
+                    }
+                }
+
                 pipeline.placeholderValues.putAll(parameters)
                 call.respond(HttpStatusCode.Created)
             }
 
             post("/proxy") {
+                val logParams = mutableMapOf<String, Any>()
+
                 val destination = call.queryParameters.getOrFail("destination")
                 val port = call.queryParameters["port"] //TODO: Change the pipeline create response to allow more ports
 
+                LOG.atDebug {
+                    message = "Servicing proxy request from container"
+                    payload = logParams.apply {
+                        put("origin", call.request.local.remoteAddress)
+                        put("destination", destination)
+                    }
+                }
+
                 // Obtain the next policy to use on the third container.
 
-                val pipeline = pipelineManager.getPipelineByIp(call.request.origin.remoteAddress) ?: throw NotFoundException("Pipeline not found")
-                val contract = contractStore.getContract(pipeline.contractId) ?: throw NotFoundException("Contract not found")
+                val pipeline = pipelineManager.getPipelineByIp(call.request.local.remoteAddress)
+                    ?: throw NotFoundException("Pipeline not found")
+                val contract =
+                    contractStore.getContract(pipeline.contractId) ?: throw NotFoundException("Contract not found")
 
-
-                val evaluationResult = policyEngine.evaluatePolicy(contract, URI(OdrlIdentifiers.DISTRIBUTE), URI(pipeline.targetId))
-                val evaluation = evaluationResult.getOrElse {
-                    call.respond(HttpStatusCode.InternalServerError)
-                    return@post
+                LOG.atDebug {
+                    message = "Obtained contract for pipeline"
+                    payload = logParams.apply {
+                        put("pipeline", pipeline.name)
+                        put("contract", contract.uid)
+                        put("params", pipeline.placeholderValues)
+                    }
                 }
 
-                if (evaluation.nextPolicyTemplate == null) {
-                    call.respond(HttpStatusCode.NotFound)
-                    return@post
+                val evaluationResult =
+                    policyEngine.evaluatePolicy(contract, URI(OdrlIdentifiers.DISTRIBUTE), URI(pipeline.targetId))
+
+                LOG.atDebug {
+                    message = "Next policy evaluation ${if (evaluationResult.isSuccess) "successful" else "failed"}"
+                    cause = evaluationResult.exceptionOrNull()
+                    payload = logParams
                 }
 
-                val nextPolicy = GlueValueProcessor().resolvePlaceholders(evaluation.nextPolicyTemplate) {
+                val evaluation = evaluationResult.getOrElse { e -> throw BadRequestException("Policy evaluation failed", e) }
+
+                val nextPolicy = GlueValueProcessor().resolvePlaceholders(evaluation.nextPolicyTemplate ?: throw BadRequestException("No follow-up policy found")) {
                     pipeline.placeholderValues[it] ?: throw NotFoundException("No value for placeholder $it")
                 }
 
@@ -85,7 +118,8 @@ class ContainerInterfaceController(
 
                 // Negotiate the policy with the next connector
 
-                val convertedNextPolicy = OdrlParser().convertToOdrlPolicy(nextPolicy.json).toOffer(OdrlParty(URI("todo:name-this-connector")))
+                val convertedNextPolicy = OdrlParser().convertToOdrlPolicy(nextPolicy.json)
+                    .toOffer(OdrlParty(URI("todo:name-this-connector")))
 
                 // This only works in docker compose or similar environments.
                 val originUrl = InetAddress.getLocalHost().hostAddress
@@ -95,9 +129,19 @@ class ContainerInterfaceController(
                         Url("http://$originUrl:8080/negotiations"),
                         convertedNextPolicy
                     )
+
+                LOG.atDebug {
+                    message = "Entering contract negotiation with destination connector"
+                    payload = logParams // TODO: Obtain some more info from the negotiation somehow
+                }
+
                 val newPolicy = negotiation.await()
 
                 // Spawn the pipeline on the next container
+                LOG.atDebug {
+                    message = "Creating pipeline on destination connector"
+                    payload = logParams
+                }
 
                 val createReq = PipelineCreateRequest(
                     target = pipeline.targetId,
@@ -121,6 +165,11 @@ class ContainerInterfaceController(
 
                 val remotePipeline = createResp.body<PipelineCreateResponse>()
 
+                LOG.atDebug {
+                    message = "Created pipeline on destination connector"
+                    payload = logParams.apply { put("remotePipeline", remotePipeline) }
+                }
+
                 // Proxy the actual request to the next connector
 
                 val appUrl = "http://$destinationHost:${remotePipeline.pipelinePort}$destinationPath"
@@ -128,7 +177,7 @@ class ContainerInterfaceController(
                     setBody(call.request.receiveChannel())
                 }
 
-                LOG.info("Proxy request returned ${appResponse.status}")
+                LOG.info {"Proxy request returned ${appResponse.status}" }
 
                 call.respond(object : OutgoingContent.WriteChannelContent() {
                     override suspend fun writeTo(channel: ByteWriteChannel) {
@@ -140,6 +189,6 @@ class ContainerInterfaceController(
     }
 
     companion object {
-        val LOG = LoggerFactory.getLogger(ContainerInterfaceController::class.java)
+        val LOG = KotlinLogging.logger {}
     }
 }

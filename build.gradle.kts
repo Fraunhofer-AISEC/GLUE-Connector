@@ -41,6 +41,7 @@ dependencies {
     implementation(libs.ktorm.core)
     implementation(libs.ktorm.jackson)
     implementation(libs.dbcp)
+    implementation(libs.kotlinLogging.jvm)
 
     // For running example with gradle
     runtimeOnly(libs.slf4j.jdk14)
