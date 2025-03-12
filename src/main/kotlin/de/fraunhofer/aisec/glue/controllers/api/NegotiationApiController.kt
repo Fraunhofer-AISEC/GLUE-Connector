@@ -64,8 +64,8 @@ class NegotiationApiController(private val negotiationManager: NegotiationManage
                         // This is supposed to fail
                         // If not, we have some really weired scheduling going on, but so be it
                     } catch (e: Exception) {
-                        // Note: This could also be an internal server error, but we will assume that its the user's
-                        // fault
+                        // Note: This could also be an internal server error, but we will assume
+                        // that it's the user's fault
                         call.respond(HttpStatusCode.BadRequest, "$e")
                         return@post
                     }

@@ -36,10 +36,11 @@ common_curl_opts=(
 
 policy_content="$(cat "$policy")"
 
-# Start the contract negotiation
+echo "Starting the contract negotiation..."
 negotiation_req="$(jq '{"peer": "'"$remote_connector"'", "contractRequest": .}' <<< "$policy_content")"
-curl -X POST "${common_curl_opts[@]}" -d "$negotiation_req" "http://$local_connector/api/negotiations"
+curl -v -X POST "${common_curl_opts[@]}" -d "$negotiation_req" "http://$local_connector/api/negotiations"
 
+echo "Requesting negotiated contracts..."
 while (( "$(curl "${common_curl_opts[@]}" "http://$local_connector/api/negotiations" | jq "length")" != 0 )); do
   sleep 1s
 done
@@ -51,7 +52,7 @@ contract_id="$(jq -r '.["@id"]' <<< "$policy_content")"
 contract_target="$(jq -r '.["odrl:permission"][0]["odrl:target"]' <<< "$policy_content")"
 contract_action="$(jq -r '.["odrl:permission"][0]["odrl:action"]' <<< "$policy_content")"
 
-# Now, start the remote pipeline
+echo "Starting remote pipeline..."
 pipeline_start_req='{"peer": "'"$remote_connector"'", "request": {"target": "'"$contract_target"'", "action": "'"$contract_action"'", "contractId": "'"$contract_id"'"}}'
 pipeline_start_resp="$(curl -X POST "${common_curl_opts[@]}" -d "$pipeline_start_req" "http://$local_connector/api/remote-pipelines")"
 
