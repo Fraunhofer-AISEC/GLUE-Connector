@@ -8,11 +8,11 @@ before_script:
 #  - echo `pwd` # debug
 #  - echo "$CI_BUILD_NAME, $CI_BUILD_REF_NAME $CI_BUILD_STAGE" # debug
   - export GRADLE_USER_HOME=`pwd`/.gradle
-  - if [ "$CI_COMMIT_REF_NAME" == "main" ]; then \
-      export IMAGE_TAG="latest"; \
-    else \
-      export IMAGE_TAG="${CI_COMMIT_REF_SLUG}"; \
-    fi
+  - if [ "$CI_COMMIT_REF_NAME" == "main" ]; then;
+      export IMAGE_TAG="latest";
+    else;
+      export IMAGE_TAG="${CI_COMMIT_REF_SLUG}";
+    fi;
   - "echo \"Using Docker image tag: $IMAGE_TAG\""
 
 variables:
@@ -26,9 +26,9 @@ cache:
 jib_container_pipeline_build:
   stage: build
   script:
-    - ./gradlew jib \
-      -Djib.to.auth.username=${CI_REGISTRY_USER} \
-      -Djib.to.auth.password=${CI_REGISTRY_PASSWORD} \
+    - ./gradlew jib
+      -Djib.to.auth.username=${CI_REGISTRY_USER}
+      -Djib.to.auth.password=${CI_REGISTRY_PASSWORD}
       -Djib.to.image=${CI_REGISTRY_IMAGE}/container-pipeline:$IMAGE_TAG
   tags:
     - munich-glue-local
@@ -46,9 +46,9 @@ kaniko-http-echo-build:
     - mkdir -p /kaniko/.docker
     - echo "{\"auths\":{\"$CI_REGISTRY\":{\"username\":\"$CI_REGISTRY_USER\",\"password\":\"$CI_REGISTRY_PASSWORD\"}}}" > /kaniko/.docker/config.json
   script:
-    - /kaniko/executor \
-      --context $CONTEXT_DIR \
-      --dockerfile $DOCKERFILE \
+    - /kaniko/executor
+      --context $CONTEXT_DIR
+      --dockerfile $DOCKERFILE
       --destination $DOCKER_IMAGE:$IMAGE_TAG
     - rm -rf /kaniko/0
   tags:
