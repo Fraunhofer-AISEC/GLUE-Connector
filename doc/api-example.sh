@@ -34,7 +34,12 @@ common_curl_opts=(
   -H "Content-Type: application/json"
 )
 
-policy_content="$(cat "$policy")"
+# Required to make sure that we are measuring the latest version
+image=$(docker pull -q container-registry.gitlab.cc-asp.fraunhofer.de/ccit-glue/usage-control/container-pipeline/http-echo:latest)
+HTTP_ECHO_HASH=$(docker images --no-trunc --quiet container-registry.gitlab.cc-asp.fraunhofer.de/ccit-glue/usage-control/container-pipeline/http-echo:latest)
+export HTTP_ECHO_HASH
+printf "Found hash of %s:\n%s\n" "$image" "$HTTP_ECHO_HASH"
+policy_content="$(envsubst < "$policy")"
 
 echo "Starting the contract negotiation..."
 negotiation_req="$(jq '{"peer": "'"$remote_connector"'", "contractRequest": .}' <<< "$policy_content")"
