@@ -4,5 +4,5 @@ import com.fasterxml.jackson.annotation.JsonProperty
 
 data class ContainerSummaryNetworkSettings(
     @JsonProperty("Networks")
-    val networks: Map<String, EndpointSettings>? = null
+    val networks: Map<String, EndpointSettings>? = null,
 )
