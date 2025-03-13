@@ -5,6 +5,7 @@ import de.fraunhofer.aisec.glue.controllers.Controller
 import de.fraunhofer.aisec.glue.models.api.NegotiationCreationRequest
 import de.fraunhofer.aisec.glue.models.api.NegotiationInfoResponse
 import de.fraunhofer.aisec.glue.negotiation.NegotiationManager
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ktor.http.*
 import io.ktor.server.plugins.*
 import io.ktor.server.request.*
@@ -64,6 +65,11 @@ class NegotiationApiController(private val negotiationManager: NegotiationManage
                         // This is supposed to fail
                         // If not, we have some really weired scheduling going on, but so be it
                     } catch (e: Exception) {
+                        LOG.atDebug {
+                            message = "Contract negotiation completed exceptionally"
+                            cause = e
+                            payload = mapOf("peerConnector" to req.peer, "contractRequest" to req.contractRequest.uid)
+                        }
                         // Note: This could also be an internal server error, but we will assume
                         // that it's the user's fault
                         call.respond(HttpStatusCode.BadRequest, "$e")
@@ -75,7 +81,12 @@ class NegotiationApiController(private val negotiationManager: NegotiationManage
             }
 
             delete {
+                LOG.error { "Contract negotiation can currently not be cancelled" }
             }
         }
+    }
+
+    companion object {
+        val LOG = KotlinLogging.logger {}
     }
 }
