@@ -7,12 +7,12 @@ import de.fraunhofer.aisec.glue.pipeline.PipelineManager
 import de.fraunhofer.aisec.glue.policy.PolicyEngine
 import de.fraunhofer.aisec.glue.policy.PolicyViolationException
 import de.fraunhofer.iosb.odrl.OdrlIdentifiers
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ktor.http.*
 import io.ktor.server.auth.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import org.slf4j.LoggerFactory
 import java.net.URI
 
 /**
@@ -43,6 +43,19 @@ class PipelineController(
                                 0 -> null
                                 1 -> contracts.first()
                                 else -> {
+                                    LOG.atDebug {
+                                        message = "The selected contract is ambiguous for given target and action"
+                                        payload =
+                                            mapOf(
+                                                "target" to req.target,
+                                                "action" to req.action,
+                                                "matchedContracts" to
+                                                    contracts.map {
+                                                            c ->
+                                                        c.uid
+                                                    },
+                                            )
+                                    }
                                     call.respond(HttpStatusCode.BadRequest)
                                     return@post
                                 }
@@ -50,6 +63,10 @@ class PipelineController(
                         }
 
                     if (contract == null) {
+                        LOG.atDebug {
+                            message = "The requested contract could not be found in the contract store"
+                            payload = mapOf("contract" to req.contractId, "target" to req.target, "action" to req.action)
+                        }
                         call.respond(HttpStatusCode.NotFound)
                         return@post
                     }
@@ -58,6 +75,10 @@ class PipelineController(
                     policyResult.map { eval ->
                         val pipeline = eval.containerPipeline
                         if (pipeline == null) {
+                            LOG.atDebug {
+                                message = "The contract evaluation yielded no container pipeline"
+                                payload = mapOf("contract" to contract.uid, "target" to req.target, "action" to req.action)
+                            }
                             call.respond(HttpStatusCode.BadRequest, "No matching container pipeline definition found")
                             return@map
                         }
@@ -68,7 +89,11 @@ class PipelineController(
                             ),
                         )
                     }.recover { err ->
-                        LOG.error("Error evaluating policy ${contract.uid} with action ${req.action} and target ${req.target}", err)
+                        LOG.atDebug {
+                            message = "Error during policy evaluation"
+                            cause = err
+                            payload = mapOf("contract" to contract.uid, "action" to req.action, "target" to req.target)
+                        }
                         when (err) {
                             is PolicyViolationException -> call.respond(HttpStatusCode.Forbidden, err.message ?: "Unknown Error")
                             else -> call.respond(HttpStatusCode.InternalServerError, err.message ?: "Unknown Error")
@@ -100,6 +125,6 @@ class PipelineController(
         // The port that is exposed on the first container
         private const val DEFAULT_ACTION = OdrlIdentifiers.USE
         private const val DEFAULT_PORT = "8080/tcp"
-        private val LOG = LoggerFactory.getLogger(PipelineController::class.java)
+        private val LOG = KotlinLogging.logger {}
     }
 }

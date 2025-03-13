@@ -49,17 +49,19 @@ class ContainerInterfaceController(
             post("/policy-parameter") {
                 val caller = call.request.local.remoteAddress
                 val parameters = call.receive<Map<String, JsonNode>>()
-                val pipeline = pipelineManager.getPipelineByIp(caller)
-                    ?: throw NotFoundException("No associated pipeline could be found for caller with IP $caller")
+                val pipeline =
+                    pipelineManager.getPipelineByIp(caller)
+                        ?: throw NotFoundException("No associated pipeline could be found for caller with IP $caller")
 
                 LOG.atDebug {
                     message = "Updating parameters for pipeline"
-                    payload = buildMap {
-                        put("origin", caller)
-                        put("oldParams", pipeline.placeholderValues)
-                        put("newParams", parameters)
-                        put("pipeline", pipeline.name)
-                    }
+                    payload =
+                        buildMap {
+                            put("origin", caller)
+                            put("oldParams", pipeline.placeholderValues)
+                            put("newParams", parameters)
+                            put("pipeline", pipeline.name)
+                        }
                 }
 
                 pipeline.placeholderValues.putAll(parameters)
@@ -70,30 +72,33 @@ class ContainerInterfaceController(
                 val logParams = mutableMapOf<String, Any>()
 
                 val destination = call.queryParameters.getOrFail("destination")
-                val port = call.queryParameters["port"] //TODO: Change the pipeline create response to allow more ports
+                val port = call.queryParameters["port"] // TODO: Change the pipeline create response to allow more ports
 
                 LOG.atDebug {
                     message = "Servicing proxy request from container"
-                    payload = logParams.apply {
-                        put("origin", call.request.local.remoteAddress)
-                        put("destination", destination)
-                    }
+                    payload =
+                        logParams.apply {
+                            put("origin", call.request.local.remoteAddress)
+                            put("destination", destination)
+                        }
                 }
 
                 // Obtain the next policy to use on the third container.
 
-                val pipeline = pipelineManager.getPipelineByIp(call.request.local.remoteAddress)
-                    ?: throw NotFoundException("Pipeline not found")
+                val pipeline =
+                    pipelineManager.getPipelineByIp(call.request.local.remoteAddress)
+                        ?: throw NotFoundException("Pipeline not found")
                 val contract =
                     contractStore.getContract(pipeline.contractId) ?: throw NotFoundException("Contract not found")
 
                 LOG.atDebug {
                     message = "Obtained contract for pipeline"
-                    payload = logParams.apply {
-                        put("pipeline", pipeline.name)
-                        put("contract", contract.uid)
-                        put("params", pipeline.placeholderValues)
-                    }
+                    payload =
+                        logParams.apply {
+                            put("pipeline", pipeline.name)
+                            put("contract", contract.uid)
+                            put("params", pipeline.placeholderValues)
+                        }
                 }
 
                 val evaluationResult =
@@ -107,9 +112,12 @@ class ContainerInterfaceController(
 
                 val evaluation = evaluationResult.getOrElse { e -> throw BadRequestException("Policy evaluation failed", e) }
 
-                val nextPolicy = GlueValueProcessor().resolvePlaceholders(evaluation.nextPolicyTemplate ?: throw BadRequestException("No follow-up policy found")) {
-                    pipeline.placeholderValues[it] ?: throw NotFoundException("No value for placeholder $it")
-                }
+                val nextPolicy =
+                    GlueValueProcessor().resolvePlaceholders(
+                        evaluation.nextPolicyTemplate ?: throw BadRequestException("No follow-up policy found"),
+                    ) {
+                        pipeline.placeholderValues[it] ?: throw NotFoundException("No value for placeholder $it")
+                    }
 
                 // Split the destination address into usable parts
                 val destinationURI = URI(destination)
@@ -118,8 +126,9 @@ class ContainerInterfaceController(
 
                 // Negotiate the policy with the next connector
 
-                val convertedNextPolicy = OdrlParser().convertToOdrlPolicy(nextPolicy.json)
-                    .toOffer(OdrlParty(URI("todo:name-this-connector")))
+                val convertedNextPolicy =
+                    OdrlParser().convertToOdrlPolicy(nextPolicy.json)
+                        .toOffer(OdrlParty(URI("todo:name-this-connector")))
 
                 // This only works in docker compose or similar environments.
                 val originUrl = InetAddress.getLocalHost().hostAddress
@@ -127,7 +136,7 @@ class ContainerInterfaceController(
                     negotiationManager.startNegotiation(
                         Url("http://$destinationHost:8080/negotiations"),
                         Url("http://$originUrl:8080/negotiations"),
-                        convertedNextPolicy
+                        convertedNextPolicy,
                     )
 
                 LOG.atDebug {
@@ -143,20 +152,22 @@ class ContainerInterfaceController(
                     payload = logParams
                 }
 
-                val createReq = PipelineCreateRequest(
-                    target = pipeline.targetId,
-                    action = OdrlIdentifiers.USE,
-                    contractId = newPolicy.uid.toString()
-                )
+                val createReq =
+                    PipelineCreateRequest(
+                        target = pipeline.targetId,
+                        action = OdrlIdentifiers.USE,
+                        contractId = newPolicy.uid.toString(),
+                    )
 
                 // Wa may also want to add some sort of owner to it, so that the remote pipeline is stopped when this
                 // one shuts down (Assuming that is what we want).
-                val createResp = httpClient.post("http://$destinationHost:8080/pipeline") {
-                    header("Content-Type", ContentType.Application.Json)
-                    setBody(createReq)
-                    val (username, password) = Utils.getCredentials()
-                    basicAuth(username, password)
-                }
+                val createResp =
+                    httpClient.post("http://$destinationHost:8080/pipeline") {
+                        header("Content-Type", ContentType.Application.Json)
+                        setBody(createReq)
+                        val (username, password) = Utils.getCredentials()
+                        basicAuth(username, password)
+                    }
 
                 if (!createResp.status.isSuccess()) {
                     call.respond(HttpStatusCode.BadGateway)
@@ -173,17 +184,20 @@ class ContainerInterfaceController(
                 // Proxy the actual request to the next connector
 
                 val appUrl = "http://$destinationHost:${remotePipeline.pipelinePort}$destinationPath"
-                val appResponse = httpClient.post(appUrl) {
-                    setBody(call.request.receiveChannel())
-                }
-
-                LOG.info {"Proxy request returned ${appResponse.status}" }
-
-                call.respond(object : OutgoingContent.WriteChannelContent() {
-                    override suspend fun writeTo(channel: ByteWriteChannel) {
-                        appResponse.bodyAsChannel().copyTo(channel)
+                val appResponse =
+                    httpClient.post(appUrl) {
+                        setBody(call.request.receiveChannel())
                     }
-                })
+
+                LOG.info { "Proxy request returned ${appResponse.status}" }
+
+                call.respond(
+                    object : OutgoingContent.WriteChannelContent() {
+                        override suspend fun writeTo(channel: ByteWriteChannel) {
+                            appResponse.bodyAsChannel().copyTo(channel)
+                        }
+                    },
+                )
             }
         }
     }
