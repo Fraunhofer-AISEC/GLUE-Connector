@@ -29,7 +29,21 @@ class NegotiationImpl(
     val completionCallback: NegotiationCompletionCallback,
 ) : Negotiation {
     override var state: NegotiationState = state
-        private set
+        private set(newState) {
+            LOG.atDebug {
+                message = "Updating negotiation state"
+                val (providerPid, consumerPid) = getProviderAndConsumerPid()
+                payload =
+                    mapOf(
+                        "role" to role,
+                        "providerPid" to providerPid,
+                        "consumerPid" to consumerPid,
+                        "oldState" to field,
+                        "newState" to newState,
+                    )
+            }
+            field = newState
+        }
     private val mutex = Mutex()
 
     /**
@@ -37,11 +51,28 @@ class NegotiationImpl(
      * This should be the right function for most interactions where the negotiation has to validate that the incoming
      * message can lead to a valid state transition and returning an error if not.
      */
-    private fun precondition(
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun precondition(
         expectedState: NegotiationState,
         expectedRole: Negotiation.Role,
     ): Boolean {
-        return state == expectedState && role == expectedRole
+        val ok = state == expectedState && role == expectedRole
+        if (!ok) {
+            LOG.atDebug {
+                message = "The received message is invalid for the current negotiation state"
+                val (providerPid, consumerPid) = getProviderAndConsumerPid()
+                payload =
+                    mapOf(
+                        "role" to role,
+                        "providerPid" to providerPid,
+                        "consumerPid" to consumerPid,
+                        "state" to state,
+                        "expectedState" to expectedState,
+                        "expectedRole" to expectedRole,
+                    )
+            }
+        }
+        return ok
     }
 
     private suspend inline fun <reified T> sendMessage(
@@ -88,7 +119,15 @@ class NegotiationImpl(
         val (providerPid, consumerPid) = getProviderAndConsumerPid()
         LOG.atDebug {
             message = "Negotiation has been terminated by the application, notifying peer"
-            payload = mapOf("role" to role, "state" to state, "providerPid" to providerPid, "consumerPid" to consumerPid)
+            payload =
+                mapOf(
+                    "role" to role,
+                    "state" to state,
+                    "providerPid" to providerPid,
+                    "consumerPid" to consumerPid,
+                    "code" to code,
+                    "reason" to reason,
+                )
         }
         completionCallback(Result.failure(NegotiationException(reason ?: "Unknown error")))
         sendMessage(
@@ -126,8 +165,6 @@ class NegotiationImpl(
         initial: Boolean,
         responseCallback: suspend (Boolean) -> Unit,
     ) = mutex.withLock {
-        val (providerPid, consumerPid) = getProviderAndConsumerPid()
-        val logParams = mutableMapOf<String, Any>("role" to role, "state" to state, "providerPid" to providerPid, "consumerPid" to consumerPid)
         // When we first construct a negotiation, we initialize it to the requested state right away.
         // For later stages, we only allow the consumer to request new contract offers if we have already offered a
         // contract.
@@ -138,24 +175,21 @@ class NegotiationImpl(
                 NegotiationState.OFFERED
             }
         if (!precondition(allowedState, Negotiation.Role.PROVIDER)) {
-            LOG.atDebug {
-                message = "Negotiation is in an invalid state to process a request"
-                payload = logParams + ("expectedState" to allowedState)
-            }
             responseCallback(false)
             return
         }
 
-        LOG.atTrace {
-            message = "State looks OK, send response to peer"
-            payload = logParams
-        }
         responseCallback(true)
 
         val (ok, counter) = negotiator.evaluateRequest(req.offer)
         LOG.atDebug {
-            message = "Negotiator evaluates the request as ${if(ok) { "acceptable" } else { "not acceptable" }}"
-            payload = logParams
+            message = "Negotiator evaluates the request as ${if (ok) {
+                "acceptable"
+            } else {
+                "not acceptable"
+            }}"
+            val (providerPid, consumerPid) = getProviderAndConsumerPid()
+            payload = mapOf<String, Any>("role" to role, "state" to state, "providerPid" to providerPid, "consumerPid" to consumerPid)
         }
 
         if (!ok) {
@@ -229,6 +263,15 @@ class NegotiationImpl(
         responseCallback(true)
 
         val (ok, newOffer) = negotiator.evaluateOffer(req.offer)
+        LOG.atDebug {
+            message = "Negotiator evaluates the offer as ${if (ok) {
+                "acceptable"
+            } else {
+                "not acceptable"
+            }}"
+            val (providerPid, consumerPid) = getProviderAndConsumerPid()
+            payload = mapOf<String, Any>("role" to role, "state" to state, "providerPid" to providerPid, "consumerPid" to consumerPid)
+        }
 
         if (!ok) {
             if (newOffer != null) {
@@ -360,6 +403,19 @@ class NegotiationImpl(
     ): Unit =
         mutex.withLock {
             if ((state != NegotiationState.REQUESTED && state != NegotiationState.ACCEPTED) || role != Negotiation.Role.CONSUMER) {
+                LOG.atDebug {
+                    message = "The received message is invalid for the current negotiation state"
+                    val (providerPid, consumerPid) = getProviderAndConsumerPid()
+                    payload =
+                        mapOf(
+                            "role" to role,
+                            "providerPid" to providerPid,
+                            "consumerPid" to consumerPid,
+                            "state" to state,
+                            "expectedState" to "${NegotiationState.REQUESTED} or ${NegotiationState.ACCEPTED}",
+                            "expectedRole" to Negotiation.Role.CONSUMER,
+                        )
+                }
                 responseCallback(false)
                 return
             }
@@ -369,6 +425,11 @@ class NegotiationImpl(
             // If the provider tries to send a (semantically) different agreement, reject and terminate the negotiation.
             // We leave the semantics to the negotiator :)
             if (!negotiator.verifyAgreement(currentPolicy as OdrlOffer, req.agreement)) {
+                LOG.atDebug {
+                    message = "The negotiator deems this agreement is not the same as the previous policy"
+                    val (providerPid, consumerPid) = getProviderAndConsumerPid()
+                    payload = mapOf("role" to role, "providerPid" to providerPid, "consumerPid" to consumerPid, "state" to state)
+                }
                 responseCallback(false)
                 terminateNegotiation("errPolicyFailure")
                 return
