@@ -80,11 +80,12 @@ class NegotiationManager(
             val body = resp.bodyAsText()
             LOG.atInfo {
                 message = "Starting negotiation failed due to peer returning an error"
-                payload = buildMap {
-                    putAll(logParams)
-                    put("status", resp.status)
-                    put("description", body)
-                }
+                payload =
+                    buildMap {
+                        putAll(logParams)
+                        put("status", resp.status)
+                        put("description", body)
+                    }
             }
             return CompletableDeferred<OdrlPolicy>().apply {
                 cancel("Initial HTTP request failed with code ${resp.status}: $body")
@@ -96,10 +97,11 @@ class NegotiationManager(
         logParams["providerPid"] = deserializedResponse.providerPid
         LOG.atDebug {
             message = "Initial negotiation setup successful"
-            payload = buildMap {
-                putAll(logParams)
-                put("state", deserializedResponse.state)
-            }
+            payload =
+                buildMap {
+                    putAll(logParams)
+                    put("state", deserializedResponse.state)
+                }
         }
 
         when (deserializedResponse.state) {
@@ -187,10 +189,11 @@ class NegotiationManager(
         if (request.providerPid != null) {
             LOG.atDebug {
                 message = "This negotiation already exists, switching to getter"
-                payload = buildMap {
-                    putAll(logParams)
-                    put("providerPid", request.providerPid)
-                }
+                payload =
+                    buildMap {
+                        putAll(logParams)
+                        put("providerPid", request.providerPid)
+                    }
             }
             return getAsProvider(request.providerPid, request.consumerPid, peerIdent)
         }
@@ -237,10 +240,11 @@ class NegotiationManager(
         if (request.consumerPid != null) {
             LOG.atDebug {
                 message = "This negotiation already exists, switching to getter"
-                payload = buildMap {
-                    putAll(logParams)
-                    put("consumerPid", request.consumerPid)
-                }
+                payload =
+                    buildMap {
+                        putAll(logParams)
+                        put("consumerPid", request.consumerPid)
+                    }
             }
             return getAsConsumer(request.consumerPid, request.providerPid, peerIdent)
         }
@@ -293,10 +297,11 @@ class NegotiationManager(
         if (consumerPid != null && negotiation.peerPid != consumerPid) {
             LOG.atDebug {
                 message = "Cannot get negotiation as provider as the consumer pid does not match"
-                payload = buildMap {
-                    putAll(logParams)
-                    put("expectedConsumerPid", negotiation.peerPid)
-                }
+                payload =
+                    buildMap {
+                        putAll(logParams)
+                        put("expectedConsumerPid", negotiation.peerPid)
+                    }
             }
             // While this would be more of a bad request scenario, but we just return not found in order to prevent
             // even the remote possibility of probing for negotiations
@@ -307,10 +312,11 @@ class NegotiationManager(
         if (negotiation.peerIdentity != null && negotiation.peerIdentity != peerIdent) {
             LOG.atDebug {
                 message = "Cannot get negotiation as provider as the peer identity does not match"
-                payload = buildMap {
-                    putAll(logParams)
-                    put("expectedPeerIdentity", negotiation.peerIdentity)
-                }
+                payload =
+                    buildMap {
+                        putAll(logParams)
+                        put("expectedPeerIdentity", negotiation.peerIdentity)
+                    }
             }
             return null
         }
@@ -323,7 +329,8 @@ class NegotiationManager(
         providerPid: String?,
         peerIdent: String,
     ): Negotiation? {
-        val logParams = mutableMapOf<String, Any>("consumerPid" to consumerPid, "providerPid" to (providerPid ?: "unset"), "peerIdentity" to peerIdent)
+        val logParams =
+            mutableMapOf<String, Any>("consumerPid" to consumerPid, "providerPid" to (providerPid ?: "unset"), "peerIdentity" to peerIdent)
 
         // We have to be careful when getting the negotiation object as a consumer since we are the initiator here.
         // When the peer is implemented in a way that it sends out callbacks before we're ready the negotiation object
@@ -355,10 +362,11 @@ class NegotiationManager(
         if (providerPid != null && negotiation.peerPid != providerPid) {
             LOG.atDebug {
                 message = "Cannot get negotiation as consumer as the provider pid does not match"
-                payload = buildMap {
-                    putAll(logParams)
-                    put("expectedProviderPid", negotiation.peerPid)
-                }
+                payload =
+                    buildMap {
+                        putAll(logParams)
+                        put("expectedProviderPid", negotiation.peerPid)
+                    }
             }
             return null
         }
@@ -366,10 +374,11 @@ class NegotiationManager(
         if (negotiation.peerIdentity != null && negotiation.peerIdentity != peerIdent) {
             LOG.atDebug {
                 message = "Cannot get negotiation as consumer as the peer identity does not match"
-                payload = buildMap {
-                    putAll(logParams)
-                    put("expectedPeerIdentity", negotiation.peerIdentity)
-                }
+                payload =
+                    buildMap {
+                        putAll(logParams)
+                        put("expectedPeerIdentity", negotiation.peerIdentity)
+                    }
             }
             return null
         }
