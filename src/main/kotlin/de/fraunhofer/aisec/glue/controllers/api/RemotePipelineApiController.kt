@@ -7,6 +7,7 @@ import de.fraunhofer.aisec.glue.controllers.Controller
 import de.fraunhofer.aisec.glue.models.api.RemotePipelineCreationRequest
 import de.fraunhofer.aisec.glue.models.api.RemotePipelineStatusResponse
 import de.fraunhofer.aisec.glue.models.pipeline.PipelineCreateResponse
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
@@ -66,9 +67,20 @@ class RemotePipelineApiController(
                     }
 
                 if (!resp.status.isSuccess()) {
+                    val errorResp = resp.bodyAsText()
+                    LOG.atDebug {
+                        message = "Could not create pipeline on remote connector"
+                        payload =
+                            mapOf(
+                                "peerConnector" to req.peer,
+                                "request" to req.request,
+                                "status" to resp.status,
+                                "description" to errorResp,
+                            )
+                    }
                     call.respond(
                         HttpStatusCode.BadGateway,
-                        "Could not create the requested pipeline on the remote connector: ${resp.bodyAsText()}",
+                        "Could not create the requested pipeline on the remote connector: $errorResp",
                     )
                     return@post
                 }
@@ -77,6 +89,10 @@ class RemotePipelineApiController(
                     try {
                         resp.body<PipelineCreateResponse>()
                     } catch (_: NoTransformationFoundException) {
+                        LOG.atDebug {
+                            message = "Could not parse response from peer connector"
+                            payload = mapOf("peerConnector" to req.peer, "request" to req.request)
+                        }
                         call.respond(
                             HttpStatusCode.BadGateway,
                             "Could not deserialize the response from the remote connector",
@@ -107,6 +123,12 @@ class RemotePipelineApiController(
                     }
 
                 if (pipeline == null) {
+                    // There should really be a better way than this...
+                    // Maybe we should just try to delete the pipeline even if it does not exist (somehow)?
+                    LOG.atDebug {
+                        message = "Tried to delete non-existent remote pipeline. Did the connector restart in between?"
+                        payload = mapOf("remotePipelineId" to id)
+                    }
                     call.respond(HttpStatusCode.NotFound)
                     return@delete
                 }
@@ -120,6 +142,11 @@ class RemotePipelineApiController(
 
                 val resp = httpClient.delete(peerUrl)
                 if (!resp.status.isSuccess()) {
+                    val errResp = resp.bodyAsText()
+                    LOG.atDebug {
+                        message = "Could not delete the remote pipeline"
+                        payload = mapOf("remotePipelineId" to id, "peer" to peer, "status" to resp.status, "description" to errResp)
+                    }
                     // TODO: This is the critical point where we should not delete the local object unless this succeeds
                     call.respond(HttpStatusCode.BadGateway, "Error deleting on the remote connector")
                     return@delete
@@ -133,4 +160,8 @@ class RemotePipelineApiController(
 
     private fun createPipelineId(): String =
         generateSequence { Random.Default.nextBytes(8).hexEncode() }.first { n -> !managedPipelines.contains(n) }
+
+    companion object {
+        val LOG = KotlinLogging.logger {}
+    }
 }
