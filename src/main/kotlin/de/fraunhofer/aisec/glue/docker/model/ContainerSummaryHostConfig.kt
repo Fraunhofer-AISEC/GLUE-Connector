@@ -4,5 +4,5 @@ import com.fasterxml.jackson.annotation.JsonProperty
 
 data class ContainerSummaryHostConfig(
     @JsonProperty("NetworkMode")
-    val networkMode: String? = null
+    val networkMode: String? = null,
 )
