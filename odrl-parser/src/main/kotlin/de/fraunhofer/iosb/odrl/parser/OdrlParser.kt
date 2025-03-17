@@ -15,13 +15,15 @@ import java.io.Reader
 @Suppress("unused")
 class OdrlParser(
     val mapper: ObjectMapper = ObjectMapper(),
+    compactSerialization: Boolean = true,
     options: JsonLdOptions = JsonLdOptions(),
     documentLoader: DocumentLoader = createDocumentLoader(),
 ) {
+
     init {
         mapper.registerKotlinModule()
         val odrlMapper = mapper.copy()
-            .registerModule(OdrlModule())
+            .registerModule(OdrlModule(compactSerialization))
             .registerModule(JavaTimeModule())
             .setDateFormat(StdDateFormat().withColonInTimeZone(true)) // Provides ISO time support
             .setSerializationInclusion(JsonInclude.Include.NON_EMPTY)    // Hides empty properties in serialized policies
@@ -40,4 +42,5 @@ class OdrlParser(
     fun writeOdrlPolicy(policy: OdrlPolicy): String {
         return mapper.writeValueAsString(policy)
     }
+
 }

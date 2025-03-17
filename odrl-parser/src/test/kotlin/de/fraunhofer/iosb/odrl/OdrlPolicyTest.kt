@@ -11,6 +11,7 @@ import kotlin.test.assertEquals
 
 class OdrlPolicyTest {
     private val parser = Commons.parserInstance
+    private val compactParser = Commons.compactParserInstance
     private val policy1 = OdrlPolicy(
         uid = URI.create("http://example.com/policy"),
         profile = listOf(OdrlIri("http://example.com/profile")),
@@ -156,6 +157,54 @@ class OdrlPolicyTest {
         assertEquals(compactPolicy1, policy)
     }
 
+    private fun normalizeString(s: String): String {
+        return s.replace("\n", "").replace(" ", "")
+    }
+
+    @Test
+    fun testCompactPolicyCompactSerialization() {
+        val string = compactParser.writeOdrlPolicy(compactPolicy1)
+        val expected = "{\n" +
+                "  \"type\": \"Policy\",\n" +
+                "  \"uid\": \"http://example.com/compactPolicy\",\n" +
+                "  \"permission\": [\n" +
+                "    {\n" +
+                "      \"uid\": \"http://example.com/permission1\",\n" +
+                "      \"assignee\": {\n" +
+                "        \"type\": \"Party\",\n" +
+                "        \"uid\": \"http://example.com/assignee1\"\n" +
+                "      }\n" +
+                "    },\n" +
+                "    {\n" +
+                "      \"uid\": \"http://example.com/permission2\",\n" +
+                "      \"assignee\": {\n" +
+                "        \"type\": \"Party\",\n" +
+                "        \"uid\": \"http://example.com/assignee2\"\n" +
+                "      }\n" +
+                "    }\n" +
+                "  ],\n" +
+                "  \"prohibition\": {\n" +
+                "    \"uid\": \"http://example.com/prohibition1\",\n" +
+                "    \"assignee\": {\n" +
+                "      \"type\": \"Party\",\n" +
+                "      \"uid\": \"http://example.com/assignee3\"\n" +
+                "    }\n" +
+                "  },\n" +
+                "  \"profile\": \"http://example.com/profile\",\n" +
+                "  \"odrl:action\": \"http://www.w3.org/ns/odrl/2/play\",\n" +
+                "  \"target\": {\n" +
+                "    \"type\": \"Asset\",\n" +
+                "    \"uid\": \"http://example.com/target\"\n" +
+                "  },\n" +
+                "  \"assigner\": {\n" +
+                "    \"type\": \"Party\",\n" +
+                "    \"uid\": \"http://example.com/assigner\"\n" +
+                "  },\n" +
+                "  \"@context\": \"http://www.w3.org/ns/odrl.jsonld\"\n" +
+                "}"
+        assertEquals(normalizeString(expected), normalizeString(string))
+    }
+
     @Test
     fun testCompositionPolicy1Deserialization() {
         val policy = parser.readOdrlPolicy(loadFileOrDie("/composition-policy-example-1.json"))
@@ -170,6 +219,37 @@ class OdrlPolicyTest {
     }
 
     @Test
+    fun testCompositionPolicy1CompactSerialization() {
+        val string = compactParser.writeOdrlPolicy(compositionPolicy1)
+        val expected = "{\n" +
+                "  \"type\": \"Policy\",\n" +
+                "  \"uid\": \"http://example.com/compositionPolicy\",\n" +
+                "  \"permission\": {},\n" +
+                "  \"profile\": \"http://example.com/profile\",\n" +
+                "  \"odrl:action\": [\n" +
+                "    \"http://www.w3.org/ns/odrl/2/play\",\n" +
+                "    \"http://www.w3.org/ns/odrl/2/stream\"\n" +
+                "  ],\n" +
+                "  \"target\": [\n" +
+                "    {\n" +
+                "      \"type\": \"Asset\",\n" +
+                "      \"uid\": \"http://example.com/target1\"\n" +
+                "    },\n" +
+                "    {\n" +
+                "      \"type\": \"Asset\",\n" +
+                "      \"uid\": \"http://example.com/target2\"\n" +
+                "    }\n" +
+                "  ],\n" +
+                "  \"assigner\": {\n" +
+                "    \"type\": \"Party\",\n" +
+                "    \"uid\": \"http://example.com/assigner\"\n" +
+                "  },\n" +
+                "  \"@context\": \"http://www.w3.org/ns/odrl.jsonld\"\n" +
+                "}"
+        assertEquals(normalizeString(expected), normalizeString(string))
+    }
+
+    @Test
     fun testCompositionPolicy2Deserialization() {
         val policy = parser.readOdrlPolicy(loadFileOrDie("/composition-policy-example-2.json"))
         assertEquals(compositionPolicy2, policy)
@@ -180,5 +260,40 @@ class OdrlPolicyTest {
         val string = parser.writeOdrlPolicy(compositionPolicy2)
         val policy = parser.readOdrlPolicy(StringReader(string))
         assertEquals(compositionPolicy2, policy)
+    }
+
+    @Test
+    fun testCompositionPolicy2CompactSerialization() {
+        val string = compactParser.writeOdrlPolicy(compositionPolicy2)
+        val expected = "{\n" +
+                "  \"type\": \"Policy\",\n" +
+                "  \"uid\": \"http://example.com/compositionPolicy\",\n" +
+                "  \"permission\": {\n" +
+                "    \"odrl:action\": \"http://www.w3.org/ns/odrl/2/use\"\n" +
+                "  },\n" +
+                "  \"prohibition\": {\n" +
+                "    \"odrl:action\": [\n" +
+                "      \"http://www.w3.org/ns/odrl/2/play\",\n" +
+                "      \"http://www.w3.org/ns/odrl/2/stream\"\n" +
+                "    ]\n" +
+                "  },\n" +
+                "  \"profile\": \"http://example.com/profile\",\n" +
+                "  \"target\": [\n" +
+                "    {\n" +
+                "      \"type\": \"Asset\",\n" +
+                "      \"uid\": \"http://example.com/target1\"\n" +
+                "    },\n" +
+                "    {\n" +
+                "      \"type\": \"Asset\",\n" +
+                "      \"uid\": \"http://example.com/target2\"\n" +
+                "    }\n" +
+                "  ],\n" +
+                "  \"assigner\": {\n" +
+                "    \"type\": \"Party\",\n" +
+                "    \"uid\": \"http://example.com/assigner\"\n" +
+                "  },\n" +
+                "  \"@context\": \"http://www.w3.org/ns/odrl.jsonld\"\n" +
+                "}"
+        assertEquals(normalizeString(expected), normalizeString(string))
     }
 }
