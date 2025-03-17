@@ -15,7 +15,7 @@ import java.io.Reader
 @Suppress("unused")
 class OdrlParser(
     val mapper: ObjectMapper = ObjectMapper(),
-    compactSerialization: Boolean = true,
+    compactSerialization: Boolean = false,
     options: JsonLdOptions = JsonLdOptions(),
     documentLoader: DocumentLoader = createDocumentLoader(),
 ) {
