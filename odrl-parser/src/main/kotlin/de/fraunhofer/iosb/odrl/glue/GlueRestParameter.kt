@@ -13,7 +13,7 @@ class GlueRestParameter(
 
     // Properties of GlueRestParameter
     @JsonProperty(GlueIdentifiers.HTTP_URL)
-    val httpUrl: URI = URI.create(""),
+    val httpUrl: URI,
 
     @JsonProperty(GlueIdentifiers.HTTP_TYPE)
     val httpType: GlueHttpType = GlueHttpType.GET,

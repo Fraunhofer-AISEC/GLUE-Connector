@@ -17,11 +17,13 @@ class OdrlPermissionTest {
         output = OdrlAsset("http://example.com/outputAsset"),
         assignee = OdrlParty("http://example.com/assignee"),
         assigner = OdrlParty("http://example.com/assigner"),
-        constraint = listOf(OdrlConstraint(
-            leftOperand = OdrlLeftOperand("http://example.com/leftOperand"),
-            operator = OdrlOperator("http://www.w3.org/ns/odrl/2/gteq"),
-            rightOperand = listOf(PrimitiveString("exampleRightOperand"))
-        )),
+        constraint = listOf(
+            OdrlConstraint(
+                leftOperand = OdrlLeftOperand("http://example.com/leftOperand"),
+                operator = OdrlOperator("http://www.w3.org/ns/odrl/2/gteq"),
+                rightOperand = listOf(PrimitiveString("exampleRightOperand"))
+            )
+        ),
         duty = listOf(
             OdrlDuty(
                 uid = URI.create("http://example.com/compensationDuty"),

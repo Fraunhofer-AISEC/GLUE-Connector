@@ -11,14 +11,18 @@ class OdrlPartyTest {
     private val mapper = Commons.parserInstance.mapper
     private val party1 = OdrlParty(
         uid = URI.create("http://example.com/party"),
-        partOf = listOf(OdrlPartyCollection(
-            source = OdrlIri("http://example.com/partyCollection"),
-            refinement = listOf(OdrlConstraint(
-                leftOperand = OdrlLeftOperand("http://example.com/leftOperand"),
-                operator = OdrlOperator("http://www.w3.org/ns/odrl/2/eq"),
-                rightOperand = listOf(PrimitiveString("exampleRightOperand"))
-            ))
-        ))
+        partOf = listOf(
+            OdrlPartyCollection(
+                source = OdrlIri("http://example.com/partyCollection"),
+                refinement = listOf(
+                    OdrlConstraint(
+                        leftOperand = OdrlLeftOperand("http://example.com/leftOperand"),
+                        operator = OdrlOperator("http://www.w3.org/ns/odrl/2/eq"),
+                        rightOperand = listOf(PrimitiveString("exampleRightOperand"))
+                    )
+                )
+            )
+        )
     )
 
     @Test

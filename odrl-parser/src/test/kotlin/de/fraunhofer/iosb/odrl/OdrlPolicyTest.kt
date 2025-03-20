@@ -15,16 +15,20 @@ class OdrlPolicyTest {
     private val policy1 = OdrlPolicy(
         uid = URI.create("http://example.com/policy"),
         profile = listOf(OdrlIri("http://example.com/profile")),
-        permission = listOf(OdrlPermission(
-            uid = URI.create("http://example.com/permission"),
-            target = OdrlAsset("http://example.com/target"),
-            action = OdrlAction("http://www.w3.org/ns/odrl/2/play"),
-            constraint = listOf(OdrlConstraint(
-                leftOperand = OdrlLeftOperand("http://www.w3.org/ns/odrl/2/dateTime"),
-                operator = OdrlOperator("http://www.w3.org/ns/odrl/2/lteq"),
-                rightOperand = listOf(XmlDate(LocalDate.of(2045, 12, 31)))
-            ))
-        ))
+        permission = listOf(
+            OdrlPermission(
+                uid = URI.create("http://example.com/permission"),
+                target = OdrlAsset("http://example.com/target"),
+                action = OdrlAction("http://www.w3.org/ns/odrl/2/play"),
+                constraint = listOf(
+                    OdrlConstraint(
+                        leftOperand = OdrlLeftOperand("http://www.w3.org/ns/odrl/2/dateTime"),
+                        operator = OdrlOperator("http://www.w3.org/ns/odrl/2/lteq"),
+                        rightOperand = listOf(XmlDate(LocalDate.of(2045, 12, 31)))
+                    )
+                )
+            )
+        )
     )
     private val compactPolicy1 = OdrlPolicy(
         uid = URI.create("http://example.com/compactPolicy"),
@@ -45,13 +49,15 @@ class OdrlPolicyTest {
                 action = OdrlAction("http://www.w3.org/ns/odrl/2/play")
             )
         ),
-        prohibition = listOf(OdrlProhibition(
-            uid = URI.create("http://example.com/prohibition1"),
-            assignee = OdrlParty("http://example.com/assignee3"),
-            assigner = OdrlParty("http://example.com/assigner"),
-            target = OdrlAsset("http://example.com/target"),
-            action = OdrlAction("http://www.w3.org/ns/odrl/2/play")
-        ))
+        prohibition = listOf(
+            OdrlProhibition(
+                uid = URI.create("http://example.com/prohibition1"),
+                assignee = OdrlParty("http://example.com/assignee3"),
+                assigner = OdrlParty("http://example.com/assigner"),
+                target = OdrlAsset("http://example.com/target"),
+                action = OdrlAction("http://www.w3.org/ns/odrl/2/play")
+            )
+        )
     )
     private val compositionPolicy1 = OdrlPolicy(
         uid = URI.create("http://example.com/compositionPolicy"),
@@ -134,13 +140,15 @@ class OdrlPolicyTest {
     @Test
     fun testPolicyDeserializationWithInvalidUri() {
         assertThrows<InvalidFormatException> {
-            parser.readOdrlPolicy(StringReader(
-                "{\n" +
-                    "  \"@context\": \"http://www.w3.org/ns/odrl.jsonld\",\n" +
-                    "  \"@type\": \"Policy\",\n" +
-                    "  \"@id\": \":::invalid-uri:::\"\n" +
-                    "}"
-            ))
+            parser.readOdrlPolicy(
+                StringReader(
+                    "{\n" +
+                            "  \"@context\": \"http://www.w3.org/ns/odrl.jsonld\",\n" +
+                            "  \"@type\": \"Policy\",\n" +
+                            "  \"@id\": \":::invalid-uri:::\"\n" +
+                            "}"
+                )
+            )
         }
     }
 
@@ -295,5 +303,110 @@ class OdrlPolicyTest {
                 "  \"@context\": \"http://www.w3.org/ns/odrl.jsonld\"\n" +
                 "}"
         assertEquals(normalizeString(expected), normalizeString(string))
+    }
+
+    @Test
+    fun testCompositionPolicy2ConversionToOffer() {
+        val expectedOffer = OdrlOffer(
+            uid = URI.create("http://example.com/compositedOffer"),
+            profile = listOf(OdrlIri("http://example.com/profile")),
+            permission = listOf(
+                OdrlPermission(
+                    assigner = OdrlParty("http://example.com/freshAssigner"),
+                    target = OdrlAsset("http://example.com/target1"),
+                    action = OdrlAction("http://www.w3.org/ns/odrl/2/use")
+                ),
+                OdrlPermission(
+                    assigner = OdrlParty("http://example.com/freshAssigner"),
+                    target = OdrlAsset("http://example.com/target2"),
+                    action = OdrlAction("http://www.w3.org/ns/odrl/2/use")
+                )
+            ),
+            prohibition = listOf(
+                OdrlProhibition(
+                    assigner = OdrlParty("http://example.com/freshAssigner"),
+                    target = OdrlAsset("http://example.com/target1"),
+                    action = OdrlAction("http://www.w3.org/ns/odrl/2/play")
+                ),
+                OdrlProhibition(
+                    assigner = OdrlParty("http://example.com/freshAssigner"),
+                    target = OdrlAsset("http://example.com/target2"),
+                    action = OdrlAction("http://www.w3.org/ns/odrl/2/play")
+                ),
+                OdrlProhibition(
+                    assigner = OdrlParty("http://example.com/freshAssigner"),
+                    target = OdrlAsset("http://example.com/target1"),
+                    action = OdrlAction("http://www.w3.org/ns/odrl/2/stream")
+                ),
+                OdrlProhibition(
+                    assigner = OdrlParty("http://example.com/freshAssigner"),
+                    target = OdrlAsset("http://example.com/target2"),
+                    action = OdrlAction("http://www.w3.org/ns/odrl/2/stream")
+                )
+            )
+        )
+        assertEquals(
+            expectedOffer,
+            parser.convertToOdrlOffer(
+                compositionPolicy2,
+                OdrlParty("http://example.com/freshAssigner"),
+                URI.create("http://example.com/compositedOffer")
+            )
+        )
+    }
+
+    @Test
+    fun testCompositionPolicy2ConversionToAgreement() {
+        val expectedAgreement = OdrlAgreement(
+            uid = URI.create("http://example.com/compositionPolicy"),
+            profile = listOf(OdrlIri("http://example.com/profile")),
+            permission = listOf(
+                OdrlPermission(
+                    assigner = OdrlParty("http://example.com/assigner"),
+                    assignee = OdrlParty("http://example.com/assignee"),
+                    target = OdrlAsset("http://example.com/target1"),
+                    action = OdrlAction("http://www.w3.org/ns/odrl/2/use")
+                ),
+                OdrlPermission(
+                    assigner = OdrlParty("http://example.com/assigner"),
+                    assignee = OdrlParty("http://example.com/assignee"),
+                    target = OdrlAsset("http://example.com/target2"),
+                    action = OdrlAction("http://www.w3.org/ns/odrl/2/use")
+                )
+            ),
+            prohibition = listOf(
+                OdrlProhibition(
+                    assigner = OdrlParty("http://example.com/assigner"),
+                    assignee = OdrlParty("http://example.com/assignee"),
+                    target = OdrlAsset("http://example.com/target1"),
+                    action = OdrlAction("http://www.w3.org/ns/odrl/2/play")
+                ),
+                OdrlProhibition(
+                    assigner = OdrlParty("http://example.com/assigner"),
+                    assignee = OdrlParty("http://example.com/assignee"),
+                    target = OdrlAsset("http://example.com/target2"),
+                    action = OdrlAction("http://www.w3.org/ns/odrl/2/play")
+                ),
+                OdrlProhibition(
+                    assigner = OdrlParty("http://example.com/assigner"),
+                    assignee = OdrlParty("http://example.com/assignee"),
+                    target = OdrlAsset("http://example.com/target1"),
+                    action = OdrlAction("http://www.w3.org/ns/odrl/2/stream")
+                ),
+                OdrlProhibition(
+                    assigner = OdrlParty("http://example.com/assigner"),
+                    assignee = OdrlParty("http://example.com/assignee"),
+                    target = OdrlAsset("http://example.com/target2"),
+                    action = OdrlAction("http://www.w3.org/ns/odrl/2/stream")
+                )
+            )
+        )
+        assertEquals(
+            expectedAgreement,
+            parser.convertToOdrlAgreement(
+                compositionPolicy2,
+                listOf(OdrlParty("http://example.com/assignee"))
+            )
+        )
     }
 }

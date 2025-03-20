@@ -1,6 +1,6 @@
 package de.fraunhofer.iosb.odrl.evaluator
 
-import de.fraunhofer.iosb.odrl.*
+import de.fraunhofer.iosb.odrl.OdrlAsset
 import java.net.URI
 import kotlin.test.Test
 import kotlin.test.assertFalse

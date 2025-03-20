@@ -21,7 +21,7 @@ import java.net.URI
 open class OdrlPolicy(
     // Using the @field: annotation target allows Jackson to see these properties also in subclasses
     @field:JsonProperty("@id")
-    val uid: URI = URI.create(""),
+    val uid: URI,
 
     @field:JsonProperty(OdrlIdentifiers.HAS_PERMISSION)
     @field:JsonSetter(nulls = Nulls.AS_EMPTY)

@@ -14,7 +14,7 @@ import java.net.URI
 @JsonTypeName(OdrlIdentifiers.OFFER)
 class OdrlOffer(
     // Properties of superclass OdrlPolicy
-    uid: URI = URI.create(""),
+    uid: URI,
     permission: List<OdrlPermission> = listOf(),
     prohibition: List<OdrlProhibition> = listOf(),
     obligation: List<OdrlDuty> = listOf(),

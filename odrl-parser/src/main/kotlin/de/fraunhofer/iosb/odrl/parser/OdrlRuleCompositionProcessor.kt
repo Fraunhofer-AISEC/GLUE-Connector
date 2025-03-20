@@ -33,6 +33,23 @@ class OdrlRuleCompositionProcessor {
         OdrlIdentifiers.TRACKING_PARTY,
     )
 
+    fun replacePropertyInOdrlRules(
+        policy: ObjectNode,
+        key: String,
+        newValue: List<JsonNode>,
+    ) {
+        for (ruleKey in ruleKeys) {
+            val rule = policy.get(ruleKey) ?: continue
+            if (rule is ArrayNode) {
+                rule.forEach { if (it is ObjectNode) it.remove(key) }
+            } else if (rule is ObjectNode) {
+                rule.remove(key)
+            }
+        }
+        policy.replace(key, ArrayNode(JsonNodeFactory.instance, newValue))
+        atomizeOdrlPolicy(policy)
+    }
+
     fun atomizeOdrlPolicy(policy: ObjectNode) {
         moveSharedPropertiesToRules(policy)
         atomizeRules(policy)
@@ -44,10 +61,10 @@ class OdrlRuleCompositionProcessor {
                 continue
             val prop = policy.remove(propKey)
             for (ruleKey in ruleKeys) {
-                val rule = policy.get(ruleKey)
+                val rule = policy.get(ruleKey) ?: continue
                 if (rule is ArrayNode) {
                     rule.forEach { addPropertyToNode(it, propKey, prop) }
-                } else if (rule != null) {
+                } else {
                     addPropertyToNode(rule, propKey, prop)
                 }
             }
@@ -57,18 +74,24 @@ class OdrlRuleCompositionProcessor {
     private fun addPropertyToNode(
         node: JsonNode,
         key: String,
-        value: JsonNode
+        value: JsonNode,
     ) {
         if (node !is ObjectNode)
             return
         val existingProp = node.get(key);
-        if (existingProp is ArrayNode) {
-            if (value is ArrayNode)
-                existingProp.addAll(value)
-            else
-                existingProp.add(value)
-        } else {
+        if (existingProp == null) {
             node.replace(key, value)
+        } else if (existingProp is ArrayNode) {
+            if (value is ArrayNode)
+                existingProp.addAll(value.filter { !existingProp.contains(it) })
+            else if (!existingProp.contains(value))
+                existingProp.add(value)
+        } else if (value is ArrayNode) {
+            if (!value.contains(existingProp))
+                value.add(existingProp)
+            node.replace(key, value)
+        } else {
+            node.replace(key, ArrayNode(JsonNodeFactory.instance, listOf(existingProp, value)))
         }
     }
 
@@ -84,13 +107,17 @@ class OdrlRuleCompositionProcessor {
 
     private fun reduceOdrlRuleForKey(
         rule: JsonNode,
-        key: String
+        key: String,
     ): List<JsonNode> {
         if (rule !is ObjectNode)
             return listOf()
         val prop = rule.get(key)
         if (prop !is ArrayNode)
             return listOf(rule)
+        if (prop.isEmpty) {
+            rule.remove(key)
+            return listOf(rule)
+        }
         return prop.map { rule.deepCopy().set(key, it) }
     }
 

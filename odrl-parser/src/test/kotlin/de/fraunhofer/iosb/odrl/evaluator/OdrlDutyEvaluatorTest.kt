@@ -29,8 +29,12 @@ class OdrlDutyEvaluatorTest {
         runBlocking {
             // Duties without matching targets are considered fulfilled
             assertTrue(
-                evaluator.isFulfilled(ctx,
-                    OdrlDuty(target = OdrlAsset("http://example.com/anotherAsset"))
+                evaluator.isFulfilled(
+                    ctx,
+                    OdrlDuty(
+                        action = OdrlAction(""),
+                        target = OdrlAsset("http://example.com/anotherAsset")
+                    )
                 ).success
             )
         }
@@ -41,8 +45,10 @@ class OdrlDutyEvaluatorTest {
         runBlocking {
             // Duties without satisfied constraints are considered fulfilled
             assertTrue(
-                evaluator.isFulfilled(ctx,
+                evaluator.isFulfilled(
+                    ctx,
                     OdrlDuty(
+                        action = OdrlAction(""),
                         target = OdrlAsset("http://example.com/asset"),
                         constraint = listOf(satisfiedConstraint, unsatisfiedConstraint)
                     )
@@ -56,7 +62,8 @@ class OdrlDutyEvaluatorTest {
         runBlocking {
             // Duty is fulfilled if action is exercised
             assertTrue(
-                evaluator.isFulfilled(ctx,
+                evaluator.isFulfilled(
+                    ctx,
                     OdrlDuty(
                         target = OdrlAsset("http://example.com/asset"),
                         constraint = listOf(satisfiedConstraint),
