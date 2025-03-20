@@ -19,10 +19,14 @@ class DockerClientTest {
     fun testContainerFlow() {
         runBlocking {
             val name = Random.Default.nextBytes(10).hexEncode()
-            val container = client.containers.create(name, "container-pipeline/http-echo:latest")
-            container.start()
-            container.stop()
-            container.remove()
+            val httpEchoImage = System.getenv("HTTP_ECHO_IMAGE_NAME") ?: "container-pipeline/http-echo"
+            val container = client.containers.create(name, httpEchoImage)
+            try {
+                container.start()
+                container.stop()
+            } finally {
+                container.remove()
+            }
         }
     }
 
