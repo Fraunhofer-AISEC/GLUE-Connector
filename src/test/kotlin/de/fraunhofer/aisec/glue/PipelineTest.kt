@@ -26,6 +26,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.net.URI
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -193,7 +194,6 @@ class PipelineTest {
                 val dockerClient = DockerClient.fromEnv()
                 assertTrue(dockerClient.runCatching { ping() }.isSuccess, "Cannot run test, docker cannot be pinged")
 
-
                 val dockerBackend = DockerBackend(objectMapper, dockerClient)
                 val pipelineManager = PipelineManager(objectMapper, dockerBackend)
 
@@ -205,10 +205,17 @@ class PipelineTest {
 
                     val payload = Random.Default.nextBytes(32)
 
+                    val dockerHost = System.getenv("DOCKER_HOST")?.let(::URI)
+                    val containerHost = if (dockerHost != null && dockerHost.scheme == "tcp") {
+                        dockerHost.host
+                    } else {
+                        "127.0.0.1"
+                    }
+                    
                     // Check the echo endpoint
                     val httpClient = HttpClient()
                     val resp =
-                        httpClient.post("http://127.0.0.1:${containerInfo[0].ports[0].hostPort}/echo") {
+                        httpClient.post("http://${containerHost}:${containerInfo[0].ports[0].hostPort}/echo") {
                             setBody(payload)
                         }
                     assertTrue(payload.contentEquals(resp.body()))
@@ -219,20 +226,23 @@ class PipelineTest {
             }
         }
 
-    suspend fun getTestContainers(dockerClient: DockerClient? = null) =
-        GlueContainerPipeline(
+    suspend fun getTestContainers(dockerClient: DockerClient? = null): GlueContainerPipeline {
+        val proxyImage = System.getenv("PROXY_IMAGE_NAME") ?: "container-pipeline/proxy"
+        val httpEchoImage = System.getenv("HTTP_ECHO_IMAGE_NAME") ?: "container-pipeline/http-echo"
+        return GlueContainerPipeline(
             listOf(
                 GlueContainer(
-                    image = "container-pipeline/proxy",
-                    hash = "sha256:${getContainerIdHash("container-pipeline/proxy", dockerClient)}",
+                    image = proxyImage,
+                    hash = "sha256:${getContainerIdHash(proxyImage, dockerClient)}",
                     allowNetwork = true,
                 ),
                 GlueContainer(
-                    image = "container-pipeline/http-echo",
-                    hash = "sha256:${getContainerIdHash("container-pipeline/http-echo", dockerClient)}",
+                    image = httpEchoImage,
+                    hash = "sha256:${getContainerIdHash(httpEchoImage, dockerClient)}",
                 ),
             ),
         )
+    }
 
     suspend fun getContainerIdHash(
         image: String,
