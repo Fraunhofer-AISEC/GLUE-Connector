@@ -35,11 +35,27 @@ common_curl_opts=(
   # TODO: Put auth here when implemented
 )
 
-# Required to make sure that we are measuring the latest version
-image=$(docker pull -q container-registry.gitlab.cc-asp.fraunhofer.de/ccit-glue/usage-control/container-pipeline/http-echo:latest)
-HTTP_ECHO_HASH=$(docker images --no-trunc --quiet container-registry.gitlab.cc-asp.fraunhofer.de/ccit-glue/usage-control/container-pipeline/http-echo:latest)
-export HTTP_ECHO_HASH
-printf "Found hash of %s:\n%s\n" "$image" "$HTTP_ECHO_HASH"
+REGISTRY="container-registry.gitlab.cc-asp.fraunhofer.de/ccit-glue/usage-control/container-pipeline"
+
+pull_and_get_hash() {
+    local image_name="$1"
+    local var_name="$2"
+
+    local image_path="${REGISTRY}/${image_name}:latest"
+    local image=$(docker pull -q "$image_path")
+    local image_hash=$(docker images --no-trunc --quiet "$image_path")
+
+    # Export the hash with the provided variable name
+    export "$var_name"="$image_hash"
+
+    printf "Found hash of %s:\n%s\n" "$image" "$image_hash"
+}
+
+# Pull images and get their hashes
+pull_and_get_hash "http-echo" "HTTP_ECHO_HASH"
+pull_and_get_hash "proxy" "PROXY_HASH"
+pull_and_get_hash "forwarder" "FORWARDER_HASH"
+
 policy_content="$(envsubst < "$policy")"
 
 echo "Starting the contract negotiation..."

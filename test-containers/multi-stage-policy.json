@@ -24,13 +24,13 @@
                   {
                     "@type": "http://fhg.de/glue/Container",
                     "glue:image": "container-registry.gitlab.cc-asp.fraunhofer.de/ccit-glue/usage-control/container-pipeline/proxy:latest",
-                    "glue:hash": "sha256:1c79045b1b89e4cc5ffb1a36a156e5acaa7df6ef8ff85eb117e117a0f7b0883f",
+                    "glue:hash": "${PROXY_HASH}",
                     "glue:allowNetwork": true
                   },
                   {
                     "@type": "http://fhg.de/glue/Container",
                     "glue:image": "container-registry.gitlab.cc-asp.fraunhofer.de/ccit-glue/usage-control/container-pipeline/forwarder:latest",
-                    "glue:hash": "sha256:2768c687bc5a5488387a56fc587dcfd88e5b3eccb462c27dc24aef082f120c93",
+                    "glue:hash": "${FORWARDER_HASH}",
                     "glue:allowNetwork": true
                   }
                 ]
@@ -79,7 +79,7 @@
                                   {
                                     "@type": "http://fhg.de/glue/Container",
                                     "glue:image": "container-registry.gitlab.cc-asp.fraunhofer.de/ccit-glue/usage-control/container-pipeline/proxy:latest",
-                                    "glue:hash": "sha256:1c79045b1b89e4cc5ffb1a36a156e5acaa7df6ef8ff85eb117e117a0f7b0883f",
+                                    "glue:hash": "${PROXY_HASH}",
                                     "glue:parameter": {
                                       "@type": "http://fhg.de/glue/RestParameter",
                                       "glue:httpUrl": "http://0.0.0.0:1234/dockerEndpoint?key1=value1",
