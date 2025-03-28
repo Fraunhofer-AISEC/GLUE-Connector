@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -9,8 +10,11 @@ import (
 	"net/url"
 	"os"
 	"strings"
-	"bytes"
 )
+
+func closeSilent(closeable io.Closer) {
+	_ = closeable.Close()
+}
 
 // Join a base url with a path, ensuring that a single slash is in between
 func joinUrl(base string, suffix string) string {
@@ -22,7 +26,7 @@ func joinUrl(base string, suffix string) string {
 		return base + "/" + suffix
 	}
 	// One slash
-	if trailingSlash || leadingSlash {
+	if trailingSlash {
 		return base + suffix
 	}
 	// two slashes
@@ -32,21 +36,21 @@ func joinUrl(base string, suffix string) string {
 func makeHandler(connectorHost string, destination string) http.HandlerFunc {
 	httpClient := http.Client{}
 
-    // Set up the parameter for the next connector's assignee here
-    // for simplicity, this is just the full destination URI
-    parameterUrl := fmt.Sprintf("http://%s:8080/coordinator/policy-parameter", connectorHost)
-    var paramsBuffer bytes.Buffer
-    json.NewEncoder(&paramsBuffer).Encode(map[string]string{ "nextDataReceiverUid": destination })
-    resp, err := httpClient.Post(parameterUrl, "application/json", &paramsBuffer)
-    if err != nil {
-        log.Fatalf("Error posting policy parameters: %s", err)
-    }
-    defer resp.Body.Close()
-    if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-        log.Fatalf("Got error response from coordinator: %s", resp.Status)
-    }
+	// Set up the parameter for the next connector's assignee here
+	// for simplicity, this is just the full destination URI
+	parameterUrl := fmt.Sprintf("http://%s:8080/coordinator/policy-parameter", connectorHost)
+	var paramsBuffer bytes.Buffer
+	_ = json.NewEncoder(&paramsBuffer).Encode(map[string]string{"nextDataReceiverUid": destination})
+	resp, err := httpClient.Post(parameterUrl, "application/json", &paramsBuffer)
+	if err != nil {
+		log.Fatalf("Error posting policy parameters: %s", err)
+	}
+	defer closeSilent(resp.Body)
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		log.Fatalf("Got error response from coordinator: %s", resp.Status)
+	}
 
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 		fullDestination := joinUrl(destination, r.URL.Path)
 		proxyUrl := fmt.Sprintf("http://%s:8080/coordinator/proxy?destination=%s", connectorHost, url.QueryEscape(fullDestination))
 
@@ -55,14 +59,14 @@ func makeHandler(connectorHost string, destination string) http.HandlerFunc {
 		if err != nil {
 			log.Fatalf("Error handling request for %s: %s", r.URL, err)
 		}
-        defer resp.Body.Close()
-        if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-            log.Fatalf("Got error response from coordinator: %s", resp.Status)
-        }
+		defer closeSilent(resp.Body)
+		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+			log.Fatalf("Got error response from coordinator: %s", resp.Status)
+		}
 
 		w.WriteHeader(http.StatusOK)
-		io.Copy(w, resp.Body)
-	})
+		_, _ = io.Copy(w, resp.Body)
+	}
 }
 
 type config struct {
@@ -91,5 +95,5 @@ func main() {
 	log.Printf("Next hop is at %s", os.Args[1])
 
 	handler := makeHandler(config.Controller, os.Args[1])
-	http.ListenAndServe("0.0.0.0:8080", handler)
+	_ = http.ListenAndServe("0.0.0.0:8080", handler)
 }

@@ -9,15 +9,19 @@ import (
 	"os"
 )
 
+func closeSilent(closeable io.Closer) {
+	_ = closeable.Close()
+}
+
 func proxy(conn net.Conn, proxyAddress string) {
-	defer conn.Close()
+	defer closeSilent(conn)
 
 	peer, err := net.Dial("tcp", proxyAddress)
 	if err != nil {
 		log.Printf("Could not connect to proxy address: %s", err.Error())
 		return
 	}
-	defer peer.Close()
+	defer closeSilent(peer)
 
 	forward := func(from net.Conn, to net.Conn, errCh chan<- error) {
 		_, err := io.Copy(to, from)

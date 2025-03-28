@@ -9,7 +9,7 @@ import (
 func echo(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Handling request from %s", r.RemoteAddr)
 
-	io.Copy(w, r.Body)
+	_, _ = io.Copy(w, r.Body)
 }
 
 func main() {
