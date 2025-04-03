@@ -89,7 +89,7 @@ class NegotiationTest {
             val contractStore = mockk<ContractStore>()
             coJustRun { contractStore.addContract(any()) }
 
-            val negotiationManager = NegotiationManager(httpClient, objectMapper, DummyNegotiator(true), contractStore)
+            val negotiationManager = NegotiationManager(httpClient, objectMapper, DummyNegotiator(true), contractStore, OdrlParser())
 
             val contractRequest =
                 ContractRequestMessage(
@@ -159,7 +159,7 @@ class NegotiationTest {
                 }
             val contractStore = mockk<ContractStore>()
             coJustRun { contractStore.addContract(any()) }
-            val negotiationManager = NegotiationManager(httpClient, objectMapper, DummyNegotiator(), contractStore)
+            val negotiationManager = NegotiationManager(httpClient, objectMapper, DummyNegotiator(), contractStore, OdrlParser())
 
             val contractOffer =
                 ContractOfferMessage(
@@ -271,7 +271,7 @@ class NegotiationTest {
                     }
                 }
             val contractStore = ContractStore(objectMapper)
-            val negotiationManager = NegotiationManager(httpClient, objectMapper, DummyNegotiator(), contractStore)
+            val negotiationManager = NegotiationManager(httpClient, objectMapper, DummyNegotiator(), contractStore, OdrlParser())
             val controller = NegotiationController(negotiationManager)
 
             configureTestApp(controller)
@@ -346,7 +346,7 @@ class NegotiationTest {
                 }
             val contractStore = mockk<ContractStore>()
             coJustRun { contractStore.addContract(any()) }
-            val negotiationManager = NegotiationManager(httpClient, objectMapper, DummyNegotiator(), contractStore)
+            val negotiationManager = NegotiationManager(httpClient, objectMapper, DummyNegotiator(), contractStore, OdrlParser())
             val controller = NegotiationController(negotiationManager)
 
             configureTestApp(controller)
@@ -432,18 +432,20 @@ class NegotiationTest {
                     }
                 }
 
+            val odrlParser = OdrlParser()
+
             val providerContractStore = mockk<ContractStore>()
             coJustRun { providerContractStore.addContract(any()) }
 
             val providerNegotiationManager =
-                NegotiationManager(testClient, objectMapper, DummyNegotiator(), providerContractStore)
+                NegotiationManager(testClient, objectMapper, DummyNegotiator(), providerContractStore, odrlParser)
             val providerController = NegotiationController(providerNegotiationManager)
 
             val consumerContractStore = mockk<ContractStore>()
             coJustRun { consumerContractStore.addContract(any()) }
 
             val consumerNegotiationManager =
-                NegotiationManager(testClient, objectMapper, DummyNegotiator(), consumerContractStore)
+                NegotiationManager(testClient, objectMapper, DummyNegotiator(), consumerContractStore, odrlParser)
             val consumerController = NegotiationController(consumerNegotiationManager)
 
             fun testServer(
@@ -512,6 +514,6 @@ class NegotiationTest {
                 objectMapper.readValue(input, OdrlOffer::class.java)
             }
 
-        val exampleAgreement = exampleOffer.toAgreement(OdrlParty("http://dataconsumer.com/org"))
+        val exampleAgreement = exampleOffer.toAgreement(OdrlParser(), OdrlParty("http://dataconsumer.com/org"))
     }
 }
