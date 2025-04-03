@@ -31,7 +31,7 @@ class PolicyEngine(private val pipelineManager: PipelineManager) {
                 messageBuilder.append(" and ")
             }
             if (decision.infringementViolations.isNotEmpty()) {
-                val infringements = decision.infringementViolations.joinToString { a -> a.uid.toString() }
+                val infringements = decision.infringementViolations.joinToString { a -> a.value.uid.toString() }
                 messageBuilder.append("the following action(s) violate the policy's prohibitions: $infringements")
             }
 

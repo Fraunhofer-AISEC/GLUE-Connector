@@ -39,6 +39,7 @@ class ContainerInterfaceController(
     private val contractStore: ContractStore,
     private val policyEngine: PolicyEngine,
     private val httpClient: HttpClient,
+    private val odrlParser: OdrlParser,
 ) : Controller {
     override fun Route.registerRoutes() {
         // TOOD: Insert some container-side authentication
@@ -131,8 +132,8 @@ class ContainerInterfaceController(
                 // Negotiate the policy with the next connector
 
                 val convertedNextPolicy =
-                    OdrlParser().convertToOdrlPolicy(nextPolicy.json)
-                        .toOffer(OdrlParty(URI("todo:name-this-connector")))
+                    odrlParser.convertToOdrlPolicy(nextPolicy.json)
+                        .toOffer(odrlParser, OdrlParty(URI("todo:name-this-connector")))
 
                 // HACK: This will not work in production since we will likely not be reachable by hostname alone
                 // This only works in docker compose or similar environments.
