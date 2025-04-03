@@ -82,7 +82,7 @@ class ContractStore(
                         val targetUid = p.target?.uid?.toString() ?: continue
                         item {
                             set(it.target, targetUid)
-                            set(it.action, p.action.uid.toString())
+                            set(it.action, p.action.value.uid.toString())
                             set(it.contract, contract.uid.toString())
                         }
                     }

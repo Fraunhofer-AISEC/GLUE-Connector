@@ -21,31 +21,31 @@ import java.net.URI
 open class OdrlPolicy(
     // Using the @field: annotation target allows Jackson to see these properties also in subclasses
     @field:JsonProperty("@id")
-    val uid: URI = URI.create(""),
+    val uid: URI,
 
     @field:JsonProperty(OdrlIdentifiers.HAS_PERMISSION)
-    @JsonSetter(nulls = Nulls.AS_EMPTY)
+    @field:JsonSetter(nulls = Nulls.AS_EMPTY)
     val permission: List<OdrlPermission> = listOf(),
 
     @field:JsonProperty(OdrlIdentifiers.HAS_PROHIBITION)
-    @JsonSetter(nulls = Nulls.AS_EMPTY)
+    @field:JsonSetter(nulls = Nulls.AS_EMPTY)
     val prohibition: List<OdrlProhibition> = listOf(),
 
     @field:JsonProperty(OdrlIdentifiers.OBLIGATION)
-    @JsonSetter(nulls = Nulls.AS_EMPTY)
+    @field:JsonSetter(nulls = Nulls.AS_EMPTY)
     val obligation: List<OdrlDuty> = listOf(),
 
     @field:JsonProperty(OdrlIdentifiers.PROFILE)
-    @JsonSetter(nulls = Nulls.AS_EMPTY)
+    @field:JsonSetter(nulls = Nulls.AS_EMPTY)
     val profile: List<OdrlIri> = listOf(),
 
     @field:JsonProperty(OdrlIdentifiers.INHERIT_FROM)
-    @JsonSetter(nulls = Nulls.AS_EMPTY)
+    @field:JsonSetter(nulls = Nulls.AS_EMPTY)
     val inheritFrom: List<OdrlIri> = listOf(),
 
     @field:JsonProperty(OdrlIdentifiers.CONFLICT)
     val conflict: OdrlConflictTerm? = null,
-): JsonLdBeanValidator {
+) : JsonLdBeanValidator {
 
     override fun validate(): List<ValidationError> {
         return validateOdrlPolicy.validate(this).errors
@@ -130,5 +130,4 @@ val validateOdrlPolicy = Validation<OdrlPolicy> {
     OdrlPolicy::conflict ifPresent {
         run(validateOdrlConflictTerm)
     }
-
 }

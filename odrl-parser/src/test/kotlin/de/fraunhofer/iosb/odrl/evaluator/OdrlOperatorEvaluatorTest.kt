@@ -60,14 +60,18 @@ class OdrlOperatorEvaluatorTest {
             ).success
         )
         assertTrue(
-            evaluator.evaluateWithRightOperand(ctx, neq, leftOperand, listOf(
-                GlueContainerPipeline(listOf(
-                    GlueContainer(
-                        image = "testContainer",
-                        hash = "364a4787748a98c1c28085d4154a06c3a9be9a67c0b08a56b3f69fa8fabf172e"
+            evaluator.evaluateWithRightOperand(
+                ctx, neq, leftOperand, listOf(
+                    GlueContainerPipeline(
+                        listOf(
+                            GlueContainer(
+                                image = "testContainer",
+                                hash = "364a4787748a98c1c28085d4154a06c3a9be9a67c0b08a56b3f69fa8fabf172e"
+                            )
+                        )
                     )
-                ))
-            )).success
+                )
+            ).success
         )
     }
 }

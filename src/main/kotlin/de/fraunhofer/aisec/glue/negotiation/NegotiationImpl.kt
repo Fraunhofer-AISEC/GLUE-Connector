@@ -6,6 +6,7 @@ import de.fraunhofer.iosb.odrl.OdrlAgreement
 import de.fraunhofer.iosb.odrl.OdrlOffer
 import de.fraunhofer.iosb.odrl.OdrlParty
 import de.fraunhofer.iosb.odrl.OdrlPolicy
+import de.fraunhofer.iosb.odrl.parser.OdrlParser
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ktor.client.*
 import io.ktor.client.request.*
@@ -27,6 +28,7 @@ class NegotiationImpl(
     val negotiator: Negotiator,
     val objectMapper: ObjectMapper,
     val completionCallback: NegotiationCompletionCallback,
+    private val odrlParser: OdrlParser,
 ) : Negotiation {
     override var state: NegotiationState = state
         private set(newState) {
@@ -217,7 +219,7 @@ class NegotiationImpl(
             }
         }
 
-        val agreement = req.offer.toAgreement(OdrlParty())
+        val agreement = req.offer.toAgreement(odrlParser, OdrlParty())
 
         // We have accepted the contract as is, tell the consumer and anyone waiting for this contract negotiation
         if (!terminateOnError(
@@ -322,7 +324,7 @@ class NegotiationImpl(
 
             state = NegotiationState.ACCEPTED
 
-            val agreement = (currentPolicy as OdrlOffer).toAgreement(OdrlParty())
+            val agreement = (currentPolicy as OdrlOffer).toAgreement(odrlParser, OdrlParty())
             currentPolicy = agreement
 
             if (!terminateOnError(

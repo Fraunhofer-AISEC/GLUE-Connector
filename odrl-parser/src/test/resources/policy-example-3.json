@@ -1,7 +1,8 @@
 {
   "@context": {
     "odrl": "http://www.w3.org/ns/odrl/2/",
-    "glue": "http://fhg.de/glue/"
+    "glue": "http://fhg.de/glue/",
+    "rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
   },
   "@id": "http://dataowner.com/policy:1234",
   "odrl:permission": [
@@ -22,7 +23,9 @@
       ],
       "odrl:duty": {
         "odrl:action": {
-          "@id": "http://fhg.de/glue/deployPipeline",
+          "rdf:value": {
+            "@id": "http://fhg.de/glue/deployPipeline"
+          },
           "odrl:refinement": [
             {
               "odrl:leftOperand": "http://fhg.de/glue/containerPipeline",
@@ -60,7 +63,9 @@
       "odrl:action": "http://www.w3.org/ns/odrl/2/distribute",
       "odrl:duty": {
         "odrl:action": {
-          "@id": "http://www.w3.org/ns/odrl/2/nextPolicy",
+          "rdf:value": {
+            "@id": "http://www.w3.org/ns/odrl/2/nextPolicy"
+          },
           "odrl:refinement": [
             {
               "odrl:leftOperand": "http://fhg.de/glue/policyTemplate",

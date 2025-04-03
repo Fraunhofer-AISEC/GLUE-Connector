@@ -29,11 +29,13 @@ class OdrlDutyTest {
                 rightOperand = listOf(PrimitiveString("exampleRightOperand2"))
             )
         ),
-        consequence = listOf(OdrlDuty(
-            uid = URI.create("http://example.com/consequenceDuty"),
-            action = OdrlAction("http://www.w3.org/ns/odrl/2/compensate"),
-            compensatedParty = OdrlParty("http://example.com/compensatedParty")
-        ))
+        consequence = listOf(
+            OdrlDuty(
+                uid = URI.create("http://example.com/consequenceDuty"),
+                action = OdrlAction("http://www.w3.org/ns/odrl/2/compensate"),
+                compensatedParty = OdrlParty("http://example.com/compensatedParty")
+            )
+        )
     )
 
     @Test

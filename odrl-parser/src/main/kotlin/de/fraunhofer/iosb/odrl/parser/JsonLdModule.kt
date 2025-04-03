@@ -1,19 +1,16 @@
 package de.fraunhofer.iosb.odrl.parser
 
 import com.apicatalog.jsonld.JsonLdOptions
-import com.apicatalog.jsonld.loader.DocumentLoader
-import com.apicatalog.jsonld.loader.FileLoader
-import com.apicatalog.jsonld.loader.HttpLoader
-import com.apicatalog.jsonld.loader.LRUDocumentCache
-import com.apicatalog.jsonld.loader.SchemeRouter
+import com.apicatalog.jsonld.loader.*
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.module.SimpleModule
 
-class JsonLdModule (
+class JsonLdModule(
     private val mapper: ObjectMapper = ObjectMapper(),
     private val options: JsonLdOptions = JsonLdOptions(),
     private val documentLoader: DocumentLoader = createDocumentLoader(),
 ) : SimpleModule() {
+
     override fun setupModule(context: SetupContext) {
         context.addBeanSerializerModifier(JsonLdBeanSerializerModifier(mapper, options, documentLoader))
         context.addBeanDeserializerModifier(JsonLdBeanDeserializerModifier(mapper, options, documentLoader))
@@ -31,4 +28,5 @@ class JsonLdModule (
                 .set("file", FileLoader())
         }
     }
+
 }

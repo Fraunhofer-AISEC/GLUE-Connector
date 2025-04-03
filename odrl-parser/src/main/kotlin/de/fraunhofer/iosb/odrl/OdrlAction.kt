@@ -6,14 +6,15 @@ import de.fraunhofer.iosb.odrl.parser.JsonLd
 import de.fraunhofer.iosb.odrl.parser.JsonLdBeanValidator
 import io.konform.validation.Validation
 import io.konform.validation.ValidationError
-import java.net.URI
 
 @JsonLd(GlueIdentifiers.CONTEXT)
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type", defaultImpl = OdrlAction::class)
 @JsonTypeName(OdrlIdentifiers.ACTION)
 data class OdrlAction(
-    @JsonProperty("@id")
-    val uid: URI,
+    // According to the ODRL information model, an action must be identified by a rdf:value when using refinements
+    @JsonAlias("@id")
+    @JsonProperty(RdfIdentifiers.VALUE)
+    val value: RdfValue,
 
     @JsonProperty(OdrlIdentifiers.REFINEMENT)
     @JsonSetter(nulls = Nulls.AS_EMPTY)
@@ -25,10 +26,10 @@ data class OdrlAction(
     @JsonProperty(OdrlIdentifiers.IMPLIES)
     @JsonSetter(nulls = Nulls.AS_EMPTY)
     val implies: List<OdrlAction> = listOf(),
-): JsonLdBeanValidator {
+) : JsonLdBeanValidator {
     // Constructor necessary for Jackson to deserialize primitive type
     @Suppress("unused")
-    constructor(primitiveValue: String) : this(URI.create(primitiveValue))
+    constructor(primitiveValue: String) : this(RdfValue(primitiveValue))
 
     override fun validate(): List<ValidationError> {
         return validateOdrlAction.validate(this).errors
@@ -36,7 +37,7 @@ data class OdrlAction(
 
     private fun getPropertyMap(): MutableMap<String, Any> {
         val map = mutableMapOf<String, Any>()
-        map["uid"] = uid
+        map["value"] = value
         if (refinement.isNotEmpty()) map["refinement"] = refinement
         if (includedIn != null) map["includedIn"] = includedIn
         if (implies.isNotEmpty()) map["implies"] = implies
@@ -49,8 +50,8 @@ data class OdrlAction(
 }
 
 val validateOdrlAction = Validation {
-    OdrlAction::uid {
-        addConstraint("OdrlAction: {value} is not a valid IRI") { isIri(it) }
+    OdrlAction::value {
+        addConstraint("OdrlAction: {value} is not a valid IRI") { isIri(it.uid) }
     }
 
     // An Action MAY have none, one or more refinement property values of type Constraint

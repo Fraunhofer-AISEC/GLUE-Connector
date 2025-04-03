@@ -1,6 +1,7 @@
 package de.fraunhofer.iosb.odrl
 
-import com.fasterxml.jackson.annotation.*
+import com.fasterxml.jackson.annotation.JsonTypeInfo
+import com.fasterxml.jackson.annotation.JsonTypeName
 import de.fraunhofer.iosb.odrl.glue.GlueIdentifiers
 import de.fraunhofer.iosb.odrl.parser.JsonLd
 import de.fraunhofer.iosb.odrl.parser.JsonLdBeanValidator
@@ -13,17 +14,13 @@ import java.net.URI
 @JsonTypeName(OdrlIdentifiers.OFFER)
 class OdrlOffer(
     // Properties of superclass OdrlPolicy
-    uid: URI = URI.create(""),
+    uid: URI,
     permission: List<OdrlPermission> = listOf(),
     prohibition: List<OdrlProhibition> = listOf(),
     obligation: List<OdrlDuty> = listOf(),
     profile: List<OdrlIri> = listOf(),
     inheritFrom: List<OdrlIri> = listOf(),
     conflict: OdrlConflictTerm? = null,
-
-    // Properties of OdrlAgreement
-    @JsonProperty(OdrlIdentifiers.ASSIGNER)
-    val assigner: OdrlParty = OdrlParty(),
 ) : OdrlPolicy(uid, permission, prohibition, obligation, profile, inheritFrom, conflict),
     JsonLdBeanValidator {
 
@@ -36,21 +33,11 @@ class OdrlOffer(
         if (javaClass != other?.javaClass) return false
         if (!super.equals(other)) return false
 
-        other as OdrlOffer
-
-        return assigner == other.assigner
+        return true
     }
 
     override fun hashCode(): Int {
-        var result = super.hashCode()
-        result = 31 * result + assigner.hashCode()
-        return result
-    }
-
-    override fun getPropertyMap(): MutableMap<String, Any> {
-        val map = super.getPropertyMap()
-        map["assigner"] = assigner
-        return map
+        return super.hashCode()
     }
 
     override fun toString(): String {
@@ -61,8 +48,14 @@ class OdrlOffer(
 val validateOdrlOffer = Validation {
     run(validateOdrlPolicy)
 
-    // An Offer MUST have one assigner property value of type Party
-    OdrlOffer::assigner {
-        run(validateOdrlParty)
+    // An Offer MUST have one assigner property value in each rule
+    OdrlOffer::permission onEach {
+        OdrlPermission::assigner required {}
+    }
+    OdrlOffer::prohibition onEach {
+        OdrlProhibition::assigner required {}
+    }
+    OdrlOffer::obligation onEach {
+        OdrlDuty::assigner required {}
     }
 }

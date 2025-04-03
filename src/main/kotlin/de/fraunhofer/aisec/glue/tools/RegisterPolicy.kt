@@ -90,7 +90,7 @@ fun main(args: Array<String>) {
                     }
                 }
             }
-        val negotiationManager = NegotiationManager(httpClient, objectMapper, DummyNegotiator(true), ContractStore(objectMapper))
+        val negotiationManager = NegotiationManager(httpClient, objectMapper, DummyNegotiator(true), ContractStore(objectMapper), OdrlParser())
 
         val closeChan = Channel<Unit>()
         val addressChan = Channel<String>()

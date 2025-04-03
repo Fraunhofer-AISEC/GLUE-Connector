@@ -1,0 +1,17 @@
+{
+  "@context": "http://www.w3.org/ns/odrl.jsonld",
+  "@type": "Action",
+  "rdf:value": {
+    "@id": "odrl:use"
+  },
+  "refinement": {
+    "leftOperand": "http://example.com/leftOperand",
+    "operator": "eq",
+    "rightOperand": "exampleRightOperand"
+  },
+  "includedIn": "http://example.com/anotherAction",
+  "implies": [
+    "http://example.com/impliedAction1",
+    "http://example.com/impliedAction2"
+  ]
+}

@@ -6,9 +6,10 @@ import kotlin.system.exitProcess
 
 class Commons {
     companion object {
-        // Use a singleton parser instance to share the document loader cache over all tests
+        // Use singleton parser instances to share the document loader cache over all tests
         // This prevents HTTP 429 errors (too many requests)
         val parserInstance: OdrlParser = OdrlParser()
+        val compactParserInstance: OdrlParser = OdrlParser(compactSerialization = true)
 
         fun loadFileOrDie(fileName: String): BufferedReader {
             val reader = {}.javaClass.getResourceAsStream(fileName)?.bufferedReader()

@@ -33,6 +33,6 @@ fun <T : Any, R : Any> upcast(
     )
 }
 
-fun OdrlPolicy.toOffer(assigner: OdrlParty) = upcast(this, OdrlOffer::class, mapOf(OdrlOffer::assigner.name to assigner))
+fun OdrlPolicy.toOffer(parser: OdrlParser, assigner: OdrlParty) = parser.convertToOdrlOffer(this, assigners = listOf(assigner))
 
-fun OdrlOffer.toAgreement(assignee: OdrlParty) = upcast(this, OdrlAgreement::class, mapOf(OdrlAgreement::assignee.name to assignee))
+fun OdrlOffer.toAgreement(parser: OdrlParser, assignee: OdrlParty) = parser.convertToOdrlAgreement(this, assignees = listOf(assignee))

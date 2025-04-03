@@ -29,7 +29,8 @@ class OdrlProhibitionEvaluatorTest {
         runBlocking {
             // Prohibitions without matching actions do not disallow context
             assertFalse(
-                evaluator.isDisallowed(ctx,
+                evaluator.isDisallowed(
+                    ctx,
                     OdrlProhibition(
                         action = OdrlAction("http://example.com/anotherAction"),
                         target = OdrlAsset("http://example.com/asset")
@@ -44,7 +45,8 @@ class OdrlProhibitionEvaluatorTest {
         runBlocking {
             // Prohibitions without matching target do not disallow context
             assertFalse(
-                evaluator.isDisallowed(ctx,
+                evaluator.isDisallowed(
+                    ctx,
                     OdrlProhibition(
                         action = OdrlAction("http://example.com/action"),
                         target = OdrlAsset("http://example.com/anotherAsset")
@@ -59,7 +61,8 @@ class OdrlProhibitionEvaluatorTest {
         runBlocking {
             // Prohibitions with unsatisfied constraints do not disallow context
             assertFalse(
-                evaluator.isDisallowed(ctx,
+                evaluator.isDisallowed(
+                    ctx,
                     OdrlProhibition(
                         action = OdrlAction("http://example.com/action"),
                         target = OdrlAsset("http://example.com/asset"),
@@ -74,7 +77,8 @@ class OdrlProhibitionEvaluatorTest {
     fun testDisallowedProhibition() {
         runBlocking {
             assertTrue(
-                evaluator.isDisallowed(ctx,
+                evaluator.isDisallowed(
+                    ctx,
                     OdrlProhibition(
                         action = OdrlAction("http://example.com/action"),
                         target = OdrlAsset("http://example.com/asset"),
@@ -94,13 +98,15 @@ class OdrlProhibitionEvaluatorTest {
                     OdrlProhibition(
                         action = OdrlAction("http://example.com/action"),
                         target = OdrlAsset("http://example.com/asset"),
-                        remedy = listOf(OdrlDuty(
-                            action = OdrlAction("http://example.com/remedyAction")
-                        ))
+                        remedy = listOf(
+                            OdrlDuty(
+                                action = OdrlAction("http://example.com/remedyAction")
+                            )
+                        )
                     ),
                     infringementCallback = {
                         // Prohibition action is not infringed
-                        it.uid.toString() != "http://example.com/action"
+                        it.value.uid.toString() != "http://example.com/action"
                     },
                     actionCallback = {
                         // Prohibition is not infringed, even if remedy action cannot be exercised
@@ -115,13 +121,15 @@ class OdrlProhibitionEvaluatorTest {
                     OdrlProhibition(
                         action = OdrlAction("http://example.com/action"),
                         target = OdrlAsset("http://example.com/asset"),
-                        remedy = listOf(OdrlDuty(
-                            action = OdrlAction("http://example.com/remedyAction")
-                        ))
+                        remedy = listOf(
+                            OdrlDuty(
+                                action = OdrlAction("http://example.com/remedyAction")
+                            )
+                        )
                     ),
                     infringementCallback = {
                         // Prohibition action is infringed
-                        it.uid.toString() == "http://example.com/action"
+                        it.value.uid.toString() == "http://example.com/action"
                     },
                     actionCallback = {
                         Result(false) // Remedy action could not be exercised
@@ -133,17 +141,19 @@ class OdrlProhibitionEvaluatorTest {
                     OdrlProhibition(
                         action = OdrlAction("http://example.com/action"),
                         target = OdrlAsset("http://example.com/asset"),
-                        remedy = listOf(OdrlDuty(
-                            action = OdrlAction("http://example.com/remedyAction")
-                        ))
+                        remedy = listOf(
+                            OdrlDuty(
+                                action = OdrlAction("http://example.com/remedyAction")
+                            )
+                        )
                     ),
                     infringementCallback = {
                         // Prohibition action is infringed
-                        it.uid.toString() == "http://example.com/action"
+                        it.value.uid.toString() == "http://example.com/action"
                     },
                     actionCallback = {
                         // Remedy action exercised successfully
-                        Result(it.uid.toString() == "http://example.com/remedyAction")
+                        Result(it.value.uid.toString() == "http://example.com/remedyAction")
                     }
                 ).success
             )

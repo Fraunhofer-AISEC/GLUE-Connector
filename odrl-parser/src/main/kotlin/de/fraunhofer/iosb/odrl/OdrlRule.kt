@@ -23,7 +23,7 @@ abstract class OdrlRule(
     val uid: URI? = null,
 
     @field:JsonProperty(OdrlIdentifiers.HAS_ACTION)
-    val action: OdrlAction = OdrlAction(URI.create("")),
+    val action: OdrlAction,
 
     @field:JsonProperty(OdrlIdentifiers.TARGET)
     val target: OdrlAsset? = null,
@@ -74,7 +74,7 @@ abstract class OdrlRule(
     val trackingParty: OdrlParty? = null,
 
     @field:JsonProperty(OdrlIdentifiers.HAS_CONSTRAINT)
-    @JsonSetter(nulls = Nulls.AS_EMPTY)
+    @field:JsonSetter(nulls = Nulls.AS_EMPTY)
     val constraint: List<OdrlConstraintRepresentation> = listOf(),
 ): JsonLdBeanValidator {
 

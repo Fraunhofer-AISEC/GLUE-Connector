@@ -1,0 +1,23 @@
+{
+  "@context": "http://www.w3.org/ns/odrl.jsonld",
+  "@type": "Policy",
+  "uid": "http://example.com/compactPolicy",
+  "profile": "http://example.com/profile",
+  "target": "http://example.com/target",
+  "assigner": "http://example.com/assigner",
+  "action": "play",
+  "permission": [
+    {
+      "uid": "http://example.com/permission1",
+      "assignee": "http://example.com/assignee1"
+    },
+    {
+      "uid": "http://example.com/permission2",
+      "assignee": "http://example.com/assignee2"
+    }
+  ],
+  "prohibition": {
+    "uid": "http://example.com/prohibition1",
+    "assignee": "http://example.com/assignee3"
+  }
+}

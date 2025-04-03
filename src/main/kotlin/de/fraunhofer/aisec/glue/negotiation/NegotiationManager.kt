@@ -8,6 +8,7 @@ import de.fraunhofer.aisec.glue.models.negotiation.ContractRequestMessage
 import de.fraunhofer.aisec.glue.models.negotiation.NegotiationState
 import de.fraunhofer.iosb.odrl.OdrlOffer
 import de.fraunhofer.iosb.odrl.OdrlPolicy
+import de.fraunhofer.iosb.odrl.parser.OdrlParser
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ktor.client.*
 import io.ktor.client.call.*
@@ -28,6 +29,7 @@ class NegotiationManager(
     private val objectMapper: ObjectMapper,
     private val defaultNegotiator: Negotiator,
     private val contractStore: ContractStore,
+    private val odrlParser: OdrlParser,
 ) {
     private val pidMutex = Mutex()
     private val assignedIds = synchronizedSet(mutableSetOf<String>())
@@ -160,6 +162,7 @@ class NegotiationManager(
                         policyFuture.completeWith(result)
                         consumerNegotiations.remove(consumerPid)
                     },
+                odrlParser = odrlParser
             )
 
         // This call here is kind of hacky since kotlin coroutines does not have condition variables.
@@ -223,6 +226,7 @@ class NegotiationManager(
                     completionCallback {
                         providerNegotiations.remove(providerPid)
                     },
+                odrlParser = odrlParser
             )
 
         providerNegotiations[providerPid] = negotiation
@@ -275,6 +279,7 @@ class NegotiationManager(
                             consumerNegotiations.remove(consumerPid)
                         }
                     },
+                odrlParser = odrlParser
             )
 
         consumerNegotiations[consumerPid] = negotiation

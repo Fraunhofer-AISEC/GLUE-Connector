@@ -11,14 +11,18 @@ class OdrlAssetTest {
     private val mapper = Commons.parserInstance.mapper
     private val asset1 = OdrlAsset(
         uid = URI.create("http://example.com/asset"),
-        partOf = listOf(OdrlAssetCollection(
-            source = OdrlIri("http://example.com/assetCollection"),
-            refinement = listOf(OdrlConstraint(
-                leftOperand = OdrlLeftOperand("http://example.com/leftOperand"),
-                operator = OdrlOperator("http://www.w3.org/ns/odrl/2/eq"),
-                rightOperand = listOf(PrimitiveString("exampleRightOperand"))
-            ))
-        ))
+        partOf = listOf(
+            OdrlAssetCollection(
+                source = OdrlIri("http://example.com/assetCollection"),
+                refinement = listOf(
+                    OdrlConstraint(
+                        leftOperand = OdrlLeftOperand("http://example.com/leftOperand"),
+                        operator = OdrlOperator("http://www.w3.org/ns/odrl/2/eq"),
+                        rightOperand = listOf(PrimitiveString("exampleRightOperand"))
+                    )
+                )
+            )
+        )
     )
 
     @Test

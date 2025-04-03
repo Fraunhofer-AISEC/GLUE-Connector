@@ -29,7 +29,8 @@ class OdrlPermissionEvaluatorTest {
         runBlocking {
             // Permissions without matching actions do not allow context
             assertFalse(
-                evaluator.isAllowed(ctx,
+                evaluator.isAllowed(
+                    ctx,
                     OdrlPermission(
                         action = OdrlAction("http://example.com/anotherAction"),
                         target = OdrlAsset("http://example.com/asset")
@@ -44,7 +45,8 @@ class OdrlPermissionEvaluatorTest {
         runBlocking {
             // Permissions without matching target do not allow context
             assertFalse(
-                evaluator.isAllowed(ctx,
+                evaluator.isAllowed(
+                    ctx,
                     OdrlPermission(
                         action = OdrlAction("http://example.com/action"),
                         target = OdrlAsset("http://example.com/anotherAsset")
@@ -59,7 +61,8 @@ class OdrlPermissionEvaluatorTest {
         runBlocking {
             // Permissions with unsatisfied constraints do not allow context
             assertFalse(
-                evaluator.isAllowed(ctx,
+                evaluator.isAllowed(
+                    ctx,
                     OdrlPermission(
                         action = OdrlAction("http://example.com/action"),
                         target = OdrlAsset("http://example.com/asset"),
@@ -75,14 +78,17 @@ class OdrlPermissionEvaluatorTest {
         runBlocking {
             // Permissions with unfulfilled duties do not allow context
             assertFalse(
-                evaluator.isAllowed(ctx,
+                evaluator.isAllowed(
+                    ctx,
                     OdrlPermission(
                         action = OdrlAction("http://example.com/action"),
                         target = OdrlAsset("http://example.com/asset"),
                         constraint = listOf(satisfiedConstraint),
-                        duty = listOf(OdrlDuty(
-                            action = OdrlAction("http://example.com/dutyAction")
-                        ))
+                        duty = listOf(
+                            OdrlDuty(
+                                action = OdrlAction("http://example.com/dutyAction")
+                            )
+                        )
                     )
                 ) {
                     Result(false) // Duty action could not be exercised
@@ -95,18 +101,21 @@ class OdrlPermissionEvaluatorTest {
     fun testAllowedPermission() {
         runBlocking {
             assertTrue(
-                evaluator.isAllowed(ctx,
+                evaluator.isAllowed(
+                    ctx,
                     OdrlPermission(
                         action = OdrlAction("http://example.com/action"),
                         target = OdrlAsset("http://example.com/asset"),
                         constraint = listOf(satisfiedConstraint),
-                        duty = listOf(OdrlDuty(
-                            action = OdrlAction("http://example.com/dutyAction")
-                        ))
+                        duty = listOf(
+                            OdrlDuty(
+                                action = OdrlAction("http://example.com/dutyAction")
+                            )
+                        )
                     )
                 ) {
                     // Duty action exercised successfully
-                    Result(it.uid.toString() == "http://example.com/dutyAction")
+                    Result(it.value.uid.toString() == "http://example.com/dutyAction")
                 }.success
             )
         }

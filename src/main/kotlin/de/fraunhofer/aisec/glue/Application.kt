@@ -71,17 +71,21 @@ val defaultDependencies by DI.Module {
                 }
             }
         }
-    bind<ObjectMapper>() with singleton { OdrlParser().mapper }
+    bind<OdrlParser>() with singleton { OdrlParser() }
+    bind<ObjectMapper>() with singleton { instance<OdrlParser>().mapper }
     bind<ContentConverter>() with singleton { JacksonConverter(instance()) }
     bind<PipelineManager>() with singleton { PipelineManager(instance()) }
     bind<PolicyEngine>() with singleton { PolicyEngine(instance()) }
     bind<ContractStore>() with singleton { ContractStore(instance()) }
-    bind<NegotiationManager>() with singleton { NegotiationManager(instance(), instance(), DummyNegotiator(), instance()) }
+    bind<NegotiationManager>() with singleton { NegotiationManager(instance(), instance(), DummyNegotiator(), instance(), instance()) }
     bind<NegotiationController>() with singleton { NegotiationController(instance()) }
     bind<PipelineController>() with singleton { PipelineController(instance(), instance(), instance()) }
     bind<NegotiationApiController>() with singleton { NegotiationApiController(instance()) }
     bind<RemotePipelineApiController>() with singleton { RemotePipelineApiController(instance(), instance()) }
-    bind<ContainerInterfaceController>() with singleton { ContainerInterfaceController(instance(), instance(), instance(), instance(), instance()) }
+    bind<ContainerInterfaceController>() with
+        singleton {
+            ContainerInterfaceController(instance(), instance(), instance(), instance(), instance(), instance())
+        }
 }
 
 fun Application.module() = module(DI.direct { import(defaultDependencies) })
