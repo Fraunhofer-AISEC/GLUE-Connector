@@ -1,4 +1,4 @@
-package de.fraunhofer.aisec.glue.negotiation
+package de.fraunhofer.aisec.glue.negotiation.builtin
 
 import de.fraunhofer.iosb.odrl.OdrlAgreement
 import de.fraunhofer.iosb.odrl.OdrlOffer

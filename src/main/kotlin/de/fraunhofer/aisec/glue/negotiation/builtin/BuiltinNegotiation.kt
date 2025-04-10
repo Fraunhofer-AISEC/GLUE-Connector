@@ -1,7 +1,8 @@
-package de.fraunhofer.aisec.glue.negotiation
+package de.fraunhofer.aisec.glue.negotiation.builtin
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import de.fraunhofer.aisec.glue.models.negotiation.*
+import de.fraunhofer.aisec.glue.negotiation.*
 import de.fraunhofer.iosb.odrl.OdrlAgreement
 import de.fraunhofer.iosb.odrl.OdrlOffer
 import de.fraunhofer.iosb.odrl.OdrlParty
@@ -15,7 +16,7 @@ import io.ktor.http.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
-class NegotiationImpl(
+class BuiltinNegotiation(
     state: NegotiationState,
     override var peerIdentity: String?,
     var currentPolicy: OdrlPolicy? = null,

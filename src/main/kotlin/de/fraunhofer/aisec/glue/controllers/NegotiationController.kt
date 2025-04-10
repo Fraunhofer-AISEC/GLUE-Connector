@@ -3,7 +3,7 @@ package de.fraunhofer.aisec.glue.controllers
 import de.fraunhofer.aisec.glue.Utils
 import de.fraunhofer.aisec.glue.models.negotiation.*
 import de.fraunhofer.aisec.glue.negotiation.Negotiation
-import de.fraunhofer.aisec.glue.negotiation.NegotiationManager
+import de.fraunhofer.aisec.glue.negotiation.builtin.BuiltinNegotiationManager
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ktor.http.*
 import io.ktor.server.auth.*
@@ -17,7 +17,7 @@ import io.ktor.server.routing.*
  * It currently implements v2024.1.
  * <https://docs.internationaldataspaces.org/ids-knowledgebase/v/dataspace-protocol/contract-negotiation/contract.negotiation.binding.https>
  */
-class NegotiationController(private val negotiationManager: NegotiationManager) : Controller {
+class NegotiationController(private val negotiationManager: BuiltinNegotiationManager) : Controller {
     private fun stateErrorResponse(negotiation: Negotiation): ContractNegotiationError {
         // Since this function is only called from response callbacks, the negotiation's lock should be held up the call
         // stack.
