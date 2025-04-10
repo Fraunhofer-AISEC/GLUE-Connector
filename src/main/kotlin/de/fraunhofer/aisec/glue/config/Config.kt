@@ -36,7 +36,10 @@ abstract class Config(val rawConfig: ApplicationConfig) {
      * Convert the type of a given property using [converter].
      * This is equivalent of the [let] receiver function, but for property delegates.
      */
-    protected fun<T, R> convert(from: ReadOnlyProperty<Any, T?>, converter: (T) -> R): ReadOnlyProperty<Any, R?> {
+    protected fun <T, R> convert(
+        from: ReadOnlyProperty<Any, T?>,
+        converter: (T) -> R,
+    ): ReadOnlyProperty<Any, R?> {
         return ReadOnlyProperty { thisRef, property -> from.getValue(thisRef, property)?.let(converter) }
     }
 
@@ -45,7 +48,10 @@ abstract class Config(val rawConfig: ApplicationConfig) {
      * If the property returns null, the default is returned instead, making the property non-null.
      * This is the equivalent of the elvis operator (`?:`).
      */
-    protected fun<T> withDefault(from: ReadOnlyProperty<Any, T?>, default: T): ReadOnlyProperty<Any, T> {
+    protected fun <T> withDefault(
+        from: ReadOnlyProperty<Any, T?>,
+        default: T,
+    ): ReadOnlyProperty<Any, T> {
         return ReadOnlyProperty { thisRef, property -> from.getValue(thisRef, property) ?: default }
     }
 
@@ -54,8 +60,16 @@ abstract class Config(val rawConfig: ApplicationConfig) {
      * If the property is null, an exception is thrown with an optional custom [message].
      * This is equivalent to the non-null assertion operator (`!!`).
      */
-    protected fun<T> required(from: ReadOnlyProperty<Any, T?>, message: String? = null): ReadOnlyProperty<Any, T> {
-        return ReadOnlyProperty { thisRef, property -> from.getValue(thisRef, property) ?: throw NullPointerException(message ?: "Property is required but not set") }
+    protected fun <T> required(
+        from: ReadOnlyProperty<Any, T?>,
+        message: String? = null,
+    ): ReadOnlyProperty<Any, T> {
+        return ReadOnlyProperty {
+                thisRef,
+                property,
+            ->
+            from.getValue(thisRef, property) ?: throw NullPointerException(message ?: "Property is required but not set")
+        }
     }
 
     /**
@@ -92,7 +106,6 @@ abstract class Config(val rawConfig: ApplicationConfig) {
      * @see boolProp
      */
     protected fun boolListProp(name: String? = null) = convert(listProp(name)) { it.map(String::toBoolean) }
-
 
     /**
      * Convert a list property into a list of doubles.

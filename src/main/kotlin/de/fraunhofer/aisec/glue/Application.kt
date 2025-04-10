@@ -89,13 +89,18 @@ val defaultDependencies by DI.Module {
         }
 }
 
-fun Application.module() = module(DI.direct {
-    import(defaultDependencies)
-    import(DI.Module("config") {
-        // Since environment.config is part of the Application, we can only create these bindings here
-        bind<ConnectorConfig>() with singleton { ConnectorConfig(environment.config) }
-    })
-})
+fun Application.module() =
+    module(
+        DI.direct {
+            import(defaultDependencies)
+            import(
+                DI.Module("config") {
+                    // Since environment.config is part of the Application, we can only create these bindings here
+                    bind<ConnectorConfig>() with singleton { ConnectorConfig(environment.config) }
+                },
+            )
+        },
+    )
 
 fun Application.module(dependencies: DirectDI) {
     configureAuthentication()
