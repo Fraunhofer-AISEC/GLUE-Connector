@@ -1,13 +1,11 @@
 package de.fraunhofer.aisec.glue.controllers.api
 
-import de.fraunhofer.aisec.glue.Utils
 import de.fraunhofer.aisec.glue.controllers.Controller
 import de.fraunhofer.aisec.glue.models.api.NegotiationCreationRequest
 import de.fraunhofer.aisec.glue.models.api.NegotiationInfoResponse
 import de.fraunhofer.aisec.glue.negotiation.NegotiationManager
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ktor.http.*
-import io.ktor.server.plugins.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -39,12 +37,6 @@ class NegotiationApiController(private val negotiationManager: NegotiationManage
 
             post {
                 val req = call.receive<NegotiationCreationRequest>()
-                // TODO: Any reliable way to get the external URL of this connector
-                //  By default, I would just use the URL the request was sent to (as I am doing now)
-                //  That said, it is not inconceivable that the User API is eventually hosted on a different location to
-                //  the one for different connectors.
-                val originUrl = Utils.baseUrlForOrigin(call.request.origin, 2)
-                val callbackUrl = URLBuilder(originUrl).appendPathSegments("negotiations").build()
                 // TODO: The peer field from the request should probably be some sort of internal ID from which
                 //  the url and protocol version is derived.
                 //  For not, it is just the URL with some simple parsing.
@@ -57,10 +49,10 @@ class NegotiationApiController(private val negotiationManager: NegotiationManage
                             builder.path("negotiations")
                         }
 
-                        builder.build()
+                        builder.buildString()
                     }
 
-                val negotiationFuture = negotiationManager.startNegotiation(peerUrl, callbackUrl, req.contractRequest)
+                val negotiationFuture = negotiationManager.startNegotiation(peerUrl, req.contractRequest)
 
                 if (negotiationFuture.isCompleted) {
                     try {

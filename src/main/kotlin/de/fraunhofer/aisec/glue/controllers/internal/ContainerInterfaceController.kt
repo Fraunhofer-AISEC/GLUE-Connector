@@ -27,7 +27,6 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.util.*
 import io.ktor.utils.io.*
-import java.net.InetAddress
 import java.net.URI
 
 /**
@@ -135,14 +134,10 @@ class ContainerInterfaceController(
                     odrlParser.convertToOdrlPolicy(nextPolicy.json)
                         .toOffer(odrlParser, OdrlParty(URI("todo:name-this-connector")))
 
-                // HACK: This will not work in production since we will likely not be reachable by hostname alone
-                // This only works in docker compose or similar environments.
-                val originUrl = InetAddress.getLocalHost().hostAddress
                 // TODO: Check if we already have an agreement with the destination node
                 val negotiation =
                     negotiationManager.startNegotiation(
-                        Url("http://$destinationHost:8080/negotiations"),
-                        Url("http://$originUrl:8080/negotiations"),
+                        "http://$destinationHost:8080/negotiations",
                         convertedNextPolicy,
                     )
 
