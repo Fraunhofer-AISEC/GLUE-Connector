@@ -18,7 +18,9 @@ abstract class Config(val rawConfig: ApplicationConfig) {
      * a string literal.
      */
     protected fun stringProp(name: String? = null): ReadOnlyProperty<Any, String?> {
-        return ReadOnlyProperty { _, property -> rawConfig.propertyOrNull(name ?: property.name)?.let(ApplicationConfigValue::getString) }
+        return ReadOnlyProperty { _, property ->
+            rawConfig.propertyOrNull(name ?: property.name)?.let(ApplicationConfigValue::getString)
+        }
     }
 
     /**
@@ -29,7 +31,9 @@ abstract class Config(val rawConfig: ApplicationConfig) {
      * a list of strings.
      */
     protected fun listProp(name: String? = null): ReadOnlyProperty<Any, List<String>?> {
-        return ReadOnlyProperty { _, property -> rawConfig.propertyOrNull(name ?: property.name)?.let(ApplicationConfigValue::getList) }
+        return ReadOnlyProperty { _, property ->
+            rawConfig.propertyOrNull(name ?: property.name)?.let(ApplicationConfigValue::getList)
+        }
     }
 
     /**
@@ -68,7 +72,27 @@ abstract class Config(val rawConfig: ApplicationConfig) {
                 thisRef,
                 property,
             ->
-            from.getValue(thisRef, property) ?: throw NullPointerException(message ?: "Property is required but not set")
+            from.getValue(thisRef, property) ?: throw NullPointerException(
+                message ?: "Property is required but not set",
+            )
+        }
+    }
+
+    /**
+     * Cache the result of a configuration property.
+     * This can be used if converting/evaluating a property is expensive and/or it is frequently accessed.
+     */
+    protected fun <T> cache(from: ReadOnlyProperty<Any, T>): ReadOnlyProperty<Any, T> {
+        // We borrow the lazy mechanics here to construct a box that can distinguish between null and an empty value
+        // lateinit cannot be used as it does not allow nullable types to be used
+        var cache = lazy<T> { throw AssertionError("The uninitialized cache must never be accessed") }
+        return ReadOnlyProperty { thisRef, property ->
+            // Note: There is technically a race condition here, but the worst case is that the wrapped property is
+            // accessed twice as the JVM ensures atomic reference assignment.
+            if (!cache.isInitialized()) {
+                cache = lazyOf(from.getValue(thisRef, property))
+            }
+            cache.value
         }
     }
 
