@@ -1,7 +1,7 @@
 package de.fraunhofer.aisec.glue
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import de.fraunhofer.aisec.glue.config.ConnectorConfig
+import de.fraunhofer.aisec.glue.config.ConfigManager
 import de.fraunhofer.aisec.glue.controllers.Controller
 import de.fraunhofer.aisec.glue.controllers.NegotiationController
 import de.fraunhofer.aisec.glue.controllers.PipelineController
@@ -96,7 +96,7 @@ fun Application.module() =
             import(
                 DI.Module("config") {
                     // Since environment.config is part of the Application, we can only create these bindings here
-                    bind<ConnectorConfig>() with singleton { ConnectorConfig(environment.config) }
+                    bind<ConfigManager>() with singleton { ConfigManager(environment.config) }
                 },
             )
         },
