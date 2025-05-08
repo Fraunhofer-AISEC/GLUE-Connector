@@ -215,7 +215,7 @@ class BuiltinNegotiationManager(
         request: ContractRequestMessage,
         originUrl: Url,
         peerIdent: String,
-    ): Negotiation? {
+    ): BuiltinNegotiation? {
         val logParams = mutableMapOf("consumerPid" to request.consumerPid, "peerIdentity" to peerIdent)
 
         // We call this function when we receive a new contract request message, which can also happen for a follow-up
@@ -270,7 +270,7 @@ class BuiltinNegotiationManager(
         request: ContractOfferMessage,
         originUrl: Url,
         peerIdent: String,
-    ): Negotiation? {
+    ): BuiltinNegotiation? {
         val logParams = mutableMapOf("providerPid" to request.providerPid, "peerIdentity" to peerIdent)
 
         if (request.consumerPid != null) {
@@ -323,7 +323,7 @@ class BuiltinNegotiationManager(
         providerPid: String,
         consumerPid: String?,
         peerIdent: String,
-    ): Negotiation? {
+    ): BuiltinNegotiation? {
         val logParams = mutableMapOf<String, Any>()
         val negotiation = providerNegotiations[providerPid] ?: return null
 
@@ -365,7 +365,7 @@ class BuiltinNegotiationManager(
         consumerPid: String,
         providerPid: String?,
         peerIdent: String,
-    ): Negotiation? {
+    ): BuiltinNegotiation? {
         val logParams =
             mutableMapOf<String, Any>("consumerPid" to consumerPid, "providerPid" to (providerPid ?: "unset"), "peerIdentity" to peerIdent)
 
@@ -423,7 +423,7 @@ class BuiltinNegotiationManager(
         return negotiation
     }
 
-    override suspend fun getNegotiations(): Collection<Negotiation> {
+    override suspend fun getNegotiations(): Collection<BuiltinNegotiation> {
         return (consumerNegotiations.values + providerNegotiations.values).toList()
     }
 
