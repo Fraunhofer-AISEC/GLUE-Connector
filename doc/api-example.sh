@@ -17,7 +17,7 @@ require() {
   fi
 }
 
-require curl jq
+require curl jq envsubst
 
 if (( $# != 3 )); then
   echo "Usage: $0 <local connector> <remote connector> <policy path>" >&2

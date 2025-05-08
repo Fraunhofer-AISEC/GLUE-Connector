@@ -2,7 +2,10 @@ package de.fraunhofer.aisec.glue.negotiation.builtin
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import de.fraunhofer.aisec.glue.models.negotiation.*
-import de.fraunhofer.aisec.glue.negotiation.*
+import de.fraunhofer.aisec.glue.negotiation.Negotiation
+import de.fraunhofer.aisec.glue.negotiation.NegotiationCompletionCallback
+import de.fraunhofer.aisec.glue.negotiation.NegotiationException
+import de.fraunhofer.aisec.glue.negotiation.toAgreement
 import de.fraunhofer.iosb.odrl.OdrlAgreement
 import de.fraunhofer.iosb.odrl.OdrlOffer
 import de.fraunhofer.iosb.odrl.OdrlParty
@@ -163,9 +166,9 @@ class BuiltinNegotiation(
      * This is only valid if we are the provider and the negotiation is in its initial or the offered state, which will
      * be indicated by the parameter of [responseCallback] when invoked.
      */
-    override suspend fun processRequest(
+    suspend fun processRequest(
         req: ContractRequestMessage,
-        initial: Boolean,
+        initial: Boolean = false,
         responseCallback: suspend (Boolean) -> Unit,
     ) = mutex.withLock {
         // When we first construct a negotiation, we initialize it to the requested state right away.
@@ -246,9 +249,9 @@ class BuiltinNegotiation(
      * This operation is only allowed if we are a consumer and the negotiation is either in its initial or the requested
      * state, which will be reported back by the argument to [responseCallback].
      */
-    override suspend fun processOffer(
+    suspend fun processOffer(
         req: ContractOfferMessage,
-        initial: Boolean,
+        initial: Boolean = false,
         responseCallback: suspend (Boolean) -> Unit,
     ) = mutex.withLock {
         val allowedState =
@@ -313,7 +316,7 @@ class BuiltinNegotiation(
         state = NegotiationState.ACCEPTED
     }
 
-    override suspend fun processAccept(responseCallback: suspend (Boolean) -> Unit): Unit =
+    suspend fun processAccept(responseCallback: suspend (Boolean) -> Unit): Unit =
         mutex.withLock {
             // By making sure that the state machine is in the offered state, we make sure that the current offer has
             // been made by us, as client offers (= requests) move us into the requested state.
@@ -345,7 +348,7 @@ class BuiltinNegotiation(
             state = NegotiationState.AGREED
         }
 
-    override suspend fun processVerify(responseCallback: suspend (Boolean) -> Unit): Unit =
+    suspend fun processVerify(responseCallback: suspend (Boolean) -> Unit): Unit =
         mutex.withLock {
             if (!precondition(NegotiationState.AGREED, Negotiation.Role.PROVIDER)) {
                 responseCallback(false)
@@ -373,7 +376,7 @@ class BuiltinNegotiation(
             responseCallback(true)
         }
 
-    override suspend fun processFinalize(responseCallback: suspend (Boolean) -> Unit) {
+    suspend fun processFinalize(responseCallback: suspend (Boolean) -> Unit) {
         if (!precondition(NegotiationState.VERIFIED, Negotiation.Role.CONSUMER)) {
             responseCallback(false)
             return
@@ -383,9 +386,7 @@ class BuiltinNegotiation(
         responseCallback(true)
     }
 
-    //       bad. Find out if there are any coroutine reentrant locks in kotlin or if the default mutex can be made
-    //       reentrant somehow.
-    override fun getStateMessageUnlocked(): ContractNegotiation {
+    fun getStateMessageUnlocked(): ContractNegotiation {
         val (providerPid, consumerPid) = getProviderAndConsumerPid()
 
         return ContractNegotiation(
@@ -400,7 +401,7 @@ class BuiltinNegotiation(
             return getStateMessageUnlocked()
         }
 
-    override suspend fun processAgreement(
+    suspend fun processAgreement(
         req: ContractAgreementMessage,
         responseCallback: suspend (Boolean) -> Unit,
     ): Unit =
@@ -450,7 +451,7 @@ class BuiltinNegotiation(
             )
         }
 
-    override suspend fun processTermination(
+    suspend fun processTermination(
         req: ContractNegotiationTerminationMessage,
         responseCallback: suspend () -> Unit,
     ) = mutex.withLock {
