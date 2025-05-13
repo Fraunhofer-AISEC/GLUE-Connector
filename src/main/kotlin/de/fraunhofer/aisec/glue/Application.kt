@@ -24,6 +24,7 @@ import io.ktor.serialization.*
 import io.ktor.serialization.jackson.*
 import io.ktor.server.application.*
 import io.ktor.server.netty.*
+import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.routing.*
 import org.kodein.di.*
 import java.util.logging.Filter
@@ -107,6 +108,11 @@ fun Application.module() =
 
 fun Application.module(dependencies: DirectDI) {
     configureAuthentication()
+    install(CORS) {
+        anyHost()
+        allowMethod(HttpMethod.Delete)
+        allowHeader(HttpHeaders.ContentType)
+    }
 
     install(ServerContentNegotiation) {
         register(ContentType.Application.Json, dependencies.instance())
