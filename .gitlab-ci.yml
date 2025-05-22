@@ -37,9 +37,8 @@ jib_container_pipeline_build:
 .podman-build:
   stage: build
   image: quay.io/podman/stable:v5.5.0
-  before_script:
-    - podman login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
   script:
+    - podman login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
     - podman build -f $DOCKERFILE -t $DOCKER_IMAGE:$IMAGE_TAG -t $DOCKER_IMAGE:$CI_PIPELINE_ID $CONTEXT_DIR
     - podman push $DOCKER_IMAGE:$IMAGE_TAG
     - podman push $DOCKER_IMAGE:$CI_PIPELINE_ID
