@@ -5,10 +5,9 @@ import de.fraunhofer.aisec.glue.models.edc.ContractNegotiation
 import de.fraunhofer.aisec.glue.models.edc.ContractRequest
 import de.fraunhofer.aisec.glue.models.edc.ContractRequestResponse
 import de.fraunhofer.aisec.glue.models.edc.QuerySpec
+import de.fraunhofer.aisec.glue.negotiation.NegotiationException
 import de.fraunhofer.aisec.glue.negotiation.NegotiationManager
-import de.fraunhofer.aisec.glue.negotiation.toOffer
 import de.fraunhofer.iosb.odrl.OdrlAgreement
-import de.fraunhofer.iosb.odrl.OdrlParty
 import de.fraunhofer.iosb.odrl.OdrlPolicy
 import de.fraunhofer.iosb.odrl.parser.OdrlParser
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -20,6 +19,7 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import kotlinx.coroutines.*
 import java.net.URI
+import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.time.Duration.Companion.seconds
 
@@ -103,19 +103,72 @@ class EdcNegotiationManager(
         return ctor(resp, body ?: resp.bodyAsText())
     }
 
+    private fun convertToOffer(policy: OdrlPolicy): Result<Pair<OdrlPolicy, String?>> {
+        // The required format is `[contractId]:[target]:[uuid]` with all three parts being base64 encoded.
+        // If this format is already there, we do nothing and hope for the best.
+        // Note that we do not check if the individual components are valid.
+        val segments = policy.uid.toString().split(':')
+        if (segments.size == 3 && segments.all { runCatching { Base64.getDecoder().decode(it) }.isSuccess }) {
+            LOG.atTrace {
+                message = "Contract ID is already in the expected format"
+                payload = mapOf("contractId" to policy.uid)
+            }
+            return Result.success(odrlParser.convertToOdrlOffer(policy) to null)
+        }
+
+        val contractId = policy.uid.toString()
+        val uuid = UUID.randomUUID().toString()
+
+        val targets = policy.permission.mapNotNull { p -> p.target?.uid }.distinct()
+        val target = when (targets.size) {
+            0 -> {
+                LOG.atDebug {
+                    message = "Cannot convert policy to valid EDC offer as it contains no targets"
+                    payload = mapOf("contractId" to policy.uid)
+                }
+                return Result.failure(NegotiationException("Policy contains no targets"))
+            }
+            1 -> targets[0].toString()
+            else -> {
+                LOG.atDebug {
+                    message = "Cannot convert policy to valid EDC offer as its target is ambiguous"
+                    payload = mapOf("contractId" to policy.uid, "candidates" to targets.map(URI::toString))
+                }
+                return Result.failure(NegotiationException("Policy target is ambiguous, specify the ID in EDC format"))
+            }
+        }
+
+        val newId =
+            arrayOf(contractId, target, uuid).joinToString(":") { Base64.getEncoder().encodeToString(it.toByteArray()) }
+        return Result.success(odrlParser.convertToOdrlOffer(policy) to newId)
+    }
+
     override suspend fun startNegotiation(
         peer: String,
         offer: OdrlPolicy,
     ): Deferred<OdrlAgreement> {
-        val compactedSerializedOffer =
-            odrlParser.mapper.writeValueAsString(
-                offer.toOffer(odrlParser, OdrlParty("todo://add-connector-id-from-config-here")),
-            )
+        val (offer, newId) = convertToOffer(offer/*, OdrlParty("todo://add-connector-od-from-config-here")*/).getOrElse {
+            return CompletableDeferred<OdrlAgreement>().apply {completeExceptionally(it)}
+        }
+
+        val compactedSerializedOffer = odrlParser.mapper.writeValueAsString(offer)
+
+        // The EDC requires a specific format for the contract request ID to correlate it with the asset and contract
+        // definitions it stores.
+        // We construct this identifier out of the present contract id and try to extract the target from the given
+        // policy's permissions.
+        // If the contract id is already in the expected format, we just pass it as-is.
+
         val compactedOffer = odrlParser.mapper.readTree(compactedSerializedOffer) as ObjectNode
-        println("Before pushdown: $compactedSerializedOffer")
+        // Some hacks to convert the compact serialization to the format required by the edc
         EdcQuirks.pushDownAction(compactedOffer)
         EdcQuirks.unwrapRdfValue(compactedOffer)
-        println("After pushdown: ${odrlParser.mapper.writeValueAsString(compactedOffer)}")
+        EdcQuirks.rewriteTypeFields(compactedOffer)
+        EdcQuirks.stringifyGlueKeys(odrlParser.mapper, compactedOffer)
+        // This one is even worse, but the URI type in the model does not allow the value required by the edc
+        if (newId != null) {
+            compactedOffer.put("uid", newId)
+        }
 
         val contractRequest =
             ContractRequest(
