@@ -1,6 +1,7 @@
 package de.fraunhofer.aisec.glue
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import de.fraunhofer.aisec.glue.config.ConfigManager
 import de.fraunhofer.aisec.glue.controllers.Controller
 import de.fraunhofer.aisec.glue.controllers.NegotiationController
 import de.fraunhofer.aisec.glue.controllers.PipelineController
@@ -88,7 +89,18 @@ val defaultDependencies by DI.Module {
         }
 }
 
-fun Application.module() = module(DI.direct { import(defaultDependencies) })
+fun Application.module() =
+    module(
+        DI.direct {
+            import(defaultDependencies)
+            import(
+                DI.Module("config") {
+                    // Since environment.config is part of the Application, we can only create these bindings here
+                    bind<ConfigManager>() with singleton { ConfigManager(environment.config) }
+                },
+            )
+        },
+    )
 
 fun Application.module(dependencies: DirectDI) {
     configureAuthentication()

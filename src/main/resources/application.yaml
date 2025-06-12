@@ -4,3 +4,5 @@ ktor:
   application:
     modules:
       - de.fraunhofer.aisec.glue.ApplicationKt.module
+connector:
+  identity: "https://glue-connector.local"
