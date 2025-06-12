@@ -18,7 +18,7 @@ class ConfigManager(private val baseConfig: ApplicationConfig) {
         }
 
         // We also want to have a nice default, which is just the class name without an optional "Config" suffix and
-        // without andy of the kotlin name mangling.
+        // without any of the kotlin name mangling.
         return cls.simpleName.removeSuffix("Config").lowercase()
     }
 
