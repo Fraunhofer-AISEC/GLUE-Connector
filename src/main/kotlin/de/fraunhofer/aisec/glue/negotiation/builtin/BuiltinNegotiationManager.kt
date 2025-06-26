@@ -2,6 +2,7 @@ package de.fraunhofer.aisec.glue.negotiation.builtin
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import de.fraunhofer.aisec.glue.ContractStore
+import de.fraunhofer.aisec.glue.config.ConfigManager
 import de.fraunhofer.aisec.glue.config.ConnectorConfig
 import de.fraunhofer.aisec.glue.models.negotiation.ContractNegotiation
 import de.fraunhofer.aisec.glue.models.negotiation.ContractOfferMessage
@@ -41,13 +42,14 @@ class BuiltinNegotiationManager(
     private val defaultNegotiator: Negotiator,
     private val contractStore: ContractStore,
     private val odrlParser: OdrlParser,
-    private val connectorConfig: ConnectorConfig,
+    private val configManager: ConfigManager,
 ) : NegotiationManager() {
     private val pidMutex = Mutex()
     private val assignedIds = synchronizedSet(mutableSetOf<String>())
     private val providerNegotiations = ConcurrentHashMap<String, BuiltinNegotiation>()
     private val consumerNegotiations = ConcurrentHashMap<String, BuiltinNegotiation>()
     private val pendingConsumerNegotiations = ConcurrentHashMap<String, MutableSharedFlow<BuiltinNegotiation?>>()
+    private val connectorConfig = configManager.getConfig(::ConnectorConfig)
 
     /**
      * Start a negotiation by sending the provided contract request to the provider.
@@ -80,9 +82,6 @@ class BuiltinNegotiationManager(
         val logParams = mutableMapOf<String, Any>()
         val consumerPid = newProcessId()
         pendingConsumerNegotiations[consumerPid] = MutableSharedFlow()
-
-        println(connectorConfig.publicUrl)
-        println(callbackUrl)
 
         val contractRequestMessage =
             ContractRequestMessage(
