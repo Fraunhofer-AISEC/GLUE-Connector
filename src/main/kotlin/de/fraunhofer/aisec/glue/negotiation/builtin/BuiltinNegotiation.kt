@@ -25,7 +25,7 @@ class BuiltinNegotiation(
     override var peerIdentity: String?,
     var currentPolicy: OdrlPolicy? = null,
     override val role: Negotiation.Role,
-    override val ownPid: String,
+    override val id: String,
     val peerPid: String,
     val ownEndpoint: Url,
     val peerEndpoint: Url,
@@ -35,7 +35,7 @@ class BuiltinNegotiation(
     val completionCallback: NegotiationCompletionCallback,
     private val odrlParser: OdrlParser,
 ) : Negotiation {
-    override var state: NegotiationState = state
+    var internalState: NegotiationState = state
         private set(newState) {
             LOG.atDebug {
                 message = "Updating negotiation state"
@@ -53,6 +53,9 @@ class BuiltinNegotiation(
         }
     private val mutex = Mutex()
 
+    override val state: String
+        get() = internalState.toString()
+
     /**
      * Ensures that the negotiation is in the right state before telling the caller to respond to the initial request.
      * This should be the right function for most interactions where the negotiation has to validate that the incoming
@@ -63,7 +66,7 @@ class BuiltinNegotiation(
         expectedState: NegotiationState,
         expectedRole: Negotiation.Role,
     ): Boolean {
-        val ok = state == expectedState && role == expectedRole
+        val ok = internalState == expectedState && role == expectedRole
         if (!ok) {
             LOG.atDebug {
                 message = "The received message is invalid for the current negotiation state"
@@ -73,7 +76,7 @@ class BuiltinNegotiation(
                         "role" to role,
                         "providerPid" to providerPid,
                         "consumerPid" to consumerPid,
-                        "state" to state,
+                        "state" to internalState,
                         "expectedState" to expectedState,
                         "expectedRole" to expectedRole,
                     )
@@ -106,9 +109,9 @@ class BuiltinNegotiation(
      */
     private fun getProviderAndConsumerPid(): Pair<String, String> {
         return if (role == Negotiation.Role.PROVIDER) {
-            Pair(ownPid, peerPid)
+            Pair(id, peerPid)
         } else {
-            Pair(peerPid, ownPid)
+            Pair(peerPid, id)
         }
     }
 
@@ -122,14 +125,14 @@ class BuiltinNegotiation(
         // Note: The spec technically disallows us from terminating in some states, but it's probably better to not
         // care and terminate anyway.
         // What's the worst that can happen? The peer terminating the connection for a protocol violation? :)
-        state = NegotiationState.TERMINATED
+        internalState = NegotiationState.TERMINATED
         val (providerPid, consumerPid) = getProviderAndConsumerPid()
         LOG.atDebug {
             message = "Negotiation has been terminated by the application, notifying peer"
             payload =
                 mapOf(
                     "role" to role,
-                    "state" to state,
+                    "state" to internalState,
                     "providerPid" to providerPid,
                     "consumerPid" to consumerPid,
                     "code" to code,
@@ -152,11 +155,11 @@ class BuiltinNegotiation(
      * Report completion of the negotiation and the resulting policy.
      */
     private suspend fun completeNegotiation() {
-        state = NegotiationState.FINALIZED
+        internalState = NegotiationState.FINALIZED
         val (providerPid, consumerPid) = getProviderAndConsumerPid()
         LOG.atDebug {
             message = "Negotiation completed successfully"
-            payload = mapOf("role" to role, "state" to state, "providerPid" to providerPid, "consumerPid" to consumerPid)
+            payload = mapOf("role" to role, "state" to internalState, "providerPid" to providerPid, "consumerPid" to consumerPid)
         }
         // The non-null assertion here is safe since the negotiation may only be completed with a contract
         completionCallback(Result.success(currentPolicy ?: throw IllegalStateException("No policy available")))
@@ -197,7 +200,7 @@ class BuiltinNegotiation(
                 "not acceptable"
             }}"
             val (providerPid, consumerPid) = getProviderAndConsumerPid()
-            payload = mapOf<String, Any>("role" to role, "state" to state, "providerPid" to providerPid, "consumerPid" to consumerPid)
+            payload = mapOf<String, Any>("role" to role, "state" to internalState, "providerPid" to providerPid, "consumerPid" to consumerPid)
         }
 
         if (!ok) {
@@ -206,7 +209,7 @@ class BuiltinNegotiation(
                         sendMessage(
                             "$peerPid/offers",
                             ContractOfferMessage(
-                                providerPid = ownPid,
+                                providerPid = id,
                                 consumerPid = peerPid,
                                 callbackAddress = ownEndpoint.toString(),
                                 offer = counter,
@@ -218,7 +221,7 @@ class BuiltinNegotiation(
                 }
                 // TODO: This will not work
                 currentPolicy = counter
-                state = NegotiationState.OFFERED
+                internalState = NegotiationState.OFFERED
                 return
             } else {
                 terminateNegotiation("errPolicyFailure", "No counteroffer can be computed for this request")
@@ -234,7 +237,7 @@ class BuiltinNegotiation(
                 sendMessage(
                     "$peerPid/agreement",
                     ContractAgreementMessage(
-                        providerPid = ownPid,
+                        providerPid = id,
                         consumerPid = peerPid,
                         agreement = agreement,
                         callbackAddress = ownEndpoint.toString(),
@@ -245,7 +248,7 @@ class BuiltinNegotiation(
             return
         }
         currentPolicy = agreement
-        state = NegotiationState.AGREED
+        internalState = NegotiationState.AGREED
     }
 
     /**
@@ -280,7 +283,7 @@ class BuiltinNegotiation(
                 "not acceptable"
             }}"
             val (providerPid, consumerPid) = getProviderAndConsumerPid()
-            payload = mapOf<String, Any>("role" to role, "state" to state, "providerPid" to providerPid, "consumerPid" to consumerPid)
+            payload = mapOf<String, Any>("role" to role, "state" to internalState, "providerPid" to providerPid, "consumerPid" to consumerPid)
         }
 
         if (!ok) {
@@ -289,12 +292,12 @@ class BuiltinNegotiation(
                     "$peerPid/request",
                     ContractRequestMessage(
                         providerPid = peerPid,
-                        consumerPid = ownPid,
+                        consumerPid = id,
                         callbackAddress = ownEndpoint.toString(),
                         offer = newOffer,
                     ),
                 )
-                state = NegotiationState.REQUESTED
+                internalState = NegotiationState.REQUESTED
                 currentPolicy = newOffer
                 return
             } else {
@@ -309,7 +312,7 @@ class BuiltinNegotiation(
                     "$peerPid/events",
                     ContractNegotiationEventMessage(
                         providerPid = peerPid,
-                        consumerPid = ownPid,
+                        consumerPid = id,
                         eventType = NegotiationEvent.ACCEPTED,
                     ),
                 ),
@@ -317,7 +320,7 @@ class BuiltinNegotiation(
         ) {
             return
         }
-        state = NegotiationState.ACCEPTED
+        internalState = NegotiationState.ACCEPTED
     }
 
     suspend fun processAccept(responseCallback: suspend (Boolean) -> Unit): Unit =
@@ -330,7 +333,7 @@ class BuiltinNegotiation(
             }
             responseCallback(true)
 
-            state = NegotiationState.ACCEPTED
+            internalState = NegotiationState.ACCEPTED
 
             // TODO: Fill in true assignee here
             val agreement = (currentPolicy as OdrlOffer).toAgreement(odrlParser, OdrlParty())
@@ -340,7 +343,7 @@ class BuiltinNegotiation(
                     sendMessage(
                         "$peerPid/agreement",
                         ContractAgreementMessage(
-                            providerPid = ownPid,
+                            providerPid = id,
                             consumerPid = peerPid,
                             agreement = currentPolicy as OdrlAgreement,
                             callbackAddress = ownEndpoint.toString(),
@@ -350,7 +353,7 @@ class BuiltinNegotiation(
             ) {
                 return
             }
-            state = NegotiationState.AGREED
+            internalState = NegotiationState.AGREED
         }
 
     suspend fun processVerify(responseCallback: suspend (Boolean) -> Unit): Unit =
@@ -366,7 +369,7 @@ class BuiltinNegotiation(
                     sendMessage(
                         "$peerPid/events",
                         ContractNegotiationEventMessage(
-                            providerPid = ownPid,
+                            providerPid = id,
                             consumerPid = peerPid,
                             eventType = NegotiationEvent.FINALIZED,
                         ),
@@ -397,21 +400,16 @@ class BuiltinNegotiation(
         return ContractNegotiation(
             providerPid = providerPid,
             consumerPid = consumerPid,
-            state = state,
+            state = internalState,
         )
     }
-
-    override suspend fun getStateMessage(): ContractNegotiation =
-        mutex.withLock {
-            return getStateMessageUnlocked()
-        }
 
     suspend fun processAgreement(
         req: ContractAgreementMessage,
         responseCallback: suspend (Boolean) -> Unit,
     ): Unit =
         mutex.withLock {
-            if ((state != NegotiationState.REQUESTED && state != NegotiationState.ACCEPTED) || role != Negotiation.Role.CONSUMER) {
+            if ((internalState != NegotiationState.REQUESTED && internalState != NegotiationState.ACCEPTED) || role != Negotiation.Role.CONSUMER) {
                 LOG.atDebug {
                     message = "The received message is invalid for the current negotiation state"
                     val (providerPid, consumerPid) = getProviderAndConsumerPid()
@@ -420,7 +418,7 @@ class BuiltinNegotiation(
                             "role" to role,
                             "providerPid" to providerPid,
                             "consumerPid" to consumerPid,
-                            "state" to state,
+                            "state" to internalState,
                             "expectedState" to "${NegotiationState.REQUESTED} or ${NegotiationState.ACCEPTED}",
                             "expectedRole" to Negotiation.Role.CONSUMER,
                         )
@@ -438,7 +436,7 @@ class BuiltinNegotiation(
                 LOG.atDebug {
                     message = "The negotiator deems this agreement is not the same as the previous policy"
                     val (providerPid, consumerPid) = getProviderAndConsumerPid()
-                    payload = mapOf("role" to role, "providerPid" to providerPid, "consumerPid" to consumerPid, "state" to state)
+                    payload = mapOf("role" to role, "providerPid" to providerPid, "consumerPid" to consumerPid, "state" to internalState)
                 }
                 responseCallback(false)
                 terminateNegotiation("errPolicyFailure")
@@ -447,12 +445,12 @@ class BuiltinNegotiation(
 
             responseCallback(true)
             currentPolicy = req.agreement
-            state = NegotiationState.VERIFIED
+            internalState = NegotiationState.VERIFIED
             sendMessage(
                 "$peerPid/agreement/verification",
                 ContractAgreementVerificationMessage(
                     providerPid = peerPid,
-                    consumerPid = ownPid,
+                    consumerPid = id,
                 ),
             )
         }
@@ -461,7 +459,7 @@ class BuiltinNegotiation(
         req: ContractNegotiationTerminationMessage,
         responseCallback: suspend () -> Unit,
     ) = mutex.withLock {
-        state = NegotiationState.TERMINATED
+        internalState = NegotiationState.TERMINATED
         val messageBuilder = StringBuilder("The peer terminated the negotiation with code ${req.code}")
         if (req.reason != null) {
             for (reason in req.reason) {

@@ -1,8 +1,6 @@
 package de.fraunhofer.aisec.glue.negotiation.edc
 
 import de.fraunhofer.aisec.glue.models.edc.TerminateNegotiationRequest
-import de.fraunhofer.aisec.glue.models.negotiation.ContractNegotiation
-import de.fraunhofer.aisec.glue.models.negotiation.NegotiationState
 import de.fraunhofer.aisec.glue.negotiation.Negotiation
 import de.fraunhofer.aisec.glue.negotiation.NegotiationException
 import de.fraunhofer.iosb.odrl.OdrlAgreement
@@ -23,45 +21,19 @@ class EdcNegotiation(
     val edcUrl: String,
     var edcState: EdcNegotiationState = EdcNegotiationState.INITIAL,
 ) : Negotiation {
-    // TODO: Overhaul our existing state objet to support more states
-    override val state: NegotiationState
-        get() =
-            when (edcState) {
-                EdcNegotiationState.INITIAL -> NegotiationState.REQUESTED
-                EdcNegotiationState.REQUESTING -> NegotiationState.REQUESTED
-                EdcNegotiationState.REQUESTED -> NegotiationState.REQUESTED
-                EdcNegotiationState.OFFERING -> throw AssertionError("EDC negotiation as provider")
-                EdcNegotiationState.OFFERED -> throw AssertionError("EDC negotiation as provider")
-                EdcNegotiationState.ACCEPTING -> NegotiationState.ACCEPTED
-                EdcNegotiationState.ACCEPTED -> NegotiationState.ACCEPTED
-                EdcNegotiationState.AGREEING -> NegotiationState.AGREED
-                EdcNegotiationState.AGREED -> NegotiationState.AGREED
-                EdcNegotiationState.VERIFYING -> NegotiationState.VERIFIED
-                EdcNegotiationState.VERIFIED -> NegotiationState.VERIFIED
-                EdcNegotiationState.FINALIZING -> NegotiationState.FINALIZED
-                EdcNegotiationState.FINALIZED -> NegotiationState.FINALIZED
-                EdcNegotiationState.TERMINATING -> NegotiationState.TERMINATED
-                EdcNegotiationState.TERMINATED -> NegotiationState.TERMINATED
-            }
 
     // We don't support provider negotiation with the EDC
     override val role: Negotiation.Role
         get() = Negotiation.Role.CONSUMER
 
-    // TODO: Abstract away from pids. This is also needed for better management
-    override val ownPid: String
+    override val id: String
         get() = edcId
 
     override val peerIdentity: String
         get() = peerId
 
-    override suspend fun getStateMessage(): ContractNegotiation {
-        return ContractNegotiation(
-            providerPid = "",
-            consumerPid = ownPid,
-            state = state,
-        )
-    }
+    override val state: String
+        get() = edcState.toString()
 
     override suspend fun cancel(cause: String?) {
         httpClient.post("$edcUrl/management/v3/contractnegotiations/$edcId/terminate") {
