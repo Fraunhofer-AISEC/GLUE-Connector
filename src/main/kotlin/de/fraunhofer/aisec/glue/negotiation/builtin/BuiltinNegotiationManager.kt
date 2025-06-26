@@ -42,7 +42,7 @@ class BuiltinNegotiationManager(
     private val defaultNegotiator: Negotiator,
     private val contractStore: ContractStore,
     private val odrlParser: OdrlParser,
-    private val configManager: ConfigManager,
+    configManager: ConfigManager,
 ) : NegotiationManager() {
     private val pidMutex = Mutex()
     private val assignedIds = synchronizedSet(mutableSetOf<String>())
@@ -91,7 +91,7 @@ class BuiltinNegotiationManager(
                 odrlRequest,
             )
 
-        logParams["consumerPid"] = consumerPid
+        logParams["id"] = consumerPid
         logParams["peerUrl"] = provider
         logParams["callbackUrl"] = callbackUrl
         logParams["contractOffer"] = odrlRequest.uid
@@ -181,7 +181,7 @@ class BuiltinNegotiationManager(
                 peerIdentity = null,
                 currentPolicy = odrlRequest,
                 role = Negotiation.Role.CONSUMER,
-                ownPid = consumerPid,
+                id = consumerPid,
                 peerPid = deserializedResponse.providerPid,
                 negotiator = negotiator ?: defaultNegotiator,
                 httpClient = httpClient,
@@ -233,7 +233,7 @@ class BuiltinNegotiationManager(
 
         val providerPid = newProcessId()
 
-        logParams["providerPid"] = providerPid
+        logParams["id"] = providerPid
         LOG.atDebug {
             message = "Creating new negotiation object as provider for request"
             payload = logParams
@@ -246,7 +246,7 @@ class BuiltinNegotiationManager(
                 // The policy is actually set after it has been processed by the negotiator
                 currentPolicy = null,
                 role = Negotiation.Role.PROVIDER,
-                ownPid = providerPid,
+                id = providerPid,
                 peerPid = request.consumerPid,
                 negotiator = defaultNegotiator,
                 httpClient = httpClient,
@@ -285,7 +285,7 @@ class BuiltinNegotiationManager(
 
         val consumerPid = newProcessId()
 
-        logParams["consumerPid"] = consumerPid
+        logParams["id"] = consumerPid
         LOG.atDebug {
             message = "Creating new negotiation object for offer as consumer"
             payload = logParams
@@ -297,7 +297,7 @@ class BuiltinNegotiationManager(
                 peerIdentity = peerIdent,
                 currentPolicy = null,
                 role = Negotiation.Role.CONSUMER,
-                ownPid = consumerPid,
+                id = consumerPid,
                 peerPid = request.providerPid,
                 negotiator = defaultNegotiator,
                 httpClient = httpClient,

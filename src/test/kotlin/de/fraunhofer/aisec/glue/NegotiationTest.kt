@@ -115,7 +115,7 @@ class NegotiationTest {
                 responseCallbackCalled = true
             }
             assertTrue(responseCallbackCalled)
-            assertEquals(NegotiationState.AGREED, negotiation.state)
+            assertEquals(NegotiationState.AGREED, negotiation.internalState)
             assertEquals(NegotiationState.AGREED, consumerState)
 
             responseCallbackCalled = false
@@ -125,7 +125,7 @@ class NegotiationTest {
             }
 
             assertTrue(responseCallbackCalled)
-            assertEquals(NegotiationState.FINALIZED, negotiation.state)
+            assertEquals(NegotiationState.FINALIZED, negotiation.internalState)
             assertEquals(NegotiationState.FINALIZED, consumerState)
 
             // Verify that the returned and stored policies are the same
@@ -188,13 +188,13 @@ class NegotiationTest {
             }
 
             assertTrue(responseCallbackCalled)
-            assertEquals(NegotiationState.ACCEPTED, negotiation.state)
+            assertEquals(NegotiationState.ACCEPTED, negotiation.internalState)
             assertEquals(NegotiationState.ACCEPTED, providerState)
 
             val agreementReq =
                 ContractAgreementMessage(
                     providerPid = providerPid,
-                    consumerPid = negotiation.ownPid,
+                    consumerPid = negotiation.id,
                     agreement = exampleAgreement,
                     callbackAddress = "https://provider/negotiations",
                 )
@@ -205,7 +205,7 @@ class NegotiationTest {
             }
 
             assertTrue(responseCallbackCalled)
-            assertEquals(NegotiationState.VERIFIED, negotiation.state)
+            assertEquals(NegotiationState.VERIFIED, negotiation.internalState)
             assertEquals(NegotiationState.VERIFIED, providerState)
 
             responseCallbackCalled = false
@@ -215,7 +215,7 @@ class NegotiationTest {
             }
 
             assertTrue(responseCallbackCalled)
-            assertEquals(NegotiationState.FINALIZED, negotiation.state)
+            assertEquals(NegotiationState.FINALIZED, negotiation.internalState)
 
             coVerify { contractStore.addContract(any()) }
         }
@@ -305,7 +305,7 @@ class NegotiationTest {
 
             val negotiation = negotiationManager.getAsProvider(respBody.providerPid, consumerPid, "consumer")
             assertNotNull(negotiation)
-            assertEquals(NegotiationState.AGREED, negotiation.state)
+            assertEquals(NegotiationState.AGREED, negotiation.internalState)
             assertEquals(NegotiationState.AGREED, consumerState)
 
             resp =
@@ -320,7 +320,7 @@ class NegotiationTest {
                     )
                 }
             assertTrue(resp.status.isSuccess())
-            assertEquals(NegotiationState.FINALIZED, negotiation.state)
+            assertEquals(NegotiationState.FINALIZED, negotiation.internalState)
             assertEquals(NegotiationState.FINALIZED, consumerState)
         }
 
@@ -382,7 +382,7 @@ class NegotiationTest {
 
             val negotiation = negotiationManager.getAsConsumer(respBody.consumerPid, providerPid, "provider")
             assertNotNull(negotiation)
-            assertEquals(NegotiationState.ACCEPTED, negotiation.state)
+            assertEquals(NegotiationState.ACCEPTED, negotiation.internalState)
             assertEquals(NegotiationState.ACCEPTED, providerState)
 
             resp =
@@ -402,7 +402,7 @@ class NegotiationTest {
 
             delay(100)
 
-            assertEquals(NegotiationState.VERIFIED, negotiation.state)
+            assertEquals(NegotiationState.VERIFIED, negotiation.internalState)
             assertEquals(NegotiationState.VERIFIED, providerState)
 
             resp =
@@ -418,7 +418,7 @@ class NegotiationTest {
                     )
                 }
             assertTrue(resp.status.isSuccess())
-            assertEquals(NegotiationState.FINALIZED, negotiation.state)
+            assertEquals(NegotiationState.FINALIZED, negotiation.internalState)
         }
 
     @Test

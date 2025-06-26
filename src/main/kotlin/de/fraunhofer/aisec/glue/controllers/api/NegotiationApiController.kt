@@ -21,13 +21,11 @@ class NegotiationApiController(private val negotiationManager: NegotiationManage
                 val negotiations =
                     negotiationManager.getNegotiations()
                         .map { negotiation ->
-                            val state = negotiation.getStateMessage()
                             NegotiationInfoResponse(
+                                id = negotiation.id,
                                 role = negotiation.role,
                                 peer = negotiation.peerIdentity ?: "unknown",
-                                providerPid = state.providerPid,
-                                consumerPid = state.consumerPid,
-                                state = state.state,
+                                state = negotiation.state
                             )
                         }
 
