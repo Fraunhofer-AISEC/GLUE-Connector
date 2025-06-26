@@ -1,6 +1,9 @@
 package de.fraunhofer.aisec.glue.negotiation.edc
 
 import com.fasterxml.jackson.databind.node.ObjectNode
+import de.fraunhofer.aisec.glue.config.BasePath
+import de.fraunhofer.aisec.glue.config.Config
+import de.fraunhofer.aisec.glue.config.ConfigManager
 import de.fraunhofer.aisec.glue.models.edc.ContractNegotiation
 import de.fraunhofer.aisec.glue.models.edc.ContractRequest
 import de.fraunhofer.aisec.glue.models.edc.ContractRequestResponse
@@ -17,6 +20,7 @@ import io.ktor.client.plugins.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
+import io.ktor.server.config.*
 import kotlinx.coroutines.*
 import java.net.URI
 import java.util.*
@@ -26,9 +30,10 @@ import kotlin.time.Duration.Companion.seconds
 class EdcNegotiationManager(
     private val httpClient: HttpClient,
     private val odrlParser: OdrlParser,
-    private val baseUrl: String = "http://localhost:19193",
+    private val configManager: ConfigManager,
 ) : NegotiationManager() {
     private val negotiations = ConcurrentHashMap<URI, EdcNegotiation>()
+    private val config = configManager.getConfig(::EdcNegotiationConfig)
 
     // Some kind of cron-like scheduler would be nice
     private val pollStateJob: Job =
@@ -47,7 +52,7 @@ class EdcNegotiationManager(
         }
 
     private suspend fun syncWithEdc() {
-        val edcQueryUrl = "$baseUrl/management/v3/contractnegotiations/request"
+        val edcQueryUrl = "$${config.edcUrl}/management/v3/contractnegotiations/request"
         LOG.atDebug {
             message = "Running scheduled EDC negotiation state update"
             payload = mapOf("requestUrl" to edcQueryUrl)
@@ -177,7 +182,7 @@ class EdcNegotiationManager(
                 compactedOffer,
             )
         val createResp =
-            httpClient.post("$baseUrl/management/v3/contractnegotiations") {
+            httpClient.post("${config.edcUrl}/management/v3/contractnegotiations") {
                 contentType(ContentType.Application.Json)
                 setBody(contractRequest)
             }
@@ -197,7 +202,7 @@ class EdcNegotiationManager(
                 httpClient,
                 edcId = contractResponse.uid.toString(),
                 peerId = peer,
-                edcUrl = baseUrl,
+                edcUrl = config.edcUrl.toString(),
             )
         // TODO: Atomically check if the uid is reused
         negotiations[contractResponse.uid] = negotiation
@@ -207,5 +212,10 @@ class EdcNegotiationManager(
 
     companion object {
         private val LOG = KotlinLogging.logger {}
+    }
+
+    @BasePath("connector.edc")
+    class EdcNegotiationConfig(applicationConfig: ApplicationConfig): Config(applicationConfig) {
+        val edcUrl by withDefault(convert(stringProp(), ::Url), Url("http://localhost:19193"))
     }
 }
