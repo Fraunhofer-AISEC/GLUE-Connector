@@ -1,6 +1,6 @@
 package de.fraunhofer.aisec.glue
 
-import de.fraunhofer.aisec.glue.config.ConnectorConfig
+import de.fraunhofer.aisec.glue.config.ConfigManager
 import de.fraunhofer.aisec.glue.controllers.Controller
 import de.fraunhofer.aisec.glue.controllers.NegotiationController
 import de.fraunhofer.aisec.glue.models.negotiation.*
@@ -90,9 +90,9 @@ class NegotiationTest {
             val contractStore = mockk<ContractStore>()
             coJustRun { contractStore.addContract(any()) }
 
-            val connectorConfig = ConnectorConfig(MapApplicationConfig("connector.identity" to "https://test-connector.local"))
+            val configManager = ConfigManager(MapApplicationConfig("connector.identity" to "https://test-connector.local"))
             val negotiationManager =
-                BuiltinNegotiationManager(httpClient, objectMapper, DummyNegotiator(true), contractStore, OdrlParser(), connectorConfig)
+                BuiltinNegotiationManager(httpClient, objectMapper, DummyNegotiator(true), contractStore, OdrlParser(), configManager)
 
             val contractRequest =
                 ContractRequestMessage(
@@ -163,9 +163,9 @@ class NegotiationTest {
             val contractStore = mockk<ContractStore>()
             coJustRun { contractStore.addContract(any()) }
 
-            val connectorConfig = ConnectorConfig(MapApplicationConfig("connector.identity" to "https://test-connector.local"))
+            val configManager = ConfigManager(MapApplicationConfig("connector.identity" to "https://test-connector.local"))
             val negotiationManager =
-                BuiltinNegotiationManager(httpClient, objectMapper, DummyNegotiator(), contractStore, OdrlParser(), connectorConfig)
+                BuiltinNegotiationManager(httpClient, objectMapper, DummyNegotiator(), contractStore, OdrlParser(), configManager)
 
             val contractOffer =
                 ContractOfferMessage(
@@ -277,9 +277,9 @@ class NegotiationTest {
                     }
                 }
             val contractStore = ContractStore(objectMapper)
-            val connectorConfig = ConnectorConfig(MapApplicationConfig("connector.identity" to "https://test-connector.local"))
+            val configManager = ConfigManager(MapApplicationConfig("connector.identity" to "https://test-connector.local"))
             val negotiationManager =
-                BuiltinNegotiationManager(httpClient, objectMapper, DummyNegotiator(), contractStore, OdrlParser(), connectorConfig)
+                BuiltinNegotiationManager(httpClient, objectMapper, DummyNegotiator(), contractStore, OdrlParser(), configManager)
             val controller = NegotiationController(negotiationManager)
 
             configureTestApp(controller)
@@ -354,9 +354,9 @@ class NegotiationTest {
                 }
             val contractStore = mockk<ContractStore>()
             coJustRun { contractStore.addContract(any()) }
-            val connectorConfig = ConnectorConfig(MapApplicationConfig("connector.identity" to "https://test-connector.local"))
+            val configManager = ConfigManager(MapApplicationConfig("connector.identity" to "https://test-connector.local"))
             val negotiationManager =
-                BuiltinNegotiationManager(httpClient, objectMapper, DummyNegotiator(), contractStore, OdrlParser(), connectorConfig)
+                BuiltinNegotiationManager(httpClient, objectMapper, DummyNegotiator(), contractStore, OdrlParser(), configManager)
             val controller = NegotiationController(negotiationManager)
 
             configureTestApp(controller)
@@ -455,7 +455,7 @@ class NegotiationTest {
                     DummyNegotiator(),
                     providerContractStore,
                     odrlParser,
-                    ConnectorConfig(providerConfig),
+                    ConfigManager(providerConfig),
                 )
             val providerController = NegotiationController(providerNegotiationManager)
 
@@ -470,7 +470,7 @@ class NegotiationTest {
                     DummyNegotiator(),
                     consumerContractStore,
                     odrlParser,
-                    ConnectorConfig(consumerConfig),
+                    ConfigManager(consumerConfig),
                 )
             val consumerController = NegotiationController(consumerNegotiationManager)
 
