@@ -15,7 +15,7 @@ import de.fraunhofer.aisec.glue.plugins.configureAuthentication
 import de.fraunhofer.aisec.glue.policy.PolicyEngine
 import de.fraunhofer.iosb.odrl.parser.OdrlParser
 import io.ktor.client.*
-import io.ktor.client.engine.okhttp.*
+import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.auth.*
 import io.ktor.client.plugins.auth.providers.*
@@ -56,7 +56,7 @@ fun main(args: Array<String>) {
 val defaultDependencies by DI.Module {
     bind<HttpClient>() with
         singleton {
-            HttpClient(OkHttp) {
+            HttpClient(CIO) {
                 install(ClientContentNegotiation) {
                     register(ContentType.Application.Json, instance())
                 }
@@ -94,7 +94,7 @@ val defaultDependencies by DI.Module {
 }
 
 fun Application.module() =
-    module(
+    moduleWithDeps(
         DI.direct {
             import(defaultDependencies)
             import(
@@ -106,7 +106,7 @@ fun Application.module() =
         },
     )
 
-fun Application.module(dependencies: DirectDI) {
+fun Application.moduleWithDeps(dependencies: DirectDI) {
     configureAuthentication()
     install(CORS) {
         anyHost()

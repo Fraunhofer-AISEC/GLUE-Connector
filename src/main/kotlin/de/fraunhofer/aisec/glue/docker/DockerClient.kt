@@ -3,10 +3,9 @@ package de.fraunhofer.aisec.glue.docker
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.DeserializationFeature
 import de.fraunhofer.aisec.glue.docker.model.*
-import de.fraunhofer.aisec.glue.docker.unix.UnixSocketFactory
 import io.ktor.client.*
 import io.ktor.client.call.*
-import io.ktor.client.engine.okhttp.*
+import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
@@ -25,12 +24,10 @@ class DockerClient(internal val httpClient: HttpClient, private val baseUrl: Url
      */
     constructor(dockerSocket: String = "/var/lib/docker.sock") :
         this(
-            HttpClient(OkHttp) {
+            HttpClient(CIO) {
                 defaultConfig()
-                engine {
-                    config {
-                        socketFactory(UnixSocketFactory(dockerSocket))
-                    }
+                defaultRequest {
+                    unixSocket(dockerSocket)
                 }
             },
             UNIX_BASE_URL,
@@ -164,8 +161,7 @@ class DockerClient(internal val httpClient: HttpClient, private val baseUrl: Url
 
         suspend fun list(): List<Network> {
             val nets = httpClient.get(endpoint("networks")).body<List<NetworkInspectResponse>>()
-            return nets.map {
-                    n ->
+            return nets.map { n ->
                 Network(this@DockerClient, n.name ?: throw NullPointerException("Received unnamed network from docker"))
             }
         }
@@ -181,7 +177,6 @@ class DockerClient(internal val httpClient: HttpClient, private val baseUrl: Url
             httpClient.post(endpoint("images/create")) {
                 parameter("fromImage", name)
                 System.getenv("REGISTRY_AUTH_TOKEN")?.let {
-                    println("X-Registry-Auth: $it")
                     header("X-Registry-Auth", it)
                 }
             }
@@ -210,7 +205,7 @@ class DockerClient(internal val httpClient: HttpClient, private val baseUrl: Url
         private const val API_VERSION = "v1.43"
         internal val UNIX_BASE_URL = Url("http://localhost/$API_VERSION")
 
-        private val defaultConfig: HttpClientConfig<OkHttpConfig>.() -> Unit = {
+        private val defaultConfig: HttpClientConfig<CIOEngineConfig>.() -> Unit = {
             expectSuccess = true
             install(ContentNegotiation) {
                 jackson(streamRequestBody = false) {
@@ -255,11 +250,11 @@ class DockerClient(internal val httpClient: HttpClient, private val baseUrl: Url
 
                         LOG.info("Using docker engine TLS socket at $dockerBaseUrl with certificates from $certDir")
                         DockerClient(
-                            HttpClient(OkHttp) {
+                            HttpClient(CIO) {
                                 defaultConfig()
                                 engine {
-                                    config {
-                                        sslSocketFactory(sslContext.socketFactory, trustManager)
+                                    https {
+                                        // TODO: Finally set this up...
                                     }
                                 }
                             },
@@ -277,7 +272,7 @@ class DockerClient(internal val httpClient: HttpClient, private val baseUrl: Url
                         LOG.info("Using docker engine TCP socket at $dockerBaseUrl")
                         // Plain HTTP should only be used locally for testing and when unix is not available
                         DockerClient(
-                            HttpClient(OkHttp, defaultConfig),
+                            HttpClient(CIO, defaultConfig),
                             dockerBaseUrl,
                         )
                     }
@@ -285,12 +280,10 @@ class DockerClient(internal val httpClient: HttpClient, private val baseUrl: Url
                 "unix" -> {
                     LOG.info("Using docker engine unix socket at ${uri.path}")
                     DockerClient(
-                        HttpClient(OkHttp) {
+                        HttpClient(CIO) {
                             defaultConfig()
-                            engine {
-                                config {
-                                    socketFactory(UnixSocketFactory(uri.path))
-                                }
+                            defaultRequest {
+                                unixSocket(uri.path)
                             }
                         },
                         UNIX_BASE_URL,

@@ -10,7 +10,7 @@ import de.fraunhofer.aisec.glue.plugins.configureAuthentication
 import de.fraunhofer.iosb.odrl.OdrlOffer
 import de.fraunhofer.iosb.odrl.parser.OdrlParser
 import io.ktor.client.*
-import io.ktor.client.engine.okhttp.*
+import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.auth.*
 import io.ktor.client.plugins.auth.providers.*
 import io.ktor.http.*
@@ -79,7 +79,7 @@ fun main(args: Array<String>) {
 
     runBlocking {
         val httpClient =
-            HttpClient(OkHttp) {
+            HttpClient(CIO) {
                 install(ClientContentNegotiation) {
                     register(ContentType.Application.Json, JacksonConverter(objectMapper))
                 }
