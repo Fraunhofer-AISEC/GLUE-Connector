@@ -16,7 +16,6 @@ data class ContractRequest(
     val protocol: String,
     @JsonProperty("${Namespaces.EDC}/policy")
     val policy: ObjectNode,
-    // TODO: Use the proper type here since that callback might be useful (we can still do polling instead)
     @JsonProperty("${Namespaces.EDC}/callbackAddresses")
-    val callbackAddresses: List<String>? = null,
+    val callbackAddresses: List<CallbackAddress>? = null,
 )

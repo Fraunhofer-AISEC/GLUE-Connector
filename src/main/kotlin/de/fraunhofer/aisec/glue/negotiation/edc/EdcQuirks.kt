@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ArrayNode
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.databind.node.TextNode
+import de.fraunhofer.iosb.odrl.OdrlIdentifiers
 import java.io.ByteArrayInputStream
 
 object EdcQuirks {
@@ -96,6 +97,7 @@ object EdcQuirks {
      * This function tries to prevent this by preemptively converting all nodes of selected glue types to string.
      */
     fun stringifyGlueKeys(objectMapper: ObjectMapper, serialization: ObjectNode) {
+        // TODO: Do we also need to stringify policy templates?
         val glueTypes = listOf("http://fhg.de/glue/ContainerPipeline")
 
         // This function returns true if the currently processed node should be replaced.
@@ -154,5 +156,74 @@ object EdcQuirks {
         }
 
         stringifyTree(serialization)
+    }
+
+    /**
+     * De-stringify nodes that the EDC does not know and therefore converts to string.
+     * To keep this simple, we only process objects with known "leftOperand" properties and try to fail gracefully
+     */
+    fun destringifyOperators(objectMapper: ObjectMapper, jsonObject: JsonNode) {
+        val knownOperations = listOf("http://fhg.de/glue/containerPipeline")
+
+        fun shouldDestringify(objectNode: ObjectNode): Boolean{
+            if (!(objectNode.has("odrl:leftOperand") && objectNode.has("odrl:rightOperand"))) {
+                return false
+            }
+
+            val leftOp = objectNode["odrl:leftOperand"]
+            val rightOp = objectNode["odrl:rightOperand"]
+
+            // Check if the right op is a string and if the left op is known
+            return rightOp.isTextual && leftOp.isTextual && knownOperations.contains(leftOp.asText())
+        }
+
+        fun impl(jsonNode: JsonNode) {
+            when (jsonNode) {
+                is ObjectNode -> {
+                    if (shouldDestringify(jsonNode)) {
+                        val rightOp = jsonNode["odrl:rightOperand"].asText()
+                        val destringified = objectMapper.readTree(rightOp)
+                        jsonNode.set<ObjectNode>("odrl:rightOperand", destringified)
+                        // There is hopefully no nested stringification
+                        return
+                    }
+
+                    for (node in jsonNode) {
+                        impl(node)
+                    }
+                }
+                is ArrayNode -> {
+                    for (node in jsonNode) {
+                        impl(node)
+                    }
+                }
+            }
+        }
+
+        impl(jsonObject)
+    }
+
+    /**
+     * For some inexplicable reason, the EDC wraps actions with refinements in an additional action tag.
+     * The developers of the EDC apparently think that this is correct behavior so we need to transform it into
+     * something that we can use on our end.
+     * [Related Issue](https://github.com/eclipse-edc/Connector/issues/4838)
+     */
+    fun fixDoubleAction(serialization: JsonNode) {
+        val actionKey = OdrlIdentifiers.HAS_ACTION
+
+        // TODO: The nested actions problem should not recur, right? If it does, we need a full recursive function here.
+        serialization.findValues(actionKey).filter { it is ObjectNode && it.has(actionKey) }.forEach {
+            val node = it as ObjectNode
+            // If the child node is not an object then something is wrong here (we could throw to let the user know)
+            val childNode = it[actionKey] as? ObjectNode ?: return@forEach
+            // Another sanity check to catch extra content that should not be there
+            if (childNode.size() != 1 || !childNode.has("@id")) {
+                return@forEach
+            }
+
+            node.remove(actionKey)
+            node.set<ObjectNode>("@id", childNode["@id"])
+        }
     }
 }
