@@ -150,11 +150,11 @@ class EdcNegotiationManager(
         peer: String,
         offer: OdrlPolicy,
     ): Deferred<OdrlAgreement> {
-        val (offer, newId) = convertToOffer(offer/*, OdrlParty("todo://add-connector-od-from-config-here")*/).getOrElse {
+        val (newOffer, newId) = convertToOffer(offer).getOrElse {
             return CompletableDeferred<OdrlAgreement>().apply {completeExceptionally(it)}
         }
 
-        val compactedSerializedOffer = odrlParser.mapper.writeValueAsString(offer)
+        val compactedSerializedOffer = odrlParser.mapper.writeValueAsString(newOffer)
 
         // The EDC requires a specific format for the contract request ID to correlate it with the asset and contract
         // definitions it stores.
@@ -197,6 +197,7 @@ class EdcNegotiationManager(
             EdcNegotiation(
                 contractFuture,
                 httpClient,
+                objectMapper = odrlParser.mapper,
                 edcId = contractResponse.uid.toString(),
                 peerId = peer,
                 edcUrl = edcConfig.url.toString(),

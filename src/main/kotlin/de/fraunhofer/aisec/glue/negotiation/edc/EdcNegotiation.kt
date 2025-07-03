@@ -1,11 +1,15 @@
 package de.fraunhofer.aisec.glue.negotiation.edc
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.convertValue
+import de.fraunhofer.aisec.glue.models.edc.ContractAgreement
 import de.fraunhofer.aisec.glue.models.edc.TerminateNegotiationRequest
 import de.fraunhofer.aisec.glue.negotiation.Negotiation
 import de.fraunhofer.aisec.glue.negotiation.NegotiationException
 import de.fraunhofer.iosb.odrl.OdrlAgreement
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ktor.client.*
+import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import kotlinx.coroutines.CompletableDeferred
@@ -16,6 +20,7 @@ import de.fraunhofer.aisec.glue.models.edc.ContractNegotiation.NegotiationState 
 class EdcNegotiation(
     val completed: CompletableDeferred<OdrlAgreement>,
     val httpClient: HttpClient,
+    val objectMapper: ObjectMapper,
     val edcId: String,
     val peerId: String,
     val edcUrl: String,
@@ -47,7 +52,30 @@ class EdcNegotiation(
         }
     }
 
-    fun update(edcObject: EdcContractNegotiation) {
+    private suspend fun fetchAgreement(): OdrlAgreement {
+        // Fetch the agreement from the EDC
+        val response = httpClient.get("$edcUrl/management/v3/contractnegotiations/$edcId/agreement") {
+            contentType(ContentType.Application.Json)
+        }
+
+        assert(response.status.isSuccess()) { "TODO: Proper error handling" }
+
+        val responseMessage = response.body<ContractAgreement>()
+
+        LOG.atDebug {
+            message = "Got contract agreement from EDC"
+            payload = mapOf(
+                "edcId" to id, "state" to edcState, "contractAgreement" to responseMessage
+            )
+        }
+
+        EdcQuirks.destringifyOperators(objectMapper, responseMessage.policy)
+        EdcQuirks.fixDoubleAction(responseMessage.policy)
+
+        return objectMapper.convertValue<OdrlAgreement>(responseMessage.policy)
+    }
+
+    suspend fun update(edcObject: EdcContractNegotiation) {
         if (edcObject.state == edcState) {
             // No change, nothing to do
             return
@@ -61,7 +89,7 @@ class EdcNegotiation(
         edcState = edcObject.state
         when (edcObject.state) {
             EdcNegotiationState.FINALIZED -> {
-                completed.complete(TODO("Fetch agreement"))
+                completed.complete(fetchAgreement())
             }
             EdcNegotiationState.TERMINATED -> {
                 completed.completeExceptionally(

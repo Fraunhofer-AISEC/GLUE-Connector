@@ -17,5 +17,5 @@ data class ContractRequest(
     @JsonProperty("${Namespaces.EDC}/policy")
     val policy: ObjectNode,
     @JsonProperty("${Namespaces.EDC}/callbackAddresses")
-    val callbackAddresses: List<String>? = null,
+    val callbackAddresses: List<CallbackAddress>? = null,
 )
