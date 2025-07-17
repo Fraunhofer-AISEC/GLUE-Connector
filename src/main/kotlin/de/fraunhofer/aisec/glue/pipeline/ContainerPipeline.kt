@@ -1,6 +1,7 @@
 package de.fraunhofer.aisec.glue.pipeline
 
 import com.fasterxml.jackson.databind.JsonNode
+import de.fraunhofer.iosb.odrl.OdrlPolicy
 import java.io.Closeable
 
 abstract class ContainerPipeline(val name: String, val contractId: String, val targetId: String) : Closeable {
@@ -32,4 +33,14 @@ abstract class ContainerPipeline(val name: String, val contractId: String, val t
         index: Int,
         config: ContainerConfig,
     )
+
+    /**
+     * Associate a new contract with this pipeline as a follow-up contract.
+     */
+    abstract suspend fun addContract(peer: String, contract: OdrlPolicy): Boolean
+
+    /**
+     * Get all follow-up contracts from this pipeline.
+     */
+    abstract suspend fun contracts(peer: String): Set<OdrlPolicy>
 }
