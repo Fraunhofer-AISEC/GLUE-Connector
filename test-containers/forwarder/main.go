@@ -6,67 +6,108 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
-	"net/url"
 	"os"
-	"strings"
 )
 
 func closeSilent(closeable io.Closer) {
 	_ = closeable.Close()
 }
 
-// Join a base url with a path, ensuring that a single slash is in between
-func joinUrl(base string, suffix string) string {
-	trailingSlash := strings.HasSuffix(base, "/")
-	leadingSlash := strings.HasPrefix(suffix, "/")
+func proxy(conn net.Conn, proxyAddress string) {
+	peer, err := net.Dial("tcp", proxyAddress)
+	if err != nil {
+		log.Printf("Could not connect to proxy address: %s", err.Error())
+		return
+	}
+	defer peer.Close()
 
-	// No slash
-	if !trailingSlash && !leadingSlash {
-		return base + "/" + suffix
+	forward := func(from net.Conn, to net.Conn, errCh chan<- error) {
+		_, err := io.Copy(to, from)
+		errCh <- err
 	}
-	// One slash
-	if trailingSlash {
-		return base + suffix
+
+	errCh := make(chan error)
+
+	go forward(conn, peer, errCh)
+	go forward(peer, conn, errCh)
+
+	err = <-errCh
+	if err != nil {
+		log.Printf("Error while forwarding data between %s and %s: %s", conn.RemoteAddr().String(), proxyAddress, err.Error())
+	} else {
+		log.Printf("Connection between %s and %s closed", conn.RemoteAddr().String(), proxyAddress)
 	}
-	// two slashes
-	return base + suffix[1:]
 }
 
-func makeHandler(connectorHost string, destination string) http.HandlerFunc {
-	httpClient := http.Client{}
+type pipelinePort struct {
+	Endpoint string `json:"endpoint"`
+	Protocol string `json:"protocol"`
+}
 
-	// Set up the parameter for the next connector's assignee here
-	// for simplicity, this is just the full destination URI
-	parameterUrl := fmt.Sprintf("http://%s:8080/coordinator/policy-parameter", connectorHost)
-	var paramsBuffer bytes.Buffer
-	_ = json.NewEncoder(&paramsBuffer).Encode(map[string]string{"nextDataReceiverUid": destination})
-	resp, err := httpClient.Post(parameterUrl, "application/json", &paramsBuffer)
+func negotiateAndProxy(conn net.Conn, coordiantor string, destination string) {
+	var httpClient http.Client
+	defer closeSilent(conn)
+
+	// Register the dnextDestionation parameter with the coordinator (control plane)
+
+	parameterUrl := fmt.Sprintf("http://%s:8080/coordinator/policy-parameter", coordiantor)
+	var paramBuffer bytes.Buffer
+	err := json.NewEncoder(&paramBuffer).Encode(map[string]string{"nextDataReceiverUid": destination})
 	if err != nil {
-		log.Fatalf("Error posting policy parameters: %s", err)
+		log.Printf("Could not encode parameter array: %s", err)
+		return
+	}
+
+	paramResp, err := httpClient.Post(parameterUrl, "application/json", &paramBuffer)
+	if err != nil {
+		log.Printf("Error in coordinator param request: %s", err)
+		return
+	}
+	defer closeSilent(paramResp.Body)
+	if paramResp.StatusCode < 200 || paramResp.StatusCode >= 300 {
+		log.Printf("Got error response from coordinator param endpoint: %s", paramResp.Status)
+		return
+	}
+
+	// Kick of the negotiation on the coordinator
+
+	coordiantorUrl := fmt.Sprintf("http://%s:8080/coordinator/negotiate?destination=%s&startPipeline=true", coordiantor, destination)
+	resp, err := httpClient.Post(coordiantorUrl, "application/json", nil)
+	if err != nil {
+		log.Printf("Error in coordinator negotiation request: %s", err)
+		return
 	}
 	defer closeSilent(resp.Body)
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		log.Fatalf("Got error response from coordinator: %s", resp.Status)
+		log.Printf("Got error response from coordinator: %s", resp.Status)
+		return
 	}
 
-	return func(w http.ResponseWriter, r *http.Request) {
-		fullDestination := joinUrl(destination, r.URL.Path)
-		proxyUrl := fmt.Sprintf("http://%s:8080/coordinator/proxy?destination=%s", connectorHost, url.QueryEscape(fullDestination))
+	// We get back all of the ports opened by the remote pipeline
+	// Look for one that we want
 
-		// This may panic if the content type header is missing...
-		resp, err := httpClient.Post(proxyUrl, r.Header["Content-Type"][0], r.Body)
-		if err != nil {
-			log.Fatalf("Error handling request for %s: %s", r.URL, err)
-		}
-		defer closeSilent(resp.Body)
-		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-			log.Fatalf("Got error response from coordinator: %s", resp.Status)
-		}
-
-		w.WriteHeader(http.StatusOK)
-		_, _ = io.Copy(w, resp.Body)
+	var ports []pipelinePort
+	err = json.NewDecoder(resp.Body).Decode(&ports)
+	if err != nil {
+		log.Printf("Could not decode negotiation json object: %s", err)
+		return
 	}
+
+	var endpoint string
+	for _, port := range ports {
+		if port.Protocol == "TCP" {
+			endpoint = port.Endpoint
+		}
+	}
+
+	if endpoint == "" {
+		log.Printf("No candidate endpoint found, closing")
+		return
+	}
+
+	proxy(conn, endpoint)
 }
 
 type config struct {
@@ -94,6 +135,20 @@ func main() {
 	log.Printf("Config: %+v", config)
 	log.Printf("Next hop is at %s", os.Args[1])
 
-	handler := makeHandler(config.Controller, os.Args[1])
-	_ = http.ListenAndServe("0.0.0.0:8080", handler)
+	listener, err := net.Listen("tcp", "0.0.0.0:8080")
+	if err != nil {
+		log.Fatalf("Could not start listener on port 8080: %s", err)
+	}
+
+	for {
+		conn, err := listener.Accept()
+		if err != nil {
+			log.Printf("Error during accept: %s", err)
+			continue
+		}
+
+		log.Printf("Accepted connection from %s", conn.RemoteAddr())
+
+		go negotiateAndProxy(conn, config.Controller, os.Args[1])
+	}
 }

@@ -10,9 +10,12 @@ import de.fraunhofer.aisec.glue.pipeline.ContainerConfig
 import de.fraunhofer.aisec.glue.pipeline.ContainerInfo
 import de.fraunhofer.aisec.glue.pipeline.ContainerPipeline
 import de.fraunhofer.aisec.glue.pipeline.ContainerPort
+import de.fraunhofer.iosb.odrl.OdrlPolicy
 import io.ktor.client.plugins.*
 import io.ktor.http.*
 import kotlinx.coroutines.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.slf4j.LoggerFactory
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -25,6 +28,8 @@ class DockerContainerPipeline internal constructor(
     val networks: List<Network>,
 ) : ContainerPipeline(name, contractId, targetId) {
     private val closed = AtomicBoolean(false)
+    private val followUpContracts: MutableMap<String, MutableSet<OdrlPolicy>> = mutableMapOf()
+    private val contractsLock = Mutex()
 
     override suspend fun start() {
         for (container in containers) {
@@ -148,6 +153,14 @@ class DockerContainerPipeline internal constructor(
         containers[index].copyToContainer {
             writeFile("config.json", objectMapper.writeValueAsBytes(config))
         }
+    }
+
+    override suspend fun addContract(peer: String, contract: OdrlPolicy): Boolean = contractsLock.withLock {
+        followUpContracts.getOrPut(peer, ::mutableSetOf).add(contract)
+    }
+
+    override suspend fun contracts(peer: String): Set<OdrlPolicy> = contractsLock.withLock {
+        followUpContracts[peer] ?: setOf()
     }
 
     companion object {
