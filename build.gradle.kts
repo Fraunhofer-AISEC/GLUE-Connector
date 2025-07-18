@@ -42,7 +42,7 @@ dependencies {
     implementation(libs.ktorm.jackson)
     implementation(libs.dbcp)
     implementation(libs.kotlinLogging.jvm)
-
+    implementation(libs.ktor.server.cors)
     // For running example with gradle
     runtimeOnly(libs.slf4j.jdk14)
 

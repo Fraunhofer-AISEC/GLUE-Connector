@@ -17,5 +17,11 @@ class ConnectorConfig(inner: ApplicationConfig) : Config(inner) {
      * The default public URL to use for callbacks when starting a negotiation.
      * When this property is not set, the local IP address is used, which will likely not be routable in production.
      */
-    val publicUrl by withDefault(convert(stringProp(), ::Url), Url(InetAddress.getLocalHost().hostAddress))
+    val publicUrl by withDefault(
+        convert(
+            stringProp(),
+            ::Url,
+        ),
+        URLBuilder(host = InetAddress.getLocalHost().hostAddress, port = 8080).build(),
+    )
 }

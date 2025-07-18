@@ -1,7 +1,11 @@
-package de.fraunhofer.aisec.glue.negotiation
+package de.fraunhofer.aisec.glue.negotiation.builtin
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import de.fraunhofer.aisec.glue.models.negotiation.*
+import de.fraunhofer.aisec.glue.negotiation.Negotiation
+import de.fraunhofer.aisec.glue.negotiation.NegotiationCompletionCallback
+import de.fraunhofer.aisec.glue.negotiation.NegotiationException
+import de.fraunhofer.aisec.glue.negotiation.toAgreement
 import de.fraunhofer.iosb.odrl.OdrlAgreement
 import de.fraunhofer.iosb.odrl.OdrlOffer
 import de.fraunhofer.iosb.odrl.OdrlParty
@@ -15,12 +19,12 @@ import io.ktor.http.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
-class NegotiationImpl(
+class BuiltinNegotiation(
     state: NegotiationState,
     override var peerIdentity: String?,
     var currentPolicy: OdrlPolicy? = null,
     override val role: Negotiation.Role,
-    override val ownPid: String,
+    override val id: String,
     val peerPid: String,
     val ownEndpoint: Url,
     val peerEndpoint: Url,
@@ -30,7 +34,7 @@ class NegotiationImpl(
     val completionCallback: NegotiationCompletionCallback,
     private val odrlParser: OdrlParser,
 ) : Negotiation {
-    override var state: NegotiationState = state
+    var internalState: NegotiationState = state
         private set(newState) {
             LOG.atDebug {
                 message = "Updating negotiation state"
@@ -48,6 +52,9 @@ class NegotiationImpl(
         }
     private val mutex = Mutex()
 
+    override val state: String
+        get() = internalState.toString()
+
     /**
      * Ensures that the negotiation is in the right state before telling the caller to respond to the initial request.
      * This should be the right function for most interactions where the negotiation has to validate that the incoming
@@ -58,7 +65,7 @@ class NegotiationImpl(
         expectedState: NegotiationState,
         expectedRole: Negotiation.Role,
     ): Boolean {
-        val ok = state == expectedState && role == expectedRole
+        val ok = internalState == expectedState && role == expectedRole
         if (!ok) {
             LOG.atDebug {
                 message = "The received message is invalid for the current negotiation state"
@@ -68,7 +75,7 @@ class NegotiationImpl(
                         "role" to role,
                         "providerPid" to providerPid,
                         "consumerPid" to consumerPid,
-                        "state" to state,
+                        "state" to internalState,
                         "expectedState" to expectedState,
                         "expectedRole" to expectedRole,
                     )
@@ -101,9 +108,9 @@ class NegotiationImpl(
      */
     private fun getProviderAndConsumerPid(): Pair<String, String> {
         return if (role == Negotiation.Role.PROVIDER) {
-            Pair(ownPid, peerPid)
+            Pair(id, peerPid)
         } else {
-            Pair(peerPid, ownPid)
+            Pair(peerPid, id)
         }
     }
 
@@ -117,14 +124,14 @@ class NegotiationImpl(
         // Note: The spec technically disallows us from terminating in some states, but it's probably better to not
         // care and terminate anyway.
         // What's the worst that can happen? The peer terminating the connection for a protocol violation? :)
-        state = NegotiationState.TERMINATED
+        internalState = NegotiationState.TERMINATED
         val (providerPid, consumerPid) = getProviderAndConsumerPid()
         LOG.atDebug {
             message = "Negotiation has been terminated by the application, notifying peer"
             payload =
                 mapOf(
                     "role" to role,
-                    "state" to state,
+                    "state" to internalState,
                     "providerPid" to providerPid,
                     "consumerPid" to consumerPid,
                     "code" to code,
@@ -147,11 +154,11 @@ class NegotiationImpl(
      * Report completion of the negotiation and the resulting policy.
      */
     private suspend fun completeNegotiation() {
-        state = NegotiationState.FINALIZED
+        internalState = NegotiationState.FINALIZED
         val (providerPid, consumerPid) = getProviderAndConsumerPid()
         LOG.atDebug {
             message = "Negotiation completed successfully"
-            payload = mapOf("role" to role, "state" to state, "providerPid" to providerPid, "consumerPid" to consumerPid)
+            payload = mapOf("role" to role, "state" to internalState, "providerPid" to providerPid, "consumerPid" to consumerPid)
         }
         // The non-null assertion here is safe since the negotiation may only be completed with a contract
         completionCallback(Result.success(currentPolicy ?: throw IllegalStateException("No policy available")))
@@ -162,9 +169,9 @@ class NegotiationImpl(
      * This is only valid if we are the provider and the negotiation is in its initial or the offered state, which will
      * be indicated by the parameter of [responseCallback] when invoked.
      */
-    override suspend fun processRequest(
+    suspend fun processRequest(
         req: ContractRequestMessage,
-        initial: Boolean,
+        initial: Boolean = false,
         responseCallback: suspend (Boolean) -> Unit,
     ) = mutex.withLock {
         // When we first construct a negotiation, we initialize it to the requested state right away.
@@ -191,7 +198,7 @@ class NegotiationImpl(
                 "not acceptable"
             }}"
             val (providerPid, consumerPid) = getProviderAndConsumerPid()
-            payload = mapOf<String, Any>("role" to role, "state" to state, "providerPid" to providerPid, "consumerPid" to consumerPid)
+            payload = mapOf<String, Any>("role" to role, "state" to internalState, "providerPid" to providerPid, "consumerPid" to consumerPid)
         }
 
         if (!ok) {
@@ -200,7 +207,7 @@ class NegotiationImpl(
                         sendMessage(
                             "$peerPid/offers",
                             ContractOfferMessage(
-                                providerPid = ownPid,
+                                providerPid = id,
                                 consumerPid = peerPid,
                                 callbackAddress = ownEndpoint.toString(),
                                 offer = counter,
@@ -211,7 +218,7 @@ class NegotiationImpl(
                     return
                 }
                 currentPolicy = counter
-                state = NegotiationState.OFFERED
+                internalState = NegotiationState.OFFERED
                 return
             } else {
                 terminateNegotiation("errPolicyFailure", "No counteroffer can be computed for this request")
@@ -226,7 +233,7 @@ class NegotiationImpl(
                 sendMessage(
                     "$peerPid/agreement",
                     ContractAgreementMessage(
-                        providerPid = ownPid,
+                        providerPid = id,
                         consumerPid = peerPid,
                         agreement = agreement,
                         callbackAddress = ownEndpoint.toString(),
@@ -237,7 +244,7 @@ class NegotiationImpl(
             return
         }
         currentPolicy = agreement
-        state = NegotiationState.AGREED
+        internalState = NegotiationState.AGREED
     }
 
     /**
@@ -245,9 +252,9 @@ class NegotiationImpl(
      * This operation is only allowed if we are a consumer and the negotiation is either in its initial or the requested
      * state, which will be reported back by the argument to [responseCallback].
      */
-    override suspend fun processOffer(
+    suspend fun processOffer(
         req: ContractOfferMessage,
-        initial: Boolean,
+        initial: Boolean = false,
         responseCallback: suspend (Boolean) -> Unit,
     ) = mutex.withLock {
         val allowedState =
@@ -272,7 +279,7 @@ class NegotiationImpl(
                 "not acceptable"
             }}"
             val (providerPid, consumerPid) = getProviderAndConsumerPid()
-            payload = mapOf<String, Any>("role" to role, "state" to state, "providerPid" to providerPid, "consumerPid" to consumerPid)
+            payload = mapOf<String, Any>("role" to role, "state" to internalState, "providerPid" to providerPid, "consumerPid" to consumerPid)
         }
 
         if (!ok) {
@@ -281,12 +288,12 @@ class NegotiationImpl(
                     "$peerPid/request",
                     ContractRequestMessage(
                         providerPid = peerPid,
-                        consumerPid = ownPid,
+                        consumerPid = id,
                         callbackAddress = ownEndpoint.toString(),
                         offer = newOffer,
                     ),
                 )
-                state = NegotiationState.REQUESTED
+                internalState = NegotiationState.REQUESTED
                 currentPolicy = newOffer
                 return
             } else {
@@ -301,7 +308,7 @@ class NegotiationImpl(
                     "$peerPid/events",
                     ContractNegotiationEventMessage(
                         providerPid = peerPid,
-                        consumerPid = ownPid,
+                        consumerPid = id,
                         eventType = NegotiationEvent.ACCEPTED,
                     ),
                 ),
@@ -309,10 +316,10 @@ class NegotiationImpl(
         ) {
             return
         }
-        state = NegotiationState.ACCEPTED
+        internalState = NegotiationState.ACCEPTED
     }
 
-    override suspend fun processAccept(responseCallback: suspend (Boolean) -> Unit): Unit =
+    suspend fun processAccept(responseCallback: suspend (Boolean) -> Unit): Unit =
         mutex.withLock {
             // By making sure that the state machine is in the offered state, we make sure that the current offer has
             // been made by us, as client offers (= requests) move us into the requested state.
@@ -322,7 +329,7 @@ class NegotiationImpl(
             }
             responseCallback(true)
 
-            state = NegotiationState.ACCEPTED
+            internalState = NegotiationState.ACCEPTED
 
             val agreement = (currentPolicy as OdrlOffer).toAgreement(odrlParser, OdrlParty())
             currentPolicy = agreement
@@ -331,7 +338,7 @@ class NegotiationImpl(
                     sendMessage(
                         "$peerPid/agreement",
                         ContractAgreementMessage(
-                            providerPid = ownPid,
+                            providerPid = id,
                             consumerPid = peerPid,
                             agreement = currentPolicy as OdrlAgreement,
                             callbackAddress = ownEndpoint.toString(),
@@ -341,10 +348,10 @@ class NegotiationImpl(
             ) {
                 return
             }
-            state = NegotiationState.AGREED
+            internalState = NegotiationState.AGREED
         }
 
-    override suspend fun processVerify(responseCallback: suspend (Boolean) -> Unit): Unit =
+    suspend fun processVerify(responseCallback: suspend (Boolean) -> Unit): Unit =
         mutex.withLock {
             if (!precondition(NegotiationState.AGREED, Negotiation.Role.PROVIDER)) {
                 responseCallback(false)
@@ -357,7 +364,7 @@ class NegotiationImpl(
                     sendMessage(
                         "$peerPid/events",
                         ContractNegotiationEventMessage(
-                            providerPid = ownPid,
+                            providerPid = id,
                             consumerPid = peerPid,
                             eventType = NegotiationEvent.FINALIZED,
                         ),
@@ -372,7 +379,7 @@ class NegotiationImpl(
             responseCallback(true)
         }
 
-    override suspend fun processFinalize(responseCallback: suspend (Boolean) -> Unit) {
+    suspend fun processFinalize(responseCallback: suspend (Boolean) -> Unit) {
         if (!precondition(NegotiationState.VERIFIED, Negotiation.Role.CONSUMER)) {
             responseCallback(false)
             return
@@ -382,29 +389,22 @@ class NegotiationImpl(
         responseCallback(true)
     }
 
-    //       bad. Find out if there are any coroutine reentrant locks in kotlin or if the default mutex can be made
-    //       reentrant somehow.
-    override fun getStateMessageUnlocked(): ContractNegotiation {
+    fun getStateMessageUnlocked(): ContractNegotiation {
         val (providerPid, consumerPid) = getProviderAndConsumerPid()
 
         return ContractNegotiation(
             providerPid = providerPid,
             consumerPid = consumerPid,
-            state = state,
+            state = internalState,
         )
     }
 
-    override suspend fun getStateMessage(): ContractNegotiation =
-        mutex.withLock {
-            return getStateMessageUnlocked()
-        }
-
-    override suspend fun processAgreement(
+    suspend fun processAgreement(
         req: ContractAgreementMessage,
         responseCallback: suspend (Boolean) -> Unit,
     ): Unit =
         mutex.withLock {
-            if ((state != NegotiationState.REQUESTED && state != NegotiationState.ACCEPTED) || role != Negotiation.Role.CONSUMER) {
+            if ((internalState != NegotiationState.REQUESTED && internalState != NegotiationState.ACCEPTED) || role != Negotiation.Role.CONSUMER) {
                 LOG.atDebug {
                     message = "The received message is invalid for the current negotiation state"
                     val (providerPid, consumerPid) = getProviderAndConsumerPid()
@@ -413,7 +413,7 @@ class NegotiationImpl(
                             "role" to role,
                             "providerPid" to providerPid,
                             "consumerPid" to consumerPid,
-                            "state" to state,
+                            "state" to internalState,
                             "expectedState" to "${NegotiationState.REQUESTED} or ${NegotiationState.ACCEPTED}",
                             "expectedRole" to Negotiation.Role.CONSUMER,
                         )
@@ -430,7 +430,7 @@ class NegotiationImpl(
                 LOG.atDebug {
                     message = "The negotiator deems this agreement is not the same as the previous policy"
                     val (providerPid, consumerPid) = getProviderAndConsumerPid()
-                    payload = mapOf("role" to role, "providerPid" to providerPid, "consumerPid" to consumerPid, "state" to state)
+                    payload = mapOf("role" to role, "providerPid" to providerPid, "consumerPid" to consumerPid, "state" to internalState)
                 }
                 responseCallback(false)
                 terminateNegotiation("errPolicyFailure")
@@ -439,21 +439,21 @@ class NegotiationImpl(
 
             responseCallback(true)
             currentPolicy = req.agreement
-            state = NegotiationState.VERIFIED
+            internalState = NegotiationState.VERIFIED
             sendMessage(
                 "$peerPid/agreement/verification",
                 ContractAgreementVerificationMessage(
                     providerPid = peerPid,
-                    consumerPid = ownPid,
+                    consumerPid = id,
                 ),
             )
         }
 
-    override suspend fun processTermination(
+    suspend fun processTermination(
         req: ContractNegotiationTerminationMessage,
         responseCallback: suspend () -> Unit,
     ) = mutex.withLock {
-        state = NegotiationState.TERMINATED
+        internalState = NegotiationState.TERMINATED
         val messageBuilder = StringBuilder("The peer terminated the negotiation with code ${req.code}")
         if (req.reason != null) {
             for (reason in req.reason) {

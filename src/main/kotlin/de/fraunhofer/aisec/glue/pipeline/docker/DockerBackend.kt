@@ -144,11 +144,12 @@ class DockerBackend(
                                             ),
                                         ),
                                 ),
-                            labels = mapOf(
-                                "de.fraunhofer.aisec.glue.pipeline.id" to id,
-                                "de.fraunhofer.aisec.glue.pipeline.contract" to contractId,
-                                "de.fraunhofer.aisec.glue.pipeline.target" to targetId,
-                            )
+                            labels =
+                                mapOf(
+                                    "de.fraunhofer.aisec.glue.pipeline.id" to id,
+                                    "de.fraunhofer.aisec.glue.pipeline.contract" to contractId,
+                                    "de.fraunhofer.aisec.glue.pipeline.target" to targetId,
+                                ),
                         ),
                     )
 
