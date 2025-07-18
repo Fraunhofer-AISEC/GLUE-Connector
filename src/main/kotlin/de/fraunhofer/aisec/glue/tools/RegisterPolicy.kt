@@ -2,9 +2,10 @@ package de.fraunhofer.aisec.glue.tools
 
 import com.fasterxml.jackson.module.kotlin.readValue
 import de.fraunhofer.aisec.glue.ContractStore
+import de.fraunhofer.aisec.glue.config.ConfigManager
 import de.fraunhofer.aisec.glue.controllers.NegotiationController
-import de.fraunhofer.aisec.glue.negotiation.DummyNegotiator
-import de.fraunhofer.aisec.glue.negotiation.NegotiationManager
+import de.fraunhofer.aisec.glue.negotiation.builtin.BuiltinNegotiationManager
+import de.fraunhofer.aisec.glue.negotiation.builtin.DummyNegotiator
 import de.fraunhofer.aisec.glue.plugins.configureAuthentication
 import de.fraunhofer.iosb.odrl.OdrlOffer
 import de.fraunhofer.iosb.odrl.parser.OdrlParser
@@ -91,7 +92,17 @@ fun main(args: Array<String>) {
                     }
                 }
             }
-        val negotiationManager = NegotiationManager(httpClient, objectMapper, DummyNegotiator(true), ContractStore(objectMapper), OdrlParser())
+        val connectorConfig = MapApplicationConfig("connector.identity" to "https://contract-registry-tool.local")
+        val configManager = ConfigManager(connectorConfig)
+        val negotiationManager =
+            BuiltinNegotiationManager(
+                httpClient,
+                objectMapper,
+                DummyNegotiator(true),
+                ContractStore(objectMapper),
+                OdrlParser(),
+                configManager,
+            )
 
         val closeChan = Channel<Unit>()
         val addressChan = Channel<String>()

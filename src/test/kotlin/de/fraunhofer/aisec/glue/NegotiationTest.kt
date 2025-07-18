@@ -1,10 +1,11 @@
 package de.fraunhofer.aisec.glue
 
+import de.fraunhofer.aisec.glue.config.ConfigManager
 import de.fraunhofer.aisec.glue.controllers.Controller
 import de.fraunhofer.aisec.glue.controllers.NegotiationController
 import de.fraunhofer.aisec.glue.models.negotiation.*
-import de.fraunhofer.aisec.glue.negotiation.DummyNegotiator
-import de.fraunhofer.aisec.glue.negotiation.NegotiationManager
+import de.fraunhofer.aisec.glue.negotiation.builtin.BuiltinNegotiationManager
+import de.fraunhofer.aisec.glue.negotiation.builtin.DummyNegotiator
 import de.fraunhofer.aisec.glue.negotiation.toAgreement
 import de.fraunhofer.iosb.odrl.OdrlOffer
 import de.fraunhofer.iosb.odrl.OdrlParty
@@ -89,7 +90,9 @@ class NegotiationTest {
             val contractStore = mockk<ContractStore>()
             coJustRun { contractStore.addContract(any()) }
 
-            val negotiationManager = NegotiationManager(httpClient, objectMapper, DummyNegotiator(true), contractStore, OdrlParser())
+            val configManager = ConfigManager(MapApplicationConfig("connector.identity" to "https://test-connector.local"))
+            val negotiationManager =
+                BuiltinNegotiationManager(httpClient, objectMapper, DummyNegotiator(true), contractStore, OdrlParser(), configManager)
 
             val contractRequest =
                 ContractRequestMessage(
@@ -113,7 +116,7 @@ class NegotiationTest {
                 responseCallbackCalled = true
             }
             assertTrue(responseCallbackCalled)
-            assertEquals(NegotiationState.AGREED, negotiation.state)
+            assertEquals(NegotiationState.AGREED, negotiation.internalState)
             assertEquals(NegotiationState.AGREED, consumerState)
 
             responseCallbackCalled = false
@@ -123,7 +126,7 @@ class NegotiationTest {
             }
 
             assertTrue(responseCallbackCalled)
-            assertEquals(NegotiationState.FINALIZED, negotiation.state)
+            assertEquals(NegotiationState.FINALIZED, negotiation.internalState)
             assertEquals(NegotiationState.FINALIZED, consumerState)
 
             // Verify that the returned and stored policies are the same
@@ -159,7 +162,10 @@ class NegotiationTest {
                 }
             val contractStore = mockk<ContractStore>()
             coJustRun { contractStore.addContract(any()) }
-            val negotiationManager = NegotiationManager(httpClient, objectMapper, DummyNegotiator(), contractStore, OdrlParser())
+
+            val configManager = ConfigManager(MapApplicationConfig("connector.identity" to "https://test-connector.local"))
+            val negotiationManager =
+                BuiltinNegotiationManager(httpClient, objectMapper, DummyNegotiator(), contractStore, OdrlParser(), configManager)
 
             val contractOffer =
                 ContractOfferMessage(
@@ -184,13 +190,13 @@ class NegotiationTest {
             }
 
             assertTrue(responseCallbackCalled)
-            assertEquals(NegotiationState.ACCEPTED, negotiation.state)
+            assertEquals(NegotiationState.ACCEPTED, negotiation.internalState)
             assertEquals(NegotiationState.ACCEPTED, providerState)
 
             val agreementReq =
                 ContractAgreementMessage(
                     providerPid = providerPid,
-                    consumerPid = negotiation.ownPid,
+                    consumerPid = negotiation.id,
                     agreement = exampleAgreement,
                     callbackAddress = "https://provider/negotiations",
                 )
@@ -201,7 +207,7 @@ class NegotiationTest {
             }
 
             assertTrue(responseCallbackCalled)
-            assertEquals(NegotiationState.VERIFIED, negotiation.state)
+            assertEquals(NegotiationState.VERIFIED, negotiation.internalState)
             assertEquals(NegotiationState.VERIFIED, providerState)
 
             responseCallbackCalled = false
@@ -211,7 +217,7 @@ class NegotiationTest {
             }
 
             assertTrue(responseCallbackCalled)
-            assertEquals(NegotiationState.FINALIZED, negotiation.state)
+            assertEquals(NegotiationState.FINALIZED, negotiation.internalState)
 
             coVerify { contractStore.addContract(any()) }
         }
@@ -271,7 +277,9 @@ class NegotiationTest {
                     }
                 }
             val contractStore = ContractStore(objectMapper)
-            val negotiationManager = NegotiationManager(httpClient, objectMapper, DummyNegotiator(), contractStore, OdrlParser())
+            val configManager = ConfigManager(MapApplicationConfig("connector.identity" to "https://test-connector.local"))
+            val negotiationManager =
+                BuiltinNegotiationManager(httpClient, objectMapper, DummyNegotiator(), contractStore, OdrlParser(), configManager)
             val controller = NegotiationController(negotiationManager)
 
             configureTestApp(controller)
@@ -300,7 +308,7 @@ class NegotiationTest {
 
             val negotiation = negotiationManager.getAsProvider(respBody.providerPid, consumerPid, "consumer")
             assertNotNull(negotiation)
-            assertEquals(NegotiationState.AGREED, negotiation.state)
+            assertEquals(NegotiationState.AGREED, negotiation.internalState)
             assertEquals(NegotiationState.AGREED, consumerState)
 
             resp =
@@ -315,7 +323,7 @@ class NegotiationTest {
                     )
                 }
             assertTrue(resp.status.isSuccess())
-            assertEquals(NegotiationState.FINALIZED, negotiation.state)
+            assertEquals(NegotiationState.FINALIZED, negotiation.internalState)
             assertEquals(NegotiationState.FINALIZED, consumerState)
         }
 
@@ -346,7 +354,9 @@ class NegotiationTest {
                 }
             val contractStore = mockk<ContractStore>()
             coJustRun { contractStore.addContract(any()) }
-            val negotiationManager = NegotiationManager(httpClient, objectMapper, DummyNegotiator(), contractStore, OdrlParser())
+            val configManager = ConfigManager(MapApplicationConfig("connector.identity" to "https://test-connector.local"))
+            val negotiationManager =
+                BuiltinNegotiationManager(httpClient, objectMapper, DummyNegotiator(), contractStore, OdrlParser(), configManager)
             val controller = NegotiationController(negotiationManager)
 
             configureTestApp(controller)
@@ -375,7 +385,7 @@ class NegotiationTest {
 
             val negotiation = negotiationManager.getAsConsumer(respBody.consumerPid, providerPid, "provider")
             assertNotNull(negotiation)
-            assertEquals(NegotiationState.ACCEPTED, negotiation.state)
+            assertEquals(NegotiationState.ACCEPTED, negotiation.internalState)
             assertEquals(NegotiationState.ACCEPTED, providerState)
 
             resp =
@@ -395,7 +405,7 @@ class NegotiationTest {
 
             delay(100)
 
-            assertEquals(NegotiationState.VERIFIED, negotiation.state)
+            assertEquals(NegotiationState.VERIFIED, negotiation.internalState)
             assertEquals(NegotiationState.VERIFIED, providerState)
 
             resp =
@@ -411,7 +421,7 @@ class NegotiationTest {
                     )
                 }
             assertTrue(resp.status.isSuccess())
-            assertEquals(NegotiationState.FINALIZED, negotiation.state)
+            assertEquals(NegotiationState.FINALIZED, negotiation.internalState)
         }
 
     @Test
@@ -437,15 +447,31 @@ class NegotiationTest {
             val providerContractStore = mockk<ContractStore>()
             coJustRun { providerContractStore.addContract(any()) }
 
+            val providerConfig = MapApplicationConfig("connector.identity" to "https://provider-connector.local")
             val providerNegotiationManager =
-                NegotiationManager(testClient, objectMapper, DummyNegotiator(), providerContractStore, odrlParser)
+                BuiltinNegotiationManager(
+                    testClient,
+                    objectMapper,
+                    DummyNegotiator(),
+                    providerContractStore,
+                    odrlParser,
+                    ConfigManager(providerConfig),
+                )
             val providerController = NegotiationController(providerNegotiationManager)
 
             val consumerContractStore = mockk<ContractStore>()
             coJustRun { consumerContractStore.addContract(any()) }
 
+            val consumerConfig = MapApplicationConfig("connector.identity" to "https://consumer-connector.local")
             val consumerNegotiationManager =
-                NegotiationManager(testClient, objectMapper, DummyNegotiator(), consumerContractStore, odrlParser)
+                BuiltinNegotiationManager(
+                    testClient,
+                    objectMapper,
+                    DummyNegotiator(),
+                    consumerContractStore,
+                    odrlParser,
+                    ConfigManager(consumerConfig),
+                )
             val consumerController = NegotiationController(consumerNegotiationManager)
 
             fun testServer(
@@ -486,17 +512,18 @@ class NegotiationTest {
 
             val provider = testServer("provider", providerController).start(false)
             val providerAddress = provider.engine.resolvedConnectors().first().run { "http://$host:$port" }
+            // We can still set this config option since options are evaluated lazily
+            providerConfig.put("connector.publicUrl", providerAddress)
 
             val consumer = testServer("consumer", consumerController).start(false)
             val consumerAddress = consumer.engine.resolvedConnectors().first().run { "http://$host:$port" }
+            consumerConfig.put("connector.publicUrl", consumerAddress)
 
             // This indirectly checks if the consumer side negotiation completed successfully
             val negotiatedPolicy =
                 consumerNegotiationManager.startNegotiation(
-                    URLBuilder(providerAddress).appendPathSegments("negotiations").build(),
-                    URLBuilder(consumerAddress).appendPathSegments("negotiations").build(),
+                    URLBuilder(providerAddress).appendPathSegments("negotiations").buildString(),
                     exampleOffer,
-                    null,
                 ).await()
 
             coVerify { providerContractStore.addContract(negotiatedPolicy) }

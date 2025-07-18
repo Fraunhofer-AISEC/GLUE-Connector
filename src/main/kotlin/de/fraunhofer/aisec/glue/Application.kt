@@ -8,8 +8,8 @@ import de.fraunhofer.aisec.glue.controllers.PipelineController
 import de.fraunhofer.aisec.glue.controllers.api.NegotiationApiController
 import de.fraunhofer.aisec.glue.controllers.api.RemotePipelineApiController
 import de.fraunhofer.aisec.glue.controllers.internal.ContainerInterfaceController
-import de.fraunhofer.aisec.glue.negotiation.DummyNegotiator
-import de.fraunhofer.aisec.glue.negotiation.NegotiationManager
+import de.fraunhofer.aisec.glue.negotiation.builtin.BuiltinNegotiationManager
+import de.fraunhofer.aisec.glue.negotiation.builtin.DummyNegotiator
 import de.fraunhofer.aisec.glue.pipeline.PipelineManager
 import de.fraunhofer.aisec.glue.plugins.configureAuthentication
 import de.fraunhofer.aisec.glue.policy.PolicyEngine
@@ -24,6 +24,7 @@ import io.ktor.serialization.*
 import io.ktor.serialization.jackson.*
 import io.ktor.server.application.*
 import io.ktor.server.netty.*
+import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.routing.*
 import org.kodein.di.*
 import java.util.logging.Filter
@@ -78,7 +79,10 @@ val defaultDependencies by DI.Module {
     bind<PipelineManager>() with singleton { PipelineManager(instance()) }
     bind<PolicyEngine>() with singleton { PolicyEngine(instance()) }
     bind<ContractStore>() with singleton { ContractStore(instance()) }
-    bind<NegotiationManager>() with singleton { NegotiationManager(instance(), instance(), DummyNegotiator(), instance(), instance()) }
+    bind<BuiltinNegotiationManager>() with
+        singleton {
+            BuiltinNegotiationManager(instance(), instance(), DummyNegotiator(), instance(), instance(), instance())
+        }
     bind<NegotiationController>() with singleton { NegotiationController(instance()) }
     bind<PipelineController>() with singleton { PipelineController(instance(), instance(), instance()) }
     bind<NegotiationApiController>() with singleton { NegotiationApiController(instance()) }
@@ -104,6 +108,11 @@ fun Application.module() =
 
 fun Application.module(dependencies: DirectDI) {
     configureAuthentication()
+    install(CORS) {
+        anyHost()
+        allowMethod(HttpMethod.Delete)
+        allowHeader(HttpHeaders.ContentType)
+    }
 
     install(ServerContentNegotiation) {
         register(ContentType.Application.Json, dependencies.instance())

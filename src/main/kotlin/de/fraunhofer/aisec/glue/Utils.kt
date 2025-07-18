@@ -1,5 +1,6 @@
 package de.fraunhofer.aisec.glue
 
+import io.github.oshai.kotlinlogging.KLogger
 import io.ktor.http.*
 
 object Utils {
@@ -42,5 +43,20 @@ object Utils {
         val username = System.getenv("AUTH_USERNAME") ?: throw IllegalStateException("Auth username not set")
         val password = System.getenv("AUTH_PASSWORD") ?: throw IllegalStateException("Auth password not set")
         return Pair(username, password)
+    }
+
+    /**
+     * A simplified interface to the KLogger structured logger.
+     * @param msg The main log message
+     * @param args A series of key-value pairs that are used as payload for the message
+     */
+    fun KLogger.debugs(
+        msg: String,
+        vararg args: Any,
+    ) {
+        atDebug {
+            message = msg
+            payload = args.asSequence().windowed(2, 2).map { (k, v) -> k.toString() to v }.toMap()
+        }
     }
 }

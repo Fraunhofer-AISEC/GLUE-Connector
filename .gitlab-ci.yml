@@ -34,26 +34,21 @@ jib_container_pipeline_build:
   tags:
     - munich-glue-local
 
-.kaniko-build:
+.podman-build:
   stage: build
-  image:
-    name: gcr.io/kaniko-project/executor:debug
-    entrypoint: [ "" ]
-  before_script:
-    - mkdir -p /kaniko/.docker
-    - echo "{\"auths\":{\"$CI_REGISTRY\":{\"username\":\"$CI_REGISTRY_USER\",\"password\":\"$CI_REGISTRY_PASSWORD\"}}}" > /kaniko/.docker/config.json
+  image: quay.io/podman/stable:v5.5.0
   script:
-    - /kaniko/executor
-      --context $CONTEXT_DIR
-      --dockerfile $DOCKERFILE
-      --destination $DOCKER_IMAGE:$IMAGE_TAG
-      --destination $DOCKER_IMAGE:$CI_PIPELINE_ID
-    - rm -rf /kaniko/0
+    - mkdir -p /etc/containers/registries.conf.d
+    - echo 'unqualified-search-registries = ["docker.io"]' > /etc/containers/registries.conf.d/docker.conf
+    - podman login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+    - podman build -f $DOCKERFILE -t $DOCKER_IMAGE:$IMAGE_TAG -t $DOCKER_IMAGE:$CI_PIPELINE_ID $CONTEXT_DIR
+    - podman push $DOCKER_IMAGE:$IMAGE_TAG
+    - podman push $DOCKER_IMAGE:$CI_PIPELINE_ID
   tags:
     - munich-glue-local
 
-kaniko-http-echo-build:
-  extends: .kaniko-build
+podman-http-echo-build:
+  extends: .podman-build
   variables:
     CONTEXT_DIR: $CI_PROJECT_DIR/test-containers/http-echo
     DOCKERFILE: test-containers/http-echo/Dockerfile
@@ -62,8 +57,8 @@ kaniko-http-echo-build:
   #  - changes:
   #    - test-containers/http-echo
 
-kaniko-proxy-build:
-  extends: .kaniko-build
+podman-proxy-build:
+  extends: .podman-build
   variables:
     CONTEXT_DIR: $CI_PROJECT_DIR/test-containers/proxy
     DOCKERFILE: test-containers/proxy/Dockerfile
@@ -72,8 +67,8 @@ kaniko-proxy-build:
   #  - changes:
   #      - test-containers/proxy
 
-kaniko-forwarder-build:
-  extends: .kaniko-build
+podman-forwarder-build:
+  extends: .podman-build
   variables:
     CONTEXT_DIR: $CI_PROJECT_DIR/test-containers/forwarder
     DOCKERFILE: test-containers/forwarder/Dockerfile
@@ -91,7 +86,7 @@ container_test:
     HTTP_ECHO_IMAGE_NAME: $CI_REGISTRY_IMAGE/http-echo:$CI_PIPELINE_ID
     FORWARDER_IMAGE_NAME: $CI_REGISTRY_IMAGE/forwarder:$CI_PIPELINE_ID
   services:
-    - docker:27.5.1-dind
+    - docker:28.1.1-dind
   stage: test
   before_script:
     - export REGISTRY_AUTH_TOKEN="$(echo "{\"username\":\"$CI_REGISTRY_USER\",\"password\":\"$CI_REGISTRY_PASSWORD\",\"serveraddress\":\"$CI_REGISTRY\"}" | basenc --base64url -w0)"

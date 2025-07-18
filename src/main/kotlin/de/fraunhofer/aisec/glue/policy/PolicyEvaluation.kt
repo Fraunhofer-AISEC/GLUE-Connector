@@ -85,8 +85,8 @@ internal class PolicyEvaluation {
                 return Result(false, "Invalid number of right operands for policy template constraint")
             }
 
-            policyTemplates += refinement.rightOperand[0] as? GlueValue ?:
-                return Result(false, "Right operand for policy template must be of type glue:Value")
+            policyTemplates += refinement.rightOperand[0] as? GlueValue
+                ?: return Result(false, "Right operand for policy template must be of type glue:Value")
         }
 
         if (policyTemplates.size != 1) {

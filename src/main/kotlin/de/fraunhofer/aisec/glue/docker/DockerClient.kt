@@ -164,7 +164,10 @@ class DockerClient(internal val httpClient: HttpClient, private val baseUrl: Url
 
         suspend fun list(): List<Network> {
             val nets = httpClient.get(endpoint("networks")).body<List<NetworkInspectResponse>>()
-            return nets.map { n -> Network(this@DockerClient, n.name ?: throw NullPointerException("Received unnamed network from docker")) }
+            return nets.map {
+                    n ->
+                Network(this@DockerClient, n.name ?: throw NullPointerException("Received unnamed network from docker"))
+            }
         }
     }
 
@@ -177,7 +180,10 @@ class DockerClient(internal val httpClient: HttpClient, private val baseUrl: Url
             LOG.debug("Attempting to pull the image \"$name\" from image registry...")
             httpClient.post(endpoint("images/create")) {
                 parameter("fromImage", name)
-                System.getenv("REGISTRY_AUTH_TOKEN")?.let { println("X-Registry-Auth: $it"); header("X-Registry-Auth", it) }
+                System.getenv("REGISTRY_AUTH_TOKEN")?.let {
+                    println("X-Registry-Auth: $it")
+                    header("X-Registry-Auth", it)
+                }
             }
 
             return Image(this@DockerClient, name)
