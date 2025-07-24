@@ -3,6 +3,7 @@ package de.fraunhofer.aisec.glue.docker
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.DeserializationFeature
 import de.fraunhofer.aisec.glue.docker.model.*
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.engine.cio.*
@@ -11,7 +12,6 @@ import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.serialization.jackson.*
-import org.slf4j.LoggerFactory
 import java.io.Closeable
 import java.net.URI
 import java.nio.file.Path
@@ -157,11 +157,8 @@ class DockerClient(internal val httpClient: HttpClient, private val baseUrl: Url
             return Network(this@DockerClient, name)
         }
 
-        suspend fun list(): List<Network> {
-            val nets = httpClient.get(endpoint("networks")).body<List<NetworkInspectResponse>>()
-            return nets.map { n ->
-                Network(this@DockerClient, n.name ?: throw NullPointerException("Received unnamed network from docker"))
-            }
+        suspend fun inspectAll(): List<NetworkInspectResponse> {
+            return httpClient.get(endpoint("networks")).body()
         }
     }
 
@@ -169,7 +166,10 @@ class DockerClient(internal val httpClient: HttpClient, private val baseUrl: Url
 
     inner class Images {
         suspend fun createByPull(name: String): Image {
-            LOG.debug("Attempting to pull the image \"$name\" from image registry...")
+            LOG.atDebug {
+                message = "Attempting to pull the image from image registry"
+                payload = mapOf("imageName" to name)
+            }
             httpClient.post(endpoint("images/create")) {
                 parameter("fromImage", name)
                 System.getenv("REGISTRY_AUTH_TOKEN")?.let {
@@ -196,7 +196,7 @@ class DockerClient(internal val httpClient: HttpClient, private val baseUrl: Url
     val images = Images()
 
     companion object {
-        private val LOG = LoggerFactory.getLogger(DockerClient::class.java)
+        private val LOG = KotlinLogging.logger {}
 
         private const val API_VERSION = "v1.43"
         internal val UNIX_BASE_URL = Url("http://localhost/$API_VERSION")
@@ -232,7 +232,7 @@ class DockerClient(internal val httpClient: HttpClient, private val baseUrl: Url
                                 "DOCKER_CERT_PATH",
                             ) ?: Path.of(System.getProperty("user.home"), ".docker").toString()
 
-                        val (sslContext, trustManager) = TLSHelper.loadDockerTLSParams(certDir)
+                        val (clientCertificate, trustManager) = TLSHelper.loadDockerCerts(certDir)
                         val dockerBaseUrl =
                             URLBuilder(uri.toString()).apply {
                                 protocol = URLProtocol("https", 0)
@@ -244,12 +244,17 @@ class DockerClient(internal val httpClient: HttpClient, private val baseUrl: Url
                                 appendPathSegments(API_VERSION)
                             }.build()
 
-                        LOG.info("Using docker engine TLS socket at $dockerBaseUrl with certificates from $certDir")
+                        LOG.atInfo {
+                            message = "Using docker engine TLS socket"
+                            payload = mapOf("location" to dockerBaseUrl, "certDir" to certDir)
+                        }
                         DockerClient(
                             HttpClient(CIO) {
                                 defaultConfig()
                                 engine {
                                     https {
+                                        this.trustManager = trustManager
+                                        certificates.add(clientCertificate)
                                     }
                                 }
                             },
@@ -264,7 +269,10 @@ class DockerClient(internal val httpClient: HttpClient, private val baseUrl: Url
                                 }
                                 appendPathSegments(API_VERSION)
                             }.build()
-                        LOG.info("Using docker engine TCP socket at $dockerBaseUrl")
+                        LOG.atInfo {
+                            message = "Using docker engine TCP socket"
+                            payload = mapOf("location" to dockerBaseUrl)
+                        }
                         // Plain HTTP should only be used locally for testing and when unix is not available
                         DockerClient(
                             HttpClient(CIO, defaultConfig),
@@ -274,6 +282,10 @@ class DockerClient(internal val httpClient: HttpClient, private val baseUrl: Url
                 }
                 "unix" -> {
                     LOG.info("Using docker engine unix socket at ${uri.path}")
+                    LOG.atInfo {
+                        message = "Using docker engine unix socket"
+                        payload = mapOf("location" to uri.path)
+                    }
                     DockerClient(
                         HttpClient(CIO) {
                             defaultConfig()

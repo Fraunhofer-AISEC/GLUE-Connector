@@ -85,7 +85,7 @@ class PipelineController(
                         call.respond(
                             PipelineCreateResponse(
                                 pipeline.name,
-                                pipeline.getContainerInfo(0)!!.ports[0].hostPort.toInt(),
+                                pipeline.getContainerInfo(0)!!.ports
                             ),
                         )
                     }.recover { err ->

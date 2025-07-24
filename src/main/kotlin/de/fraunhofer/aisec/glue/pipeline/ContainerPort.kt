@@ -6,12 +6,13 @@ data class ContainerPort(
      */
     val containerPort: UShort,
     /**
-     * The port on the host where the container is reachable.
+     * The host:port pair where the container port is reachable on.
      */
-    val hostPort: UShort,
+    val hostAddress: String,
     /**
      * The protocol for the port.
-     * Either `tcp` or `udp`
+     * Either `tcp` or `udp`.
+     * Other protocols like `sctp` are currently not supported.
      */
     val protocol: String,
 )
