@@ -4,12 +4,14 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import de.fraunhofer.aisec.glue.Utils.hexEncode
 import de.fraunhofer.aisec.glue.pipeline.docker.DockerBackend
 import de.fraunhofer.iosb.odrl.glue.GlueContainerPipeline
+import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlin.random.Random
 
 class PipelineManager(
     private val objectMapper: ObjectMapper,
+    private val remoteManager: RemotePipelineManager,
     private val backend: Backend = DockerBackend(objectMapper),
 ) {
     private val pipelines = mutableMapOf<String, ContainerPipeline>()
@@ -59,6 +61,7 @@ class PipelineManager(
                 // TODO: Allow for a timeout on stop before removing and consider errors
                 pipeline.stop()
                 pipeline.remove()
+                pipeline.remotePipelines().forEach { remoteManager.delete(it.id) }
                 // Note: We are not calling close here since that just invokes stop and remove in the background.
             } != null
         }
@@ -76,4 +79,8 @@ class PipelineManager(
         pipelineMutex.withLock {
             backend.getPipelineFromIp(ip)?.let(pipelines::get)
         }
+
+    companion object {
+        private val LOG = KotlinLogging.logger {}
+    }
 }

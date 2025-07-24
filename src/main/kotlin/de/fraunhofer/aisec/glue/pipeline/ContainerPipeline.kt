@@ -37,10 +37,19 @@ abstract class ContainerPipeline(val name: String, val contractId: String, val t
     /**
      * Associate a new contract with this pipeline as a follow-up contract.
      */
-    abstract suspend fun addContract(peer: String, contract: OdrlPolicy): Boolean
+    abstract suspend fun addContract(
+        peer: String,
+        contract: OdrlPolicy,
+    ): Boolean
 
     /**
      * Get all follow-up contracts from this pipeline.
      */
     abstract suspend fun contracts(peer: String): Set<OdrlPolicy>
+
+    abstract suspend fun addRemotePipeline(
+        remotePipeline: RemotePipeline
+    ): Boolean
+
+    abstract suspend fun remotePipelines(): Set<RemotePipeline>
 }

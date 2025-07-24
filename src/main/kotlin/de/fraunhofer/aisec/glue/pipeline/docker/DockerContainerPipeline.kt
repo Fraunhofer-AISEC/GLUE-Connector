@@ -10,13 +10,16 @@ import de.fraunhofer.aisec.glue.pipeline.ContainerConfig
 import de.fraunhofer.aisec.glue.pipeline.ContainerInfo
 import de.fraunhofer.aisec.glue.pipeline.ContainerPipeline
 import de.fraunhofer.aisec.glue.pipeline.ContainerPort
+import de.fraunhofer.aisec.glue.pipeline.RemotePipeline
 import de.fraunhofer.iosb.odrl.OdrlPolicy
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ktor.client.plugins.*
 import io.ktor.http.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import org.slf4j.LoggerFactory
+import java.net.InetAddress
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 
 class DockerContainerPipeline internal constructor(
@@ -30,6 +33,7 @@ class DockerContainerPipeline internal constructor(
     private val closed = AtomicBoolean(false)
     private val followUpContracts: MutableMap<String, MutableSet<OdrlPolicy>> = mutableMapOf()
     private val contractsLock = Mutex()
+    private val followUpPipelines = ConcurrentHashMap.newKeySet<RemotePipeline>()
 
     override suspend fun start() {
         for (container in containers) {
@@ -43,7 +47,7 @@ class DockerContainerPipeline internal constructor(
                 container.stop()
             }
         } catch (_: TimeoutCancellationException) {
-            LOG.warn("Could not stop container ${container.name} within timeout")
+            LOG.warn { "Could not stop container ${container.name} within timeout" }
             try {
                 container.kill()
             } catch (e: ClientRequestException) {
@@ -71,7 +75,10 @@ class DockerContainerPipeline internal constructor(
             container.runCatching {
                 remove(deleteVolumes = true, force = true)
             }.onFailure { e ->
-                LOG.error("Could not remove container ${container.name}", e)
+                LOG.atError {
+                    message = "Could not remove container ${container.name}"
+                    cause = e
+                }
             }
         }
 
@@ -79,7 +86,10 @@ class DockerContainerPipeline internal constructor(
             network.runCatching {
                 remove()
             }.onFailure { e ->
-                LOG.error("Could not remove network ${network.name}", e)
+                LOG.atError {
+                    message = "Could not remove network ${network.name}"
+                    cause = e
+                }
             }
         }
     }
@@ -110,16 +120,15 @@ class DockerContainerPipeline internal constructor(
         return status
     }
 
+    // TODO: Allow returning more than one.
     private fun parsePortBinding(
         name: String,
         bindings: List<PortBinding>,
-    ): ContainerPort {
+    ): List<ContainerPort> {
         // Some input validation
         if (bindings.isEmpty()) {
             throw IllegalStateException("The provided port $name has no bindings")
         }
-        // Before starting the container, the port is bound to 0
-        val hostPort = bindings[0].hostPort?.toUShortOrNull() ?: 0u
         val portComponents = name.split('/')
         if (portComponents.size != 2) {
             throw IllegalStateException("The port name $name has an invalid format")
@@ -127,7 +136,16 @@ class DockerContainerPipeline internal constructor(
         val containerPort = portComponents[0].toUShort()
         val protocol = portComponents[1]
 
-        return ContainerPort(containerPort, hostPort, protocol)
+        return bindings.map { b ->
+            // TODO: We should switch local IP addresses for external ones here, but where do we get those from?
+            //  Also, I think IPv6 addresses will automatically be converted to IPv4 addresses by this...
+            val hostIp = when (bindings[0].hostIp) {
+                "0.0.0.0", "::" -> InetAddress.getLocalHost().hostAddress
+                else -> bindings[0].hostIp
+            }
+
+            ContainerPort(containerPort, "$hostIp:${b.hostPort}", protocol)
+        }
     }
 
     override suspend fun getContainerInfo(index: Int): ContainerInfo {
@@ -138,7 +156,7 @@ class DockerContainerPipeline internal constructor(
                 name = c.name,
                 // TODO: Use IPAMConfig instead
                 ipAddresses = inspect.networkSettings?.networks?.values?.mapNotNull(EndpointSettings::ipAddress) ?: emptyList(),
-                ports = inspect.networkSettings?.ports?.mapNotNull { (k, v) -> v?.let { parsePortBinding(k, v) } } ?: emptyList(),
+                ports = inspect.networkSettings?.ports?.flatMap { (k, v) -> v?.let { parsePortBinding(k, v) } ?: emptyList() } ?: emptyList(),
                 status = parseContainerStatus(inspect.state ?: throw IllegalStateException("Inspection has no state object")),
                 pid = inspect.state.pid,
             )
@@ -158,16 +176,29 @@ class DockerContainerPipeline internal constructor(
         }
     }
 
-    override suspend fun addContract(peer: String, contract: OdrlPolicy): Boolean = contractsLock.withLock {
-        // TODO: Add persistence here
-        followUpContracts.getOrPut(peer, ::mutableSetOf).add(contract)
+    override suspend fun addContract(
+        peer: String,
+        contract: OdrlPolicy,
+    ): Boolean =
+        contractsLock.withLock {
+            // TODO: Add persistence here
+            followUpContracts.getOrPut(peer, ::mutableSetOf).add(contract)
+        }
+
+    override suspend fun contracts(peer: String): Set<OdrlPolicy> =
+        contractsLock.withLock {
+            followUpContracts[peer] ?: setOf()
+        }
+
+    override suspend fun addRemotePipeline(remotePipeline: RemotePipeline): Boolean {
+        return followUpPipelines.add(remotePipeline)
     }
 
-    override suspend fun contracts(peer: String): Set<OdrlPolicy> = contractsLock.withLock {
-        followUpContracts[peer] ?: setOf()
+    override suspend fun remotePipelines(): Set<RemotePipeline> {
+        return followUpPipelines
     }
 
     companion object {
-        private val LOG = LoggerFactory.getLogger(DockerContainerPipeline::class.java)
+        private val LOG = KotlinLogging.logger {}
     }
 }

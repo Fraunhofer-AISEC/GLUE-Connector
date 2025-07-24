@@ -11,6 +11,7 @@ import de.fraunhofer.aisec.glue.controllers.internal.ContainerInterfaceControlle
 import de.fraunhofer.aisec.glue.negotiation.builtin.BuiltinNegotiationManager
 import de.fraunhofer.aisec.glue.negotiation.builtin.DummyNegotiator
 import de.fraunhofer.aisec.glue.pipeline.PipelineManager
+import de.fraunhofer.aisec.glue.pipeline.RemotePipelineManager
 import de.fraunhofer.aisec.glue.plugins.configureAuthentication
 import de.fraunhofer.aisec.glue.policy.PolicyEngine
 import de.fraunhofer.iosb.odrl.parser.OdrlParser
@@ -76,7 +77,8 @@ val defaultDependencies by DI.Module {
     bind<OdrlParser>() with singleton { OdrlParser() }
     bind<ObjectMapper>() with singleton { instance<OdrlParser>().mapper }
     bind<ContentConverter>() with singleton { JacksonConverter(instance()) }
-    bind<PipelineManager>() with singleton { PipelineManager(instance()) }
+    bind<RemotePipelineManager>() with singleton { RemotePipelineManager(instance(), instance()) }
+    bind<PipelineManager>() with singleton { PipelineManager(instance(), instance()) }
     bind<PolicyEngine>() with singleton { PolicyEngine(instance()) }
     bind<ContractStore>() with singleton { ContractStore(instance()) }
     bind<BuiltinNegotiationManager>() with
@@ -86,10 +88,10 @@ val defaultDependencies by DI.Module {
     bind<NegotiationController>() with singleton { NegotiationController(instance()) }
     bind<PipelineController>() with singleton { PipelineController(instance(), instance(), instance()) }
     bind<NegotiationApiController>() with singleton { NegotiationApiController(instance()) }
-    bind<RemotePipelineApiController>() with singleton { RemotePipelineApiController(instance(), instance()) }
+    bind<RemotePipelineApiController>() with singleton { RemotePipelineApiController(instance(), instance(), instance()) }
     bind<ContainerInterfaceController>() with
         singleton {
-            ContainerInterfaceController(instance(), instance(), instance(), instance(), instance(), instance())
+            ContainerInterfaceController(instance(), instance(), instance(), instance(), instance(), instance(), instance())
         }
 }
 

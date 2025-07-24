@@ -87,8 +87,7 @@ class PipelineController(
                         call.respond(
                             PipelineCreateResponse(
                                 pipeline.name,
-                                // TODO: This is unsafe, add an optional list of ports instead
-                                pipeline.getContainerInfo(0)!!.ports[0].hostPort.toInt(),
+                                pipeline.getContainerInfo(0)!!.ports
                             ),
                         )
                     }.recover { err ->
