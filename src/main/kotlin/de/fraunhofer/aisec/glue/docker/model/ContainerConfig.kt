@@ -33,77 +33,77 @@ import com.fasterxml.jackson.annotation.JsonProperty
  */
 data class ContainerConfig(
     // The hostname to use for the container, as a valid RFC 1123 hostname.
-    @JsonProperty("Hostname")
+    @param:JsonProperty("Hostname")
     val hostname: String? = null,
     // The domain name to use for the container.
-    @JsonProperty("Domainname")
+    @param:JsonProperty("Domainname")
     val domainname: String? = null,
     // The user that commands are run as inside the container.
-    @JsonProperty("User")
+    @param:JsonProperty("User")
     val user: String? = null,
     // Whether to attach to `stdin`.
-    @JsonProperty("AttachStdin")
+    @param:JsonProperty("AttachStdin")
     val attachStdin: Boolean? = false,
     // Whether to attach to `stdout`.
-    @JsonProperty("AttachStdout")
+    @param:JsonProperty("AttachStdout")
     val attachStdout: Boolean? = true,
     // Whether to attach to `stderr`.
-    @JsonProperty("AttachStderr")
+    @param:JsonProperty("AttachStderr")
     val attachStderr: Boolean? = true,
     // An object mapping ports to an empty object in the form:  `{\"<port>/<tcp|udp|sctp>\": {}}`
-    @JsonProperty("ExposedPorts")
+    @param:JsonProperty("ExposedPorts")
     val exposedPorts: Map<String, Any>? = null,
     // Attach standard streams to a TTY, including `stdin` if it is not closed.
-    @JsonProperty("Tty")
+    @param:JsonProperty("Tty")
     val tty: Boolean? = false,
     // Open `stdin`
-    @JsonProperty("OpenStdin")
+    @param:JsonProperty("OpenStdin")
     val openStdin: Boolean? = false,
     // Close `stdin` after one attached client disconnects
-    @JsonProperty("StdinOnce")
+    @param:JsonProperty("StdinOnce")
     val stdinOnce: Boolean? = false,
     // A list of environment variables to set inside the container in the form `[\"VAR=value\", ...]`. A variable without `=` is removed from the environment, rather than to have an empty value.
-    @JsonProperty("Env")
+    @param:JsonProperty("Env")
     val env: List<String>? = null,
     // Command to run specified as a string or an array of strings.
-    @JsonProperty("Cmd")
+    @param:JsonProperty("Cmd")
     val cmd: List<String>? = null,
-    @JsonProperty("Healthcheck")
+    @param:JsonProperty("Healthcheck")
     val healthcheck: HealthConfig? = null,
     // Command is already escaped (Windows only)
-    @JsonProperty("ArgsEscaped")
+    @param:JsonProperty("ArgsEscaped")
     val argsEscaped: Boolean? = false,
     // The name (or reference) of the image to use when creating the container, or which was used when the container was created.
-    @JsonProperty("Image")
+    @param:JsonProperty("Image")
     val image: String? = null,
     // An object mapping mount point paths inside the container to empty objects.
-    @JsonProperty("Volumes")
+    @param:JsonProperty("Volumes")
     val volumes: Map<String, Any>? = null,
     // The working directory for commands to run in.
-    @JsonProperty("WorkingDir")
+    @param:JsonProperty("WorkingDir")
     val workingDir: String? = null,
     // The entry point for the container as a string or an array of strings.  If the array consists of exactly one empty string (`[\"\"]`) then the entry point is reset to system default (i.e., the entry point used by docker when there is no `ENTRYPOINT` instruction in the `Dockerfile`).
-    @JsonProperty("Entrypoint")
+    @param:JsonProperty("Entrypoint")
     val entrypoint: List<String>? = null,
     // Disable networking for the container.
-    @JsonProperty("NetworkDisabled")
+    @param:JsonProperty("NetworkDisabled")
     val networkDisabled: Boolean? = null,
     // MAC address of the container.
-    @JsonProperty("MacAddress")
+    @param:JsonProperty("MacAddress")
     val macAddress: String? = null,
     // `ONBUILD` metadata that were defined in the image's `Dockerfile`.
-    @JsonProperty("OnBuild")
+    @param:JsonProperty("OnBuild")
     val onBuild: List<String>? = null,
     // User-defined key/value metadata.
-    @JsonProperty("Labels")
+    @param:JsonProperty("Labels")
     val labels: Map<String, String>? = null,
     // Signal to stop a container as a string or unsigned integer.
-    @JsonProperty("StopSignal")
+    @param:JsonProperty("StopSignal")
     val stopSignal: String? = null,
     // Timeout to stop a container in seconds.
-    @JsonProperty("StopTimeout")
+    @param:JsonProperty("StopTimeout")
     val stopTimeout: Int? = null,
     // Shell for when `RUN`, `CMD`, and `ENTRYPOINT` uses a shell.
-    @JsonProperty("Shell")
+    @param:JsonProperty("Shell")
     val shell: List<String>? = null,
 )

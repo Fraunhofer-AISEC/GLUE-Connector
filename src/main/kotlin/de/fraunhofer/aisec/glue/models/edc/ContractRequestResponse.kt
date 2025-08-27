@@ -10,8 +10,8 @@ import java.net.URI
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type")
 @JsonTypeName("${Namespaces.EDC}/IdResponse")
 data class ContractRequestResponse(
-    @JsonProperty("@id")
+    @param:JsonProperty("@id")
     val uid: URI,
-    @JsonProperty("${Namespaces.EDC}/createdAt")
+    @param:JsonProperty("${Namespaces.EDC}/createdAt")
     val createdAt: Long,
 )

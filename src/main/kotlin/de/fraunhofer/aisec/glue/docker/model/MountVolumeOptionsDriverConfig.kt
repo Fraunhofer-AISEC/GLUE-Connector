@@ -10,9 +10,9 @@ import com.fasterxml.jackson.annotation.JsonProperty
  */
 data class MountVolumeOptionsDriverConfig(
     // Name of the driver to use to create the volume.
-    @JsonProperty("Name")
+    @param:JsonProperty("Name")
     val name: String? = null,
     // key/value map of driver specific options.
-    @JsonProperty("Options")
+    @param:JsonProperty("Options")
     val options: Map<String, String>? = null,
 )

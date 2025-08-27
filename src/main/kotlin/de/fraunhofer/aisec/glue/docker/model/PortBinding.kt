@@ -10,9 +10,9 @@ import com.fasterxml.jackson.annotation.JsonProperty
  */
 data class PortBinding(
     // Host IP address that the container's port is mapped to.
-    @JsonProperty("HostIp")
+    @param:JsonProperty("HostIp")
     val hostIp: String? = null,
     // Host port number that the container's port is mapped to.
-    @JsonProperty("HostPort")
+    @param:JsonProperty("HostPort")
     val hostPort: String? = null,
 )

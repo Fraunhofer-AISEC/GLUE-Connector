@@ -10,9 +10,9 @@ import com.fasterxml.jackson.annotation.JsonProperty
  */
 data class Address(
     // IP address.
-    @JsonProperty("Addr")
+    @param:JsonProperty("Addr")
     val addr: String? = null,
     // Mask length of the IP address.
-    @JsonProperty("PrefixLen")
+    @param:JsonProperty("PrefixLen")
     val prefixLen: Int? = null,
 )

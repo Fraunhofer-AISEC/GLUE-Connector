@@ -10,12 +10,12 @@ import de.fraunhofer.iosb.odrl.parser.JsonLd
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type")
 @JsonTypeName("${Namespaces.EDC}/ContractRequest")
 data class ContractRequest(
-    @JsonProperty("${Namespaces.EDC}/counterPartyAddress")
+    @param:JsonProperty("${Namespaces.EDC}/counterPartyAddress")
     val counterPartyAddress: String,
-    @JsonProperty("${Namespaces.EDC}/protocol")
+    @param:JsonProperty("${Namespaces.EDC}/protocol")
     val protocol: String,
-    @JsonProperty("${Namespaces.EDC}/policy")
+    @param:JsonProperty("${Namespaces.EDC}/policy")
     val policy: ObjectNode,
-    @JsonProperty("${Namespaces.EDC}/callbackAddresses")
+    @param:JsonProperty("${Namespaces.EDC}/callbackAddresses")
     val callbackAddresses: List<CallbackAddress>? = null,
 )

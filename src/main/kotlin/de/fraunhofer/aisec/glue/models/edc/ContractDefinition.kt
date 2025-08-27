@@ -10,14 +10,14 @@ import java.net.URI
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type")
 @JsonTypeName("${Namespaces.EDC}/ContractDefinition")
 data class ContractDefinition(
-    @JsonProperty("@id")
+    @param:JsonProperty("@id")
     val uid: URI,
-    @JsonProperty("${Namespaces.EDC}/accessPolicyId")
+    @param:JsonProperty("${Namespaces.EDC}/accessPolicyId")
     val accessPolicyId: URI,
-    @JsonProperty("${Namespaces.EDC}/contractPolicyId")
+    @param:JsonProperty("${Namespaces.EDC}/contractPolicyId")
     val contractPolicyId: URI,
-    @JsonProperty("${Namespaces.EDC}/assetSelector")
+    @param:JsonProperty("${Namespaces.EDC}/assetSelector")
     val assetSelector: List<String>,
-    @JsonProperty("${Namespaces.EDC}/privateProperties")
+    @param:JsonProperty("${Namespaces.EDC}/privateProperties")
     val privateProperties: Map<String, Any>,
 )

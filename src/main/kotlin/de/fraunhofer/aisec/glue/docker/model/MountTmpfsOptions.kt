@@ -10,9 +10,9 @@ import com.fasterxml.jackson.annotation.JsonProperty
  */
 data class MountTmpfsOptions(
     // The size for the tmpfs mount in bytes.
-    @JsonProperty("SizeBytes")
+    @param:JsonProperty("SizeBytes")
     val sizeBytes: Long? = null,
     // The permission mode for the tmpfs mount in an integer.
-    @JsonProperty("Mode")
+    @param:JsonProperty("Mode")
     val mode: Int? = null,
 )
