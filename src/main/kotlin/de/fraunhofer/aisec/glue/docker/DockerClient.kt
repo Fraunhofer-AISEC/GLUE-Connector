@@ -159,6 +159,7 @@ class DockerClient(internal val httpClient: HttpClient, private val baseUrl: Url
             return Network(this@DockerClient, name)
         }
 
+        @Suppress("unused")
         suspend fun inspectAll(): List<NetworkInspectResponse> {
             return httpClient.get(endpoint("networks")).body()
         }
@@ -230,18 +231,19 @@ class DockerClient(internal val httpClient: HttpClient, private val baseUrl: Url
                 // docker over tcp uses http(s) internally
                 "tcp" -> {
                     val tlsVerify = System.getenv("DOCKER_TLS_VERIFY")
-                    if (tlsVerify != null && tlsVerify != "") {
+                    if (!tlsVerify.isNullOrEmpty()) {
                         val certDir =
                             System.getenv(
                                 "DOCKER_CERT_PATH",
                             ) ?: Path.of(System.getProperty("user.home"), ".docker").toString()
 
-                        val (clientCertificate, trustManager) = TLSHelper.loadDockerCerts(certDir)
+                        val (clientCertificate, trustManager) = TLSHelper.loadDockerTLSParams(certDir)
                         val dockerBaseUrl =
                             URLBuilder(uri.toString()).apply {
                                 protocol = URLProtocol("https", 0)
-                                // This looks a bit ugly, but should work to assign the correct default port for the docker
-                                // https protocol. If we use ktor's default mechanism then we'll have problems with port 443
+                                // This looks a bit ugly, but should work to assign the correct default port for the
+                                // docker https protocol. If we use ktor's default mechanism, then we'll have problems
+                                // with port 443
                                 if (port == 0) {
                                     port = 2376
                                 }
@@ -285,7 +287,6 @@ class DockerClient(internal val httpClient: HttpClient, private val baseUrl: Url
                     }
                 }
                 "unix" -> {
-                    LOG.info("Using docker engine unix socket at ${uri.path}")
                     LOG.atInfo {
                         message = "Using docker engine unix socket"
                         payload = mapOf("location" to uri.path)

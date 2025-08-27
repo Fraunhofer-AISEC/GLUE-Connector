@@ -1,14 +1,15 @@
 package de.fraunhofer.aisec.glue.docker
 
-import javax.net.ssl.SSLContext
+import io.ktor.network.tls.*
 import javax.net.ssl.X509TrustManager
 
+@Suppress("unused")
 object TLSHelper {
     private const val CA_CERT_FILE = "ca.pem"
     private const val CERT_FILE = "cert.pem"
     private const val KEY_FILE = "key.pem"
 
-    fun loadDockerTLSParams(certDir: String): Pair<SSLContext, X509TrustManager> {
+    fun loadDockerTLSParams(certDir: String): Pair<CertificateAndKey, X509TrustManager> {
         // It seems the java crypto API is unable to load pkcs#1 keys like they are used by pretty much every project
         // I've come across...
         // Until I have some time to think about how to still work with the standard docker certificates, tls will not
