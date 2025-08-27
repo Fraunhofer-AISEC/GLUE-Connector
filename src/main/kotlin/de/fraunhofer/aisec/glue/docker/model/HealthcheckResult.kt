@@ -12,15 +12,15 @@ import com.fasterxml.jackson.annotation.JsonProperty
  */
 data class HealthcheckResult(
     // Date and time at which this check started in [RFC 3339](https://www.ietf.org/rfc/rfc3339.txt) format with nano-seconds.
-    @JsonProperty("Start")
+    @param:JsonProperty("Start")
     val start: java.time.OffsetDateTime? = null,
     // Date and time at which this check ended in [RFC 3339](https://www.ietf.org/rfc/rfc3339.txt) format with nano-seconds.
-    @JsonProperty("End")
+    @param:JsonProperty("End")
     val end: String? = null,
     // ExitCode meanings:  - `0` healthy - `1` unhealthy - `2` reserved (considered unhealthy) - other values: error running probe
-    @JsonProperty("ExitCode")
+    @param:JsonProperty("ExitCode")
     val exitCode: Int? = null,
     // Output from last check
-    @JsonProperty("Output")
+    @param:JsonProperty("Output")
     val output: String? = null,
 )

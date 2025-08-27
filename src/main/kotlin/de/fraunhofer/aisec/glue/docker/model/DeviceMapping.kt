@@ -10,10 +10,10 @@ import com.fasterxml.jackson.annotation.JsonProperty
  * @param cgroupPermissions
  */
 data class DeviceMapping(
-    @JsonProperty("PathOnHost")
+    @param:JsonProperty("PathOnHost")
     val pathOnHost: String? = null,
-    @JsonProperty("PathInContainer")
+    @param:JsonProperty("PathInContainer")
     val pathInContainer: String? = null,
-    @JsonProperty("CgroupPermissions")
+    @param:JsonProperty("CgroupPermissions")
     val cgroupPermissions: String? = null,
 )

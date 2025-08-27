@@ -3,14 +3,14 @@ package de.fraunhofer.aisec.glue.docker.model
 import com.fasterxml.jackson.annotation.JsonProperty
 
 data class NetworkContainer(
-    @JsonProperty("Name")
+    @param:JsonProperty("Name")
     val name: String? = null,
-    @JsonProperty("EndpointID")
+    @param:JsonProperty("EndpointID")
     val endpointID: String? = null,
-    @JsonProperty("MacAddress")
+    @param:JsonProperty("MacAddress")
     val macAddress: String? = null,
-    @JsonProperty("IPv4Address")
+    @param:JsonProperty("IPv4Address")
     val ipv4Address: String? = null,
-    @JsonProperty("IPv6Address")
+    @param:JsonProperty("IPv6Address")
     val ipv6Address: String? = null,
 )

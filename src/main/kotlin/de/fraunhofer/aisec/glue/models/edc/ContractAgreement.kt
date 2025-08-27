@@ -10,16 +10,16 @@ import de.fraunhofer.iosb.odrl.parser.JsonLd
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type")
 @JsonTypeName("${Namespaces.EDC}/ContractAgreement")
 data class ContractAgreement(
-    @JsonProperty("@id")
+    @param:JsonProperty("@id")
     val id: String,
-    @JsonProperty("${Namespaces.EDC}/providerId")
+    @param:JsonProperty("${Namespaces.EDC}/providerId")
     val providerId: String,
-    @JsonProperty("${Namespaces.EDC}/consumerId")
+    @param:JsonProperty("${Namespaces.EDC}/consumerId")
     val consumerId: String,
-    @JsonProperty("${Namespaces.EDC}/contractSigningDate")
+    @param:JsonProperty("${Namespaces.EDC}/contractSigningDate")
     val contractSigningDate: Long,
-    @JsonProperty("${Namespaces.EDC}/assetId")
+    @param:JsonProperty("${Namespaces.EDC}/assetId")
     val assetId: String,
-    @JsonProperty("${Namespaces.EDC}/policy")
+    @param:JsonProperty("${Namespaces.EDC}/policy")
     val policy: JsonNode
 )

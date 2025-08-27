@@ -10,8 +10,8 @@ import java.net.URI
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type")
 @JsonTypeName("${Namespaces.EDC}/TerminateNegotiation")
 data class TerminateNegotiationRequest(
-    @JsonProperty("@id")
+    @param:JsonProperty("@id")
     val uid: URI,
-    @JsonProperty("${Namespaces.EDC}/reason")
+    @param:JsonProperty("${Namespaces.EDC}/reason")
     val reason: String,
 )
