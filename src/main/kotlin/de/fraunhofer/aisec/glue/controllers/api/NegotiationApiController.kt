@@ -26,7 +26,7 @@ class NegotiationApiController(private val negotiationManager: NegotiationManage
                                 id = negotiation.id,
                                 role = negotiation.role,
                                 peer = negotiation.peerIdentity ?: "unknown",
-                                state = negotiation.state
+                                state = negotiation.state,
                             )
                         }
 

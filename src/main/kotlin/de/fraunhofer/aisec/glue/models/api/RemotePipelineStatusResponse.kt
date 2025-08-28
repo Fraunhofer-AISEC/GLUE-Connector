@@ -1,7 +1,5 @@
 package de.fraunhofer.aisec.glue.models.api
 
-import com.fasterxml.jackson.annotation.JsonUnwrapped
-import de.fraunhofer.aisec.glue.models.pipeline.PipelineCreateResponse
 import de.fraunhofer.aisec.glue.pipeline.ContainerPort
 
 data class RemotePipelineStatusResponse(

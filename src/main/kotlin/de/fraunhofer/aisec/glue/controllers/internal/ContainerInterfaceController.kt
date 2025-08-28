@@ -356,13 +356,14 @@ class ContainerInterfaceController(
                     remotePipelines[callingPipeline to followingContract] = remoteAddr to createdPipeline.pipelineName
 
                     call.respond(listOf(mapOf("endpoint" to remoteAddr, "protocol" to "TCP")))
-                    */
+                     */
 
-                    val remotePipeline = remotePipelineManager.getOrCreate(
-                        Url("http://$destinationHost:8080"),
-                        followingContract.uid.toString(),
-                        callingPipeline.targetId
-                    )
+                    val remotePipeline =
+                        remotePipelineManager.getOrCreate(
+                            Url("http://$destinationHost:8080"),
+                            followingContract.uid.toString(),
+                            callingPipeline.targetId,
+                        )
 
                     // TODO: Unify format with the normal pipeline API (needs to be rewritten in forwarder)
                     call.respond(remotePipeline.ports.map { p -> mapOf("endpoint" to p.hostAddress, "protocol" to p.protocol.uppercase()) })

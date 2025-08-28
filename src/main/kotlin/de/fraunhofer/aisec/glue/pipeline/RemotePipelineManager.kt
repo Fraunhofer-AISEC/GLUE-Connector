@@ -17,10 +17,8 @@ import io.ktor.http.Url
 import io.ktor.http.appendPathSegments
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
-import io.ktor.http.parameters
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.serialization.builtins.TripleSerializer
 import kotlin.random.Random
 
 class RemotePipelineManager(val httpClient: HttpClient, val objectMapper: ObjectMapper) {
@@ -64,18 +62,19 @@ class RemotePipelineManager(val httpClient: HttpClient, val objectMapper: Object
         // We prefer to use the same ID remote and locally, but that may not always be possible
         val pipelineId =
             if (remotePipelines.contains(pipelineInfo.pipelineName)) {
-                generateSequence { Random.Default.nextBytes(8).hexEncode() }.first { n -> !remotePipelines.contains(n) }
+                generateSequence { Random.nextBytes(8).hexEncode() }.first { n -> !remotePipelines.contains(n) }
             } else {
                 pipelineInfo.pipelineName
             }
 
         LOG.atDebug {
             message = "Successfully created remote pipeline"
-            payload = mapOf(
-                "id" to pipelineInfo.pipelineName,
-                "localId" to pipelineId,
-                "peer" to peerUrl,
-            )
+            payload =
+                mapOf(
+                    "id" to pipelineInfo.pipelineName,
+                    "localId" to pipelineId,
+                    "peer" to peerUrl,
+                )
         }
 
         val pipeline =
@@ -107,7 +106,7 @@ class RemotePipelineManager(val httpClient: HttpClient, val objectMapper: Object
         actionId: String = OdrlIdentifiers.USE,
     ): RemotePipeline = pipelinesMutex.withLock { createUnlocked(peerUrl, contractId, targetId, actionId) }
 
-    suspend fun getAll(): Collection<RemotePipeline> {
+    fun getAll(): Collection<RemotePipeline> {
         return remotePipelines.values
     }
 
@@ -156,12 +155,13 @@ class RemotePipelineManager(val httpClient: HttpClient, val objectMapper: Object
             createUnlocked(peerUrl, contractId, targetId, actionId)
         }
 
-    suspend fun delete(pipelineId: String): Boolean = pipelinesMutex.withLock {
-        val pipeline = remotePipelines.remove(pipelineId) ?: return@withLock false
-        lookupByContract.remove(Triple(pipeline.contractId, pipeline.targetId, pipeline.actionId))
-        pipeline.stop()
-        true
-    }
+    suspend fun delete(pipelineId: String): Boolean =
+        pipelinesMutex.withLock {
+            val pipeline = remotePipelines.remove(pipelineId) ?: return@withLock false
+            lookupByContract.remove(Triple(pipeline.contractId, pipeline.targetId, pipeline.actionId))
+            pipeline.stop()
+            true
+        }
 
     companion object {
         private val LOG = KotlinLogging.logger {}

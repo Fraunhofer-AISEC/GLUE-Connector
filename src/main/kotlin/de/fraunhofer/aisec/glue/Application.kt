@@ -36,19 +36,21 @@ import io.ktor.server.plugins.contentnegotiation.ContentNegotiation as ServerCon
 
 fun main(args: Array<String>) {
     val filteredLoggerPrefixes = listOf("sun.rmi", "javax.management")
-    val filteredMethods = hashSetOf(
-        Pair("java.io.ObjectInputFilter\$Config", "traceFilter"),
-        Pair("java.io.ObjectInputStream", "filterCheck"),
-    )
+    val filteredMethods =
+        hashSetOf(
+            Pair("java.io.ObjectInputFilter\$Config", "traceFilter"),
+            Pair("java.io.ObjectInputStream", "filterCheck"),
+        )
     Logger.getLogger("").apply {
         level = Level.ALL
         handlers.forEach { handler ->
             handler.level = Level.ALL
             // Filter background noise
-            handler.filter = Filter { record ->
-                filteredLoggerPrefixes.none { record.loggerName.startsWith(it) }
-                        && Pair(record.sourceClassName, record.sourceMethodName) !in filteredMethods
-            }
+            handler.filter =
+                Filter { record ->
+                    filteredLoggerPrefixes.none { record.loggerName.startsWith(it) } &&
+                        Pair(record.sourceClassName, record.sourceMethodName) !in filteredMethods
+                }
         }
     }
     EngineMain.main(args)
