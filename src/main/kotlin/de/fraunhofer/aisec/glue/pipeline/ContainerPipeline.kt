@@ -45,9 +45,7 @@ abstract class ContainerPipeline(val name: String, val contractId: String, val t
      */
     abstract suspend fun contracts(peer: String): Set<OdrlPolicy>
 
-    abstract suspend fun addRemotePipeline(
-        remotePipeline: RemotePipeline
-    ): Boolean
+    abstract suspend fun addRemotePipeline(remotePipeline: RemotePipeline): Boolean
 
     abstract suspend fun remotePipelines(): Set<RemotePipeline>
 }

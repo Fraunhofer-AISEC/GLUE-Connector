@@ -135,10 +135,11 @@ class DockerContainerPipeline internal constructor(
 
         return bindings.map { b ->
             //  Also, I think IPv6 addresses will automatically be converted to IPv4 addresses by this...
-            val hostIp = when (bindings[0].hostIp) {
-                "0.0.0.0", "::" -> InetAddress.getLocalHost().hostAddress
-                else -> bindings[0].hostIp
-            }
+            val hostIp =
+                when (bindings[0].hostIp) {
+                    "0.0.0.0", "::" -> InetAddress.getLocalHost().hostAddress
+                    else -> bindings[0].hostIp
+                }
 
             ContainerPort(containerPort, "$hostIp:${b.hostPort}", protocol)
         }
@@ -151,7 +152,11 @@ class DockerContainerPipeline internal constructor(
             ContainerInfo(
                 name = c.name,
                 ipAddresses = inspect.networkSettings?.networks?.values?.mapNotNull(EndpointSettings::ipAddress) ?: emptyList(),
-                ports = inspect.networkSettings?.ports?.flatMap { (k, v) -> v?.let { parsePortBinding(k, v) } ?: emptyList() } ?: emptyList(),
+                ports =
+                    inspect.networkSettings?.ports?.flatMap {
+                            (k, v) ->
+                        v?.let { parsePortBinding(k, v) } ?: emptyList()
+                    } ?: emptyList(),
                 status = parseContainerStatus(inspect.state ?: throw IllegalStateException("Inspection has no state object")),
                 pid = inspect.state.pid,
             )

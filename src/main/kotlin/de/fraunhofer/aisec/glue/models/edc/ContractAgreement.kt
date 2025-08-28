@@ -21,5 +21,5 @@ data class ContractAgreement(
     @param:JsonProperty("${Namespaces.EDC}/assetId")
     val assetId: String,
     @param:JsonProperty("${Namespaces.EDC}/policy")
-    val policy: JsonNode
+    val policy: JsonNode,
 )

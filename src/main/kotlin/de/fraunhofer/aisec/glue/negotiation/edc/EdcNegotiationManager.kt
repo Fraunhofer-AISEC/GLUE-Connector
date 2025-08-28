@@ -123,23 +123,24 @@ class EdcNegotiationManager(
         val uuid = UUID.randomUUID().toString()
 
         val targets = policy.permission.mapNotNull { p -> p.target?.uid }.distinct()
-        val target = when (targets.size) {
-            0 -> {
-                LOG.atDebug {
-                    message = "Cannot convert policy to valid EDC offer as it contains no targets"
-                    payload = mapOf("contractId" to policy.uid)
+        val target =
+            when (targets.size) {
+                0 -> {
+                    LOG.atDebug {
+                        message = "Cannot convert policy to valid EDC offer as it contains no targets"
+                        payload = mapOf("contractId" to policy.uid)
+                    }
+                    return Result.failure(NegotiationException("Policy contains no targets"))
                 }
-                return Result.failure(NegotiationException("Policy contains no targets"))
-            }
-            1 -> targets[0].toString()
-            else -> {
-                LOG.atDebug {
-                    message = "Cannot convert policy to valid EDC offer as its target is ambiguous"
-                    payload = mapOf("contractId" to policy.uid, "candidates" to targets.map(URI::toString))
+                1 -> targets[0].toString()
+                else -> {
+                    LOG.atDebug {
+                        message = "Cannot convert policy to valid EDC offer as its target is ambiguous"
+                        payload = mapOf("contractId" to policy.uid, "candidates" to targets.map(URI::toString))
+                    }
+                    return Result.failure(NegotiationException("Policy target is ambiguous, specify the ID in EDC format"))
                 }
-                return Result.failure(NegotiationException("Policy target is ambiguous, specify the ID in EDC format"))
             }
-        }
 
         val newId =
             arrayOf(contractId, target, uuid).joinToString(":") { Base64.getEncoder().encodeToString(it.toByteArray()) }
@@ -150,9 +151,10 @@ class EdcNegotiationManager(
         peer: String,
         offer: OdrlPolicy,
     ): Deferred<OdrlAgreement> {
-        val (newOffer, newId) = convertToOffer(offer).getOrElse {
-            return CompletableDeferred<OdrlAgreement>().apply {completeExceptionally(it)}
-        }
+        val (newOffer, newId) =
+            convertToOffer(offer).getOrElse {
+                return CompletableDeferred<OdrlAgreement>().apply { completeExceptionally(it) }
+            }
 
         val compactedSerializedOffer = odrlParser.mapper.writeValueAsString(newOffer)
 
@@ -212,7 +214,7 @@ class EdcNegotiationManager(
     }
 
     @BasePath("connector.edc")
-    class EdcNegotiationConfig(applicationConfig: ApplicationConfig): Config(applicationConfig) {
+    class EdcNegotiationConfig(applicationConfig: ApplicationConfig) : Config(applicationConfig) {
         val url by withDefault(convert(stringProp(), ::Url), Url("http://localhost:19193"))
     }
 }

@@ -1,27 +1,17 @@
 package de.fraunhofer.aisec.glue.controllers.api
 
 import de.fraunhofer.aisec.glue.ContractStore
-import de.fraunhofer.aisec.glue.Utils
-import de.fraunhofer.aisec.glue.Utils.hexEncode
 import de.fraunhofer.aisec.glue.controllers.Controller
 import de.fraunhofer.aisec.glue.models.api.RemotePipelineCreationRequest
 import de.fraunhofer.aisec.glue.models.api.RemotePipelineStatusResponse
-import de.fraunhofer.aisec.glue.models.pipeline.PipelineCreateResponse
-import de.fraunhofer.aisec.glue.pipeline.ContainerPort
 import de.fraunhofer.aisec.glue.pipeline.RemotePipelineManager
 import de.fraunhofer.iosb.odrl.OdrlIdentifiers
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ktor.client.*
-import io.ktor.client.call.*
-import io.ktor.client.request.*
-import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
-import kotlin.random.Random
 
 /**
  * This controller provides an overview of the pipelines created by this connector on other connectors.
@@ -45,10 +35,23 @@ class RemotePipelineApiController(
                 //  Technically, it would be possible to have a different connector do the negotiation, but then why
                 //  use this proxy function here at all...
 
-                val remotePipeline = remotePipelineManager.create(peerUrl, req.request.contractId, req.request.target, req.request.action ?: OdrlIdentifiers.USE)
+                val remotePipeline =
+                    remotePipelineManager.create(
+                        peerUrl,
+                        req.request.contractId,
+                        req.request.target,
+                        req.request.action ?: OdrlIdentifiers.USE,
+                    )
 
-                call.respond(HttpStatusCode.Created, RemotePipelineStatusResponse(req.peer, remotePipeline.id,
-                    remotePipeline.remoteId, remotePipeline.ports))
+                call.respond(
+                    HttpStatusCode.Created,
+                    RemotePipelineStatusResponse(
+                        req.peer,
+                        remotePipeline.id,
+                        remotePipeline.remoteId,
+                        remotePipeline.ports,
+                    ),
+                )
             }
 
             delete("{id}") {

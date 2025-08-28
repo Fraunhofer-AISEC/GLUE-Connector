@@ -35,32 +35,7 @@ class PipelineController(
                     val req = call.receive<PipelineCreateRequest>()
 
                     val contract =
-                        if (req.contractId != null) {
-                            contractStore.getContract(req.contractId)
-                        } else {
-                            val contracts = contractStore.getContract(req.target, req.action)
-                            when (contracts.size) {
-                                0 -> null
-                                1 -> contracts.first()
-                                else -> {
-                                    LOG.atDebug {
-                                        message = "The selected contract is ambiguous for given target and action"
-                                        payload =
-                                            mapOf(
-                                                "target" to req.target,
-                                                "action" to req.action,
-                                                "matchedContracts" to
-                                                    contracts.map {
-                                                            c ->
-                                                        c.uid
-                                                    },
-                                            )
-                                    }
-                                    call.respond(HttpStatusCode.BadRequest)
-                                    return@post
-                                }
-                            }
-                        }
+                        contractStore.getContract(req.contractId)
 
                     if (contract == null) {
                         LOG.atDebug {
@@ -85,7 +60,7 @@ class PipelineController(
                         call.respond(
                             PipelineCreateResponse(
                                 pipeline.name,
-                                pipeline.getContainerInfo(0)!!.ports
+                                pipeline.getContainerInfo(0)!!.ports,
                             ),
                         )
                     }.recover { err ->

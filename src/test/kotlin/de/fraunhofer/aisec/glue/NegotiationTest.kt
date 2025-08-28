@@ -12,8 +12,8 @@ import de.fraunhofer.iosb.odrl.OdrlParty
 import de.fraunhofer.iosb.odrl.parser.OdrlParser
 import io.ktor.client.*
 import io.ktor.client.call.*
-import io.ktor.client.engine.mock.*
 import io.ktor.client.engine.cio.*
+import io.ktor.client.engine.mock.*
 import io.ktor.client.plugins.auth.*
 import io.ktor.client.plugins.auth.providers.*
 import io.ktor.client.request.*

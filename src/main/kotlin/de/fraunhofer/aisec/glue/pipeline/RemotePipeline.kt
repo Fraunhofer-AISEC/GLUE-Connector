@@ -22,8 +22,7 @@ class RemotePipeline(
     val contractId: String,
     val targetId: String,
     val actionId: String,
-
-    private val httpClient: HttpClient
+    private val httpClient: HttpClient,
 ) {
     /**
      * Return the status of this pipeline.
