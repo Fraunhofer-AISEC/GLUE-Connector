@@ -15,7 +15,7 @@ class OdrlConstraintEvaluatorTest {
         "http://example.com/action",
         "http://example.com/asset",
         GlueContainerPipeline(
-            listOf(
+            container = listOf(
                 GlueContainer(
                     image = "testContainer",
                     hash = "364a4787748a98c1c28085d4154a06c3a9be9a67c0b08a56b3f69fa8fabf172e"
@@ -35,7 +35,7 @@ class OdrlConstraintEvaluatorTest {
             operator = OdrlOperator("http://www.w3.org/ns/odrl/2/eq"),
             rightOperand = listOf(
                 GlueContainerPipeline(
-                    listOf(
+                    container = listOf(
                         GlueContainer(
                             image = "testContainer",
                             hash = "364a4787748a98c1c28085d4154a06c3a9be9a67c0b08a56b3f69fa8fabf172e"
@@ -56,7 +56,7 @@ class OdrlConstraintEvaluatorTest {
             operator = OdrlOperator("http://www.w3.org/ns/odrl/2/neq"),
             rightOperand = listOf(
                 GlueContainerPipeline(
-                    listOf(
+                    container = listOf(
                         GlueContainer(
                             image = "testContainer",
                             hash = "364a4787748a98c1c28085d4154a06c3a9be9a67c0b08a56b3f69fa8fabf172e"

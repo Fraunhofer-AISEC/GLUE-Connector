@@ -7,6 +7,7 @@ object GlueIdentifiers {
 
     // Core vocabulary
     const val CONTAINER_PIPELINE = "http://fhg.de/glue/ContainerPipeline"
+    const val PLATFORM_SECURITY = "http://fhg.de/glue/platformSecurity"
 
     const val CONTAINER = "http://fhg.de/glue/Container"
     const val HAS_CONTAINER = "http://fhg.de/glue/container"
