@@ -12,19 +12,19 @@ import io.konform.validation.ValidationError
 @JsonTypeName(OdrlIdentifiers.ACTION)
 data class OdrlAction(
     // According to the ODRL information model, an action must be identified by a rdf:value when using refinements
-    @JsonAlias("@id")
-    @JsonProperty(RdfIdentifiers.VALUE)
+    @param:JsonAlias("@id")
+    @param:JsonProperty(RdfIdentifiers.VALUE)
     val value: RdfValue,
 
-    @JsonProperty(OdrlIdentifiers.REFINEMENT)
-    @JsonSetter(nulls = Nulls.AS_EMPTY)
+    @param:JsonProperty(OdrlIdentifiers.REFINEMENT)
+    @param:JsonSetter(nulls = Nulls.AS_EMPTY)
     val refinement: List<OdrlConstraintRepresentation> = listOf(),
 
-    @JsonProperty(OdrlIdentifiers.INCLUDED_IN)
+    @param:JsonProperty(OdrlIdentifiers.INCLUDED_IN)
     val includedIn: OdrlAction? = null,
 
-    @JsonProperty(OdrlIdentifiers.IMPLIES)
-    @JsonSetter(nulls = Nulls.AS_EMPTY)
+    @param:JsonProperty(OdrlIdentifiers.IMPLIES)
+    @param:JsonSetter(nulls = Nulls.AS_EMPTY)
     val implies: List<OdrlAction> = listOf(),
 ) : JsonLdBeanValidator {
     // Constructor necessary for Jackson to deserialize primitive type

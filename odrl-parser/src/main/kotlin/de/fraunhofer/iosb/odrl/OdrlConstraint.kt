@@ -15,33 +15,33 @@ import java.net.URI
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type", defaultImpl = OdrlConstraint::class)
 @JsonTypeName(OdrlIdentifiers.CONSTRAINT)
 data class OdrlConstraint(
-    @JsonProperty("@id")
+    @param:JsonProperty("@id")
     val uid: URI? = null,
 
-    @JsonProperty(OdrlIdentifiers.HAS_LEFT_OPERAND)
+    @param:JsonProperty(OdrlIdentifiers.HAS_LEFT_OPERAND)
     val leftOperand: OdrlLeftOperand,
 
-    @JsonProperty(OdrlIdentifiers.HAS_OPERATOR)
+    @param:JsonProperty(OdrlIdentifiers.HAS_OPERATOR)
     val operator: OdrlOperator,
 
-    @JsonProperty(OdrlIdentifiers.HAS_RIGHT_OPERAND)
-    @JsonSetter(nulls = Nulls.AS_EMPTY)
+    @param:JsonProperty(OdrlIdentifiers.HAS_RIGHT_OPERAND)
+    @param:JsonSetter(nulls = Nulls.AS_EMPTY)
     val rightOperand: List<OdrlRightOperand> = listOf(),
 
-    @JsonProperty(OdrlIdentifiers.HAS_RIGHT_OPERAND_REFERENCE)
-    @JsonSetter(nulls = Nulls.AS_EMPTY)
+    @param:JsonProperty(OdrlIdentifiers.HAS_RIGHT_OPERAND_REFERENCE)
+    @param:JsonSetter(nulls = Nulls.AS_EMPTY)
     // The https://www.w3.org/ns/odrl.jsonld context declares "rightOperandReference" to be of type xsd:anyUri
     val rightOperandReference: List<XmlAnyUri> = listOf(),
 
-    @JsonProperty(OdrlIdentifiers.DATATYPE)
+    @param:JsonProperty(OdrlIdentifiers.DATATYPE)
     // The https://www.w3.org/ns/odrl.jsonld context rewrites "dataType" to "datatype" (probably a bug?)
-    @JsonAlias("http://www.w3.org/ns/odrl/2/datatype")
+    @param:JsonAlias("http://www.w3.org/ns/odrl/2/datatype")
     val dataType: XmlAnyType? = null,
 
-    @JsonProperty(OdrlIdentifiers.UNIT)
+    @param:JsonProperty(OdrlIdentifiers.UNIT)
     val unit: OdrlIri? = null,
 
-    @JsonProperty(OdrlIdentifiers.STATUS)
+    @param:JsonProperty(OdrlIdentifiers.STATUS)
     val status: OdrlRightOperand? = null,
 ): OdrlConstraintRepresentation, JsonLdBeanValidator {
     override fun validate(): List<ValidationError> {

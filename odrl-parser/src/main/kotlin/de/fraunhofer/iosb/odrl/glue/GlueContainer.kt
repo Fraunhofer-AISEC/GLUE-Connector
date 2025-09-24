@@ -11,17 +11,17 @@ import io.konform.validation.string.notBlank
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type", defaultImpl = GlueContainer::class)
 @JsonTypeName(GlueIdentifiers.CONTAINER)
 data class GlueContainer(
-    @JsonProperty(GlueIdentifiers.IMAGE)
+    @param:JsonProperty(GlueIdentifiers.IMAGE)
     val image: String,
 
-    @JsonProperty(GlueIdentifiers.HASH)
+    @param:JsonProperty(GlueIdentifiers.HASH)
     val hash: String,
 
-    @JsonProperty(GlueIdentifiers.ALLOW_NETWORK)
+    @param:JsonProperty(GlueIdentifiers.ALLOW_NETWORK)
     val allowNetwork: Boolean? = false,
 
-    @JsonProperty(GlueIdentifiers.HAS_PARAMETER)
-    @JsonSetter(nulls = Nulls.AS_EMPTY)
+    @param:JsonProperty(GlueIdentifiers.HAS_PARAMETER)
+    @param:JsonSetter(nulls = Nulls.AS_EMPTY)
     val parameter: List<GlueParameter> = listOf(),
 ): JsonLdBeanValidator {
     override fun validate(): List<ValidationError> {

@@ -12,10 +12,10 @@ class GlueRestParameter(
     value: GlueValue? = null,
 
     // Properties of GlueRestParameter
-    @JsonProperty(GlueIdentifiers.HTTP_URL)
+    @param:JsonProperty(GlueIdentifiers.HTTP_URL)
     val httpUrl: URI,
 
-    @JsonProperty(GlueIdentifiers.HTTP_TYPE)
+    @param:JsonProperty(GlueIdentifiers.HTTP_TYPE)
     val httpType: GlueHttpType = GlueHttpType.GET,
 ): GlueParameter(value) {
 

@@ -12,11 +12,11 @@ import io.konform.validation.jsonschema.minItems
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type", defaultImpl = GlueContainerPipeline::class)
 @JsonTypeName(GlueIdentifiers.CONTAINER_PIPELINE)
 data class GlueContainerPipeline(
-    @JsonProperty(GlueIdentifiers.PLATFORM_SECURITY)
-    @JsonSetter(nulls = Nulls.AS_EMPTY)
+    @param:JsonProperty(GlueIdentifiers.PLATFORM_SECURITY)
+    @param:JsonSetter(nulls = Nulls.AS_EMPTY)
     val platformSecurity: List<String> = listOf(),
-    @JsonProperty(GlueIdentifiers.HAS_CONTAINER)
-    @JsonSetter(nulls = Nulls.AS_EMPTY)
+    @param:JsonProperty(GlueIdentifiers.HAS_CONTAINER)
+    @param:JsonSetter(nulls = Nulls.AS_EMPTY)
     val container: List<GlueContainer> = listOf(),
 ) : OdrlRightOperand(), JsonLdBeanValidator {
     override fun validate(): List<ValidationError> {

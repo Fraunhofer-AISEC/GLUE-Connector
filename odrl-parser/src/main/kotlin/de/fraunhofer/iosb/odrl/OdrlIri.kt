@@ -12,7 +12,7 @@ import java.net.URI
 @JsonLd(GlueIdentifiers.CONTEXT)
 @JsonTypeInfo(use = JsonTypeInfo.Id.NONE, defaultImpl = OdrlIri::class)
 data class OdrlIri(
-    @JsonProperty("@id")
+    @param:JsonProperty("@id")
     val uid: URI,
 ): JsonLdBeanValidator {
     // Constructor necessary for Jackson to deserialize primitive type

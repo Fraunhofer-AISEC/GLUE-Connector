@@ -34,8 +34,8 @@ class OdrlProhibition(
     constraint: List<OdrlConstraintRepresentation> = listOf(),
 
     // Properties of OdrlProhibition
-    @JsonProperty(OdrlIdentifiers.REMEDY)
-    @JsonSetter(nulls = Nulls.AS_EMPTY)
+    @param:JsonProperty(OdrlIdentifiers.REMEDY)
+    @param:JsonSetter(nulls = Nulls.AS_EMPTY)
     val remedy: List<OdrlDuty> = listOf()
 ): OdrlRule(uid, action, target, output, assignee, assigner, attributedParty, attributingParty, compensatedParty,
         compensatingParty, consentedParty, consentingParty, contractedParty, contractingParty, informedParty,
