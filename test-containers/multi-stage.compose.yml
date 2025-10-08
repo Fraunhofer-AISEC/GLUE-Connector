@@ -1,6 +1,6 @@
 services:
   initial-connector:
-    image: container-registry.gitlab.cc-asp.fraunhofer.de/ccit-glue/usage-control/container-pipeline/container-pipeline:latest
+    image: "${DOCKER_IMAGE:-container-registry.gitlab.cc-asp.fraunhofer.de/ccit-glue/usage-control/container-pipeline/container-pipeline:latest}"
     environment:
       # Take from .env file
       - "AUTH_USERNAME=${AUTH_USERNAME}"
@@ -20,7 +20,7 @@ services:
       - "DOCKER_TLS_CERTDIR="
 
   intermediary-connector:
-    image: container-registry.gitlab.cc-asp.fraunhofer.de/ccit-glue/usage-control/container-pipeline/container-pipeline:latest
+    image: "${DOCKER_IMAGE:-container-registry.gitlab.cc-asp.fraunhofer.de/ccit-glue/usage-control/container-pipeline/container-pipeline:latest}"
     environment:
       # Take from .env file
       - "AUTH_USERNAME=${AUTH_USERNAME}"
@@ -40,7 +40,7 @@ services:
       - "DOCKER_TLS_CERTDIR="
 
   final-connector:
-    image: container-registry.gitlab.cc-asp.fraunhofer.de/ccit-glue/usage-control/container-pipeline/container-pipeline:latest
+    image: "${DOCKER_IMAGE:-container-registry.gitlab.cc-asp.fraunhofer.de/ccit-glue/usage-control/container-pipeline/container-pipeline:latest}"
     environment:
       # Take from .env file
       - "AUTH_USERNAME=${AUTH_USERNAME}"
@@ -58,6 +58,7 @@ services:
     network_mode: "service:final-connector"
     environment:
       - "DOCKER_TLS_CERTDIR="
+
 networks:
   default:
     ipam:
