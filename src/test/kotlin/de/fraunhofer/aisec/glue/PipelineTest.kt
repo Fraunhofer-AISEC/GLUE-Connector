@@ -10,6 +10,7 @@ import de.fraunhofer.aisec.glue.policy.PolicyEngine
 import de.fraunhofer.iosb.odrl.glue.GlueContainer
 import de.fraunhofer.iosb.odrl.glue.GlueContainerPipeline
 import de.fraunhofer.iosb.odrl.parser.OdrlParser
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
@@ -25,6 +26,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
+import org.junit.jupiter.api.assertDoesNotThrow
 import java.io.File
 import kotlin.random.Random
 import kotlin.test.Test
@@ -201,16 +203,30 @@ class PipelineTest {
                 val dockerBackend = DockerBackend(objectMapper, dockerClient)
                 val pipelineManager = PipelineManager(objectMapper, remotePipelineManager, dockerBackend)
 
+                LOG.info { "Test setup complete" }
+
                 pipelineManager.createPipeline(getTestContainers(dockerClient), "testContract", "testTarget").use { pipeline ->
                     val containerInfo = pipeline.getContainerInfo()
+
+                    val inspectResult = dockerClient.containers.get("pipeline-${pipeline.name}-0").inspect()
+                    LOG.atInfo {
+                        message = "Obtained docker inspect result and parsed container info"
+                        payload =
+                            mapOf(
+                                "inspectResult" to inspectResult,
+                                "containerInfo" to containerInfo,
+                            )
+                    }
 
                     val payload = Random.nextBytes(32)
 
                     // Check the echo endpoint
                     val hostAddress = containerInfo[0].ports[0].hostAddress
                     val resp =
-                        httpClient.post("http://$hostAddress/echo") {
-                            setBody(payload)
+                        assertDoesNotThrow("Exception when connecting to the deployed pipeline") {
+                            httpClient.post("http://$hostAddress/echo") {
+                                setBody(payload)
+                            }
                         }
                     assertTrue(payload.contentEquals(resp.body()))
 
@@ -255,5 +271,7 @@ class PipelineTest {
             File("test-containers/example-policy.json").reader().use { r ->
                 OdrlParser().readOdrlPolicy(r)
             }
+
+        private val LOG = KotlinLogging.logger {}
     }
 }

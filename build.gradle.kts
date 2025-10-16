@@ -61,6 +61,7 @@ tasks.jar {
 
 tasks.test {
     useJUnitPlatform()
+    jvmArgs("-Dkotlinx.coroutines.debug", "-Dkotlinx.coroutines.stacktrace.recovery=true")
 }
 
 kotlin {
