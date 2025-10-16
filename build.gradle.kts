@@ -41,6 +41,7 @@ dependencies {
     implementation(libs.dbcp)
     implementation(libs.kotlinLogging.jvm)
     implementation(libs.ktor.server.cors)
+    implementation(libs.ktor.server.callLogging)
     // For running example with gradle
     runtimeOnly(libs.slf4j.jdk14)
 
@@ -48,7 +49,6 @@ dependencies {
     testImplementation(libs.kotlin.test)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.ktor.server.test.host)
-    testImplementation(libs.ktor.server.callLogging)
     testImplementation(libs.ktor.client.mock)
     testImplementation(libs.mockk)
 }
@@ -72,7 +72,11 @@ application {
 }
 
 jib {
-    container.mainClass = "de.fraunhofer.aisec.glue.ApplicationKt"
+    container {
+        mainClass = "de.fraunhofer.aisec.glue.ApplicationKt"
+        // Activates Kotlin's debug mode inside the container
+        jvmFlags = listOf("-ea")
+    }
 }
 
 // Required for ./gradlew run in order to wait on readln()

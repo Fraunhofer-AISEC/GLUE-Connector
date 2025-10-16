@@ -21,7 +21,7 @@ func proxy(conn net.Conn, proxyAddress string) {
 		log.Printf("Could not connect to proxy address: %s", err.Error())
 		return
 	}
-	defer peer.Close()
+	defer closeSilent(peer)
 
 	forward := func(from net.Conn, to net.Conn, errCh chan<- error) {
 		_, err := io.Copy(to, from)
@@ -84,6 +84,7 @@ func negotiateAndProxy(conn net.Conn, coordiantor string, destination string) {
 		log.Printf("Got error response from coordinator: %s", resp.Status)
 		return
 	}
+	log.Printf("Got response from coordinator: %s", resp.Status)
 
 	// We get back all of the ports opened by the remote pipeline
 	// Look for one that we want
@@ -106,6 +107,7 @@ func negotiateAndProxy(conn net.Conn, coordiantor string, destination string) {
 		log.Printf("No candidate endpoint found, closing")
 		return
 	}
+	log.Printf("Using endpoint %s", endpoint)
 
 	proxy(conn, endpoint)
 }

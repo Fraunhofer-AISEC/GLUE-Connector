@@ -9,6 +9,8 @@ services:
       # The subnet used by this container's pipelines
       - "DOCKER_SUBNET=10.1.0.0"
       - "DOCKER_HOST=tcp://127.0.0.1:2375"
+      # Debugging
+      - "JAVA_TOOL_OPTIONS=-agentlib:jdwp=transport=dt_socket,address=*:5005,server=y,suspend=n"
     networks:
       default:
         ipv4_address: 172.25.0.2
@@ -29,6 +31,8 @@ services:
       # The subnet used by this container's pipelines
       - "DOCKER_SUBNET=10.1.1.0"
       - "DOCKER_HOST=tcp://127.0.0.1:2375"
+      # Debugging
+      - "JAVA_TOOL_OPTIONS=-agentlib:jdwp=transport=dt_socket,address=*:5005,server=y,suspend=n"
     networks:
       default:
         ipv4_address: 172.25.0.3
@@ -49,6 +53,8 @@ services:
       # The subnet used by this container's pipelines
       - "DOCKER_SUBNET=10.1.2.0"
       - "DOCKER_HOST=tcp://127.0.0.1:2375"
+      # Debugging
+      - "JAVA_TOOL_OPTIONS=-agentlib:jdwp=transport=dt_socket,address=*:5005,server=y,suspend=n"
     networks:
       default:
         ipv4_address: 172.25.0.4

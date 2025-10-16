@@ -25,7 +25,10 @@ import io.ktor.serialization.*
 import io.ktor.serialization.jackson.*
 import io.ktor.server.application.*
 import io.ktor.server.netty.*
+import io.ktor.server.plugins.calllogging.CallLogging
 import io.ktor.server.plugins.cors.routing.*
+import io.ktor.server.request.httpMethod
+import io.ktor.server.request.uri
 import io.ktor.server.routing.*
 import org.kodein.di.*
 import java.util.logging.Filter
@@ -120,6 +123,17 @@ fun Application.moduleWithDeps(dependencies: DirectDI) {
 
     install(ServerContentNegotiation) {
         register(ContentType.Application.Json, dependencies.instance())
+    }
+
+    install(CallLogging) {
+        level = org.slf4j.event.Level.INFO
+        format { call ->
+            val status = call.response.status()
+            val httpMethod = call.request.httpMethod.value
+            val uri = call.request.uri
+            val userAgent = call.request.headers["User-Agent"]
+            "$httpMethod $uri -> $status (User-Agent: $userAgent)"
+        }
     }
 
     routing {
