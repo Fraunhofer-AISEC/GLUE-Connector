@@ -26,7 +26,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.net.URI
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -47,7 +46,7 @@ class PipelineTest {
                     ContainerInfo(
                         name = "test-container-1",
                         ipAddresses = listOf("127.0.0.2"),
-                        ports = listOf(ContainerPort(8080u, 12345u, "tcp")),
+                        ports = listOf(ContainerPort(8080u.toUShort(), "127.0.0.1:12345", "tcp")),
                         status = ContainerInfo.ContainerStatus.HEALTHY,
                     ),
                     ContainerInfo(
@@ -60,6 +59,7 @@ class PipelineTest {
 
             coEvery { mockPipeline.getContainerInfo(any()) } answers { containerInfos[firstArg()] }
             coEvery { mockPipeline.getContainerInfo() } returns containerInfos
+            coEvery { mockPipeline.remotePipelines() } returns emptySet()
             coJustRun { mockPipeline.injectConfig(any(), any()) }
             coJustRun { mockPipeline.start() }
 
@@ -69,7 +69,9 @@ class PipelineTest {
             coEvery { mockBackend.createPipeline(capture(pipelineName), any(), any(), any()) } returns mockPipeline
             coEvery { mockBackend.getConnectorIp(any()) } returns "127.0.0.1"
 
-            val pipelineManager = PipelineManager(objectMapper, mockBackend)
+            val mockRemotePipelineManager = mockk<RemotePipelineManager>()
+
+            val pipelineManager = PipelineManager(objectMapper, mockRemotePipelineManager, mockBackend)
 
             val pipeline = pipelineManager.createPipeline(getTestContainers(), "testContract", "testTarget")
 
@@ -98,7 +100,7 @@ class PipelineTest {
                     ContainerInfo(
                         name = "test-container-1",
                         ipAddresses = listOf("127.0.0.2"),
-                        ports = listOf(ContainerPort(8080u, 12345u, "tcp")),
+                        ports = listOf(ContainerPort(8080u.toUShort(), "127.0.0.1:12345", "tcp")),
                         status = ContainerInfo.ContainerStatus.HEALTHY,
                     ),
                     ContainerInfo(
@@ -111,6 +113,7 @@ class PipelineTest {
 
             coEvery { mockPipeline.getContainerInfo(any()) } answers { containerInfos[firstArg()] }
             coEvery { mockPipeline.getContainerInfo() } returns containerInfos
+            coEvery { mockPipeline.remotePipelines() } returns emptySet()
             coJustRun { mockPipeline.injectConfig(any(), any()) }
             coJustRun { mockPipeline.start() }
 
@@ -121,8 +124,9 @@ class PipelineTest {
             coEvery { mockBackend.getConnectorIp(any()) } returns "127.0.0.1"
             every { mockPipeline.name } answers { capturedName.captured }
 
+            val mockRemotePipelineManager = mockk<RemotePipelineManager>()
             val contractStore = ContractStore(objectMapper)
-            val pipelineManager = PipelineManager(objectMapper, mockBackend)
+            val pipelineManager = PipelineManager(objectMapper, mockRemotePipelineManager, mockBackend)
             val policyEngine = PolicyEngine(pipelineManager)
             val pipelineController = PipelineController(contractStore, pipelineManager, policyEngine)
 
@@ -192,28 +196,20 @@ class PipelineTest {
                 val dockerClient = DockerClient.fromEnv()
                 assertTrue(dockerClient.runCatching { ping() }.isSuccess, "Cannot run test, docker cannot be pinged")
 
+                val httpClient = HttpClient()
+                val remotePipelineManager = RemotePipelineManager(httpClient, objectMapper)
                 val dockerBackend = DockerBackend(objectMapper, dockerClient)
-                val pipelineManager = PipelineManager(objectMapper, dockerBackend)
+                val pipelineManager = PipelineManager(objectMapper, remotePipelineManager, dockerBackend)
 
                 pipelineManager.createPipeline(getTestContainers(dockerClient), "testContract", "testTarget").use { pipeline ->
                     val containerInfo = pipeline.getContainerInfo()
 
-                    // Technically, we should probably inspect the container here manually, but since the container info is
-                    // made from the inspect result, that gets us nowhere.
+                    val payload = Random.nextBytes(32)
 
-                    val payload = Random.Default.nextBytes(32)
-
-                    val dockerHost = System.getenv("DOCKER_HOST")?.let(::URI)
-                    val containerHost = if (dockerHost != null && dockerHost.scheme == "tcp") {
-                        dockerHost.host
-                    } else {
-                        "127.0.0.1"
-                    }
-                    
                     // Check the echo endpoint
-                    val httpClient = HttpClient()
+                    val hostAddress = containerInfo[0].ports[0].hostAddress
                     val resp =
-                        httpClient.post("http://${containerHost}:${containerInfo[0].ports[0].hostPort}/echo") {
+                        httpClient.post("http://$hostAddress/echo") {
                             setBody(payload)
                         }
                     assertTrue(payload.contentEquals(resp.body()))
