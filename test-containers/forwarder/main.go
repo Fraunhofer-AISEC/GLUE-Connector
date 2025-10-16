@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"sync"
 )
 
 func closeSilent(closeable io.Closer) {
@@ -23,22 +24,21 @@ func proxy(conn net.Conn, proxyAddress string) {
 	}
 	defer closeSilent(peer)
 
-	forward := func(from net.Conn, to net.Conn, errCh chan<- error) {
-		_, err := io.Copy(to, from)
-		errCh <- err
+	var wg sync.WaitGroup
+
+	forward := func(from net.Conn, to net.Conn) {
+		defer wg.Done()
+		if _, err := io.Copy(to, from); err != nil {
+			log.Printf("Error while forwarding data between %s and %s: %s", conn.RemoteAddr().String(), proxyAddress, err.Error())
+		}
 	}
 
-	errCh := make(chan error)
+	wg.Add(2)
+	go forward(conn, peer)
+	go forward(peer, conn)
+	wg.Wait()
 
-	go forward(conn, peer, errCh)
-	go forward(peer, conn, errCh)
-
-	err = <-errCh
-	if err != nil {
-		log.Printf("Error while forwarding data between %s and %s: %s", conn.RemoteAddr().String(), proxyAddress, err.Error())
-	} else {
-		log.Printf("Connection between %s and %s closed", conn.RemoteAddr().String(), proxyAddress)
-	}
+	log.Printf("Connection between %s and %s closed", conn.RemoteAddr().String(), proxyAddress)
 }
 
 type pipelinePort struct {
@@ -73,8 +73,8 @@ func negotiateAndProxy(conn net.Conn, coordiantor string, destination string) {
 
 	// Kick of the negotiation on the coordinator
 
-	coordiantorUrl := fmt.Sprintf("http://%s:8080/coordinator/negotiate?destination=%s&startPipeline=true", coordiantor, destination)
-	resp, err := httpClient.Post(coordiantorUrl, "application/json", nil)
+	coordinatorUrl := fmt.Sprintf("http://%s:8080/coordinator/negotiate?destination=%s&startPipeline=true", coordiantor, destination)
+	resp, err := httpClient.Post(coordinatorUrl, "application/json", nil)
 	if err != nil {
 		log.Printf("Error in coordinator negotiation request: %s", err)
 		return
