@@ -1,5 +1,6 @@
 package de.fraunhofer.aisec.glue
 
+import de.fraunhofer.aisec.glue.config.ConfigManager
 import de.fraunhofer.aisec.glue.controllers.PipelineController
 import de.fraunhofer.aisec.glue.docker.DockerClient
 import de.fraunhofer.aisec.glue.models.pipeline.PipelineCreateRequest
@@ -28,6 +29,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
 import org.junit.jupiter.api.assertDoesNotThrow
 import java.io.File
+import java.net.InetAddress
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -73,7 +75,7 @@ class PipelineTest {
 
             val mockRemotePipelineManager = mockk<RemotePipelineManager>()
 
-            val pipelineManager = PipelineManager(objectMapper, mockRemotePipelineManager, mockBackend)
+            val pipelineManager = PipelineManager(mockRemotePipelineManager, mockBackend)
 
             val pipeline = pipelineManager.createPipeline(getTestContainers(), "testContract", "testTarget")
 
@@ -128,7 +130,7 @@ class PipelineTest {
 
             val mockRemotePipelineManager = mockk<RemotePipelineManager>()
             val contractStore = ContractStore(objectMapper)
-            val pipelineManager = PipelineManager(objectMapper, mockRemotePipelineManager, mockBackend)
+            val pipelineManager = PipelineManager(mockRemotePipelineManager, mockBackend)
             val policyEngine = PolicyEngine(pipelineManager)
             val pipelineController = PipelineController(contractStore, pipelineManager, policyEngine)
 
@@ -200,8 +202,14 @@ class PipelineTest {
 
                 val httpClient = HttpClient()
                 val remotePipelineManager = RemotePipelineManager(httpClient, objectMapper)
-                val dockerBackend = DockerBackend(objectMapper, dockerClient)
-                val pipelineManager = PipelineManager(objectMapper, remotePipelineManager, dockerBackend)
+                val configManager =
+                    ConfigManager(
+                        MapApplicationConfig(
+                            "docker.publicHostname" to (System.getenv("DOCKER_HOSTNAME") ?: InetAddress.getLocalHost().hostAddress),
+                        ),
+                    )
+                val dockerBackend = DockerBackend(objectMapper, dockerClient, configManager)
+                val pipelineManager = PipelineManager(remotePipelineManager, dockerBackend)
 
                 LOG.info { "Test setup complete" }
 

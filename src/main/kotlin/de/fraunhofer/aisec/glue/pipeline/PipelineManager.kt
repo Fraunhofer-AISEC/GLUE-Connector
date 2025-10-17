@@ -1,8 +1,6 @@
 package de.fraunhofer.aisec.glue.pipeline
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import de.fraunhofer.aisec.glue.Utils.hexEncode
-import de.fraunhofer.aisec.glue.pipeline.docker.DockerBackend
 import de.fraunhofer.iosb.odrl.glue.GlueContainerPipeline
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.sync.Mutex
@@ -10,9 +8,8 @@ import kotlinx.coroutines.sync.withLock
 import kotlin.random.Random
 
 class PipelineManager(
-    private val objectMapper: ObjectMapper,
     private val remoteManager: RemotePipelineManager,
-    private val backend: Backend = DockerBackend(objectMapper),
+    private val backend: Backend,
 ) {
     private val pipelines = mutableMapOf<String, ContainerPipeline>()
     private val pipelineMutex = Mutex()

@@ -1,6 +1,8 @@
 package de.fraunhofer.aisec.glue.pipeline.docker
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import de.fraunhofer.aisec.glue.config.Config
+import de.fraunhofer.aisec.glue.config.ConfigManager
 import de.fraunhofer.aisec.glue.docker.Container
 import de.fraunhofer.aisec.glue.docker.DockerClient
 import de.fraunhofer.aisec.glue.docker.InetUtil
@@ -9,20 +11,25 @@ import de.fraunhofer.aisec.glue.docker.model.*
 import de.fraunhofer.aisec.glue.pipeline.Backend
 import de.fraunhofer.aisec.glue.pipeline.ContainerInfo
 import de.fraunhofer.aisec.glue.pipeline.ContainerPipeline
+import de.fraunhofer.aisec.glue.pipeline.docker.DockerBackend.DockerConfig
 import de.fraunhofer.iosb.odrl.glue.GlueContainerPipeline
+import io.ktor.server.config.ApplicationConfig
 import org.slf4j.LoggerFactory
 import java.net.Inet4Address
+import java.net.InetAddress
 import kotlin.experimental.or
 
 class DockerBackend(
     private val objectMapper: ObjectMapper,
-    private val dockerClient: DockerClient = createDockerClient(),
+    private val dockerClient: DockerClient,
+    configManager: ConfigManager,
 ) : Backend {
     private val dockerSubnet = System.getenv("DOCKER_SUBNET") ?: "10.1.0.0"
     private val subnetLen = 29
     private val subnets =
         InetUtil.getSubnets(InetUtil.parseInet4Address(dockerSubnet), 16, subnetLen)
             .iterator()
+    private val config = configManager.getConfig(::DockerConfig)
 
     // Note: This is an implementation detail of docker that should not be relied upon.
     // Unfortunately, we don't have much of a choice.
@@ -224,7 +231,7 @@ class DockerBackend(
                 throw e
             }
 
-        return DockerContainerPipeline(id, contractId, targetId, objectMapper, containers, networks)
+        return DockerContainerPipeline(id, contractId, targetId, objectMapper, containers, networks, config)
     }
 
     override suspend fun getConnectorIp(relativeTo: ContainerInfo): String {
@@ -257,15 +264,11 @@ class DockerBackend(
             .firstNotNullOfOrNull { c -> c.labels?.get("de.fraunhofer.aisec.glue.pipeline.id") }
     }
 
+    class DockerConfig(inner: ApplicationConfig) : Config(inner) {
+        val publicHostname by withDefault(stringProp(), InetAddress.getLocalHost().hostAddress)
+    }
+
     companion object {
         private val LOG = LoggerFactory.getLogger(DockerBackend::class.java)
-
-        fun createDockerClient(): DockerClient {
-            // Keep the DOCKER_SOCKET environment variable around for now for backward compatibility
-            return System.getenv("DOCKER_SOCKET")?.let { s ->
-                LOG.warn("Using the DOCKER_SOCKET variable is deprecated. Please use the standard DOCKER_HOST instead")
-                DockerClient(s)
-            } ?: DockerClient.fromEnv()
-        }
     }
 }
