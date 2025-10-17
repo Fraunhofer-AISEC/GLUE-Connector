@@ -7,8 +7,8 @@ import com.fasterxml.jackson.annotation.JsonProperty
  * @param weight
  */
 data class BlkioWeightDevice(
-    @JsonProperty("Path")
+    @param:JsonProperty("Path")
     val path: String? = null,
-    @JsonProperty("Weight")
+    @param:JsonProperty("Weight")
     val weight: Int? = null,
 )

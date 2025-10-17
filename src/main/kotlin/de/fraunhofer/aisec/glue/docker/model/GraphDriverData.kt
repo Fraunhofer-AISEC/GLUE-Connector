@@ -10,9 +10,9 @@ import com.fasterxml.jackson.annotation.JsonProperty
  */
 data class GraphDriverData(
     // Name of the storage driver.
-    @JsonProperty("Name")
+    @param:JsonProperty("Name")
     val name: String,
     // Low-level storage metadata, provided as key/value pairs.  This information is driver-specific, and depends on the storage-driver in use, and should be used for informational purposes only.
-    @JsonProperty("Data")
+    @param:JsonProperty("Data")
     val `data`: Map<String, String>,
 )

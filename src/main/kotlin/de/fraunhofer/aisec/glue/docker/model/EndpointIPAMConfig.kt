@@ -10,10 +10,10 @@ import com.fasterxml.jackson.annotation.JsonProperty
  * @param linkLocalIPs
  */
 data class EndpointIPAMConfig(
-    @JsonProperty("IPv4Address")
+    @param:JsonProperty("IPv4Address")
     val ipv4Address: String? = null,
-    @JsonProperty("IPv6Address")
+    @param:JsonProperty("IPv6Address")
     val ipv6Address: String? = null,
-    @JsonProperty("LinkLocalIPs")
+    @param:JsonProperty("LinkLocalIPs")
     val linkLocalIPs: List<String>? = null,
 )

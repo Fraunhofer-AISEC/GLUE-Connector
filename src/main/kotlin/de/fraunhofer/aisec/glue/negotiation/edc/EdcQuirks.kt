@@ -66,15 +66,15 @@ object EdcQuirks {
      * While this gets somehow remedied before we send out our requests it is an issue when we stringify values for the
      * EDC.
      * For this reason, this function recursively replaces all `type` properties with `@type`.
+     * TODO: Delete
      */
-    // TODO: Delete
     fun rewriteTypeFields(node: JsonNode) {
         when (node) {
             is ObjectNode -> {
                 if (node.has("type")) {
                     val type = node.remove("type")
                     val copy = mutableListOf<Map.Entry<String, JsonNode>>()
-                    node.fields().forEach { copy.add(it) }
+                    node.properties().forEach { copy.add(it) }
                     node.removeAll()
                     node.set<JsonNode>("@type", type)
                     copy.forEach { (k, v) -> node.set<JsonNode>(k, v) }
@@ -96,7 +96,10 @@ object EdcQuirks {
      * EDC, as the agreement is stringified and the offer is a normal json tree.
      * This function tries to prevent this by preemptively converting all nodes of selected glue types to string.
      */
-    fun stringifyGlueKeys(objectMapper: ObjectMapper, serialization: ObjectNode) {
+    fun stringifyGlueKeys(
+        objectMapper: ObjectMapper,
+        serialization: ObjectNode,
+    ) {
         // TODO: Do we also need to stringify policy templates?
         val glueTypes = listOf("http://fhg.de/glue/ContainerPipeline")
 
@@ -124,7 +127,7 @@ object EdcQuirks {
             when (node) {
                 is ObjectNode -> {
                     val stringifiedNodes = mutableMapOf<String, String>()
-                    for ((key, value) in node.fields()) {
+                    for ((key, value) in node.properties()) {
                         if (shouldStringify(value)) {
                             // We do replacements after as I'm not sure if replacing inline invalidates the iterator
                             stringifiedNodes[key] = stringifyNode(value)
@@ -162,10 +165,13 @@ object EdcQuirks {
      * De-stringify nodes that the EDC does not know and therefore converts to string.
      * To keep this simple, we only process objects with known "leftOperand" properties and try to fail gracefully
      */
-    fun destringifyOperators(objectMapper: ObjectMapper, jsonObject: JsonNode) {
+    fun destringifyOperators(
+        objectMapper: ObjectMapper,
+        jsonObject: JsonNode,
+    ) {
         val knownOperations = listOf("http://fhg.de/glue/containerPipeline")
 
-        fun shouldDestringify(objectNode: ObjectNode): Boolean{
+        fun shouldDestringify(objectNode: ObjectNode): Boolean {
             if (!(objectNode.has("odrl:leftOperand") && objectNode.has("odrl:rightOperand"))) {
                 return false
             }

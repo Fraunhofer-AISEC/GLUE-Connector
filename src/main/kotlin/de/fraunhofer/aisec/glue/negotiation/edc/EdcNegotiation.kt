@@ -26,7 +26,6 @@ class EdcNegotiation(
     val edcUrl: String,
     var edcState: EdcNegotiationState = EdcNegotiationState.INITIAL,
 ) : Negotiation {
-
     // We don't support provider negotiation with the EDC
     override val role: Negotiation.Role
         get() = Negotiation.Role.CONSUMER
@@ -54,9 +53,10 @@ class EdcNegotiation(
 
     private suspend fun fetchAgreement(): OdrlAgreement {
         // Fetch the agreement from the EDC
-        val response = httpClient.get("$edcUrl/management/v3/contractnegotiations/$edcId/agreement") {
-            contentType(ContentType.Application.Json)
-        }
+        val response =
+            httpClient.get("$edcUrl/management/v3/contractnegotiations/$edcId/agreement") {
+                contentType(ContentType.Application.Json)
+            }
 
         assert(response.status.isSuccess()) { "TODO: Proper error handling" }
 
@@ -64,9 +64,12 @@ class EdcNegotiation(
 
         LOG.atDebug {
             message = "Got contract agreement from EDC"
-            payload = mapOf(
-                "edcId" to id, "state" to edcState, "contractAgreement" to responseMessage
-            )
+            payload =
+                mapOf(
+                    "edcId" to id,
+                    "state" to edcState,
+                    "contractAgreement" to responseMessage,
+                )
         }
 
         EdcQuirks.destringifyOperators(objectMapper, responseMessage.policy)

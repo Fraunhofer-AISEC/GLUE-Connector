@@ -37,32 +37,7 @@ class PipelineController(
                     // TODO: Push this code down to some other class (ContractManager?)
                     // TODO: Make this responsive to sending the same contract again with different content but the same ID, so that the contract in the DB gets updated
                     val contract =
-                        if (req.contractId != null) {
-                            contractStore.getContract(req.contractId)
-                        } else {
-                            val contracts = contractStore.getContract(req.target, req.action)
-                            when (contracts.size) {
-                                0 -> null
-                                1 -> contracts.first()
-                                else -> {
-                                    LOG.atDebug {
-                                        message = "The selected contract is ambiguous for given target and action"
-                                        payload =
-                                            mapOf(
-                                                "target" to req.target,
-                                                "action" to req.action,
-                                                "matchedContracts" to
-                                                    contracts.map {
-                                                            c ->
-                                                        c.uid
-                                                    },
-                                            )
-                                    }
-                                    call.respond(HttpStatusCode.BadRequest)
-                                    return@post
-                                }
-                            }
-                        }
+                        contractStore.getContract(req.contractId)
 
                     if (contract == null) {
                         LOG.atDebug {
@@ -87,8 +62,7 @@ class PipelineController(
                         call.respond(
                             PipelineCreateResponse(
                                 pipeline.name,
-                                // TODO: This is unsafe, add an optional list of ports instead
-                                pipeline.getContainerInfo(0)!!.ports[0].hostPort.toInt(),
+                                pipeline.getContainerInfo(0)!!.ports,
                             ),
                         )
                     }.recover { err ->

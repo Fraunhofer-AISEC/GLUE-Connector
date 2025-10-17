@@ -11,12 +11,12 @@ import com.fasterxml.jackson.annotation.JsonProperty
  */
 data class MountBindOptions(
     // A propagation mode with the value `[r]private`, `[r]shared`, or `[r]slave`.
-    @JsonProperty("Propagation")
+    @param:JsonProperty("Propagation")
     val propagation: String? = null,
     // Disable recursive bind mount.
-    @JsonProperty("NonRecursive")
+    @param:JsonProperty("NonRecursive")
     val nonRecursive: Boolean? = false,
     // Create mount point on host if missing
-    @JsonProperty("CreateMountpoint")
+    @param:JsonProperty("CreateMountpoint")
     val createMountpoint: Boolean? = false,
 )

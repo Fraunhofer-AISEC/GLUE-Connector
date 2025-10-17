@@ -12,11 +12,11 @@ import java.net.URI
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type")
 @JsonTypeName("${Namespaces.EDC}/PolicyDefinition")
 data class PolicyDefinition(
-    @JsonProperty("@id")
+    @param:JsonProperty("@id")
     val uid: URI,
-    @JsonProperty("${Namespaces.EDC}/policy")
+    @param:JsonProperty("${Namespaces.EDC}/policy")
     val policy: OdrlPolicy,
-    @JsonProperty("${Namespaces.EDC}/privateProperties")
-    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    @param:JsonProperty("${Namespaces.EDC}/privateProperties")
+    @param:JsonInclude(JsonInclude.Include.NON_EMPTY)
     val privateProperties: Map<String, Any>? = null,
 )

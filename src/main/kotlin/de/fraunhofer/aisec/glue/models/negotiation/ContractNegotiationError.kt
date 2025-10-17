@@ -9,14 +9,14 @@ import de.fraunhofer.iosb.odrl.parser.JsonLd
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type")
 @JsonTypeName("${Namespaces.DSPACE}/ContractNegotiationError")
 data class ContractNegotiationError(
-    @JsonProperty("${Namespaces.DSPACE}/providerPid")
+    @param:JsonProperty("${Namespaces.DSPACE}/providerPid")
     val providerPid: String,
-    @JsonProperty("${Namespaces.DSPACE}/consumerPid")
+    @param:JsonProperty("${Namespaces.DSPACE}/consumerPid")
     val consumerPid: String,
-    @JsonProperty("${Namespaces.DSPACE}/code")
+    @param:JsonProperty("${Namespaces.DSPACE}/code")
     val code: String,
-    @JsonProperty("${Namespaces.DSPACE}/reason")
+    @param:JsonProperty("${Namespaces.DSPACE}/reason")
     val reason: List<Any>? = null,
-    @JsonProperty("${Namespaces.DC_TERMS}/description")
+    @param:JsonProperty("${Namespaces.DC_TERMS}/description")
     val description: List<MultilanguageProperty>? = null,
 )

@@ -41,61 +41,61 @@ import com.fasterxml.jackson.annotation.JsonProperty
  */
 data class ContainerInspectResponse(
     // The ID of the container
-    @JsonProperty("Id")
+    @param:JsonProperty("Id")
     val id: String? = null,
     // The time the container was created
-    @JsonProperty("Created")
+    @param:JsonProperty("Created")
     val created: String? = null,
     // The path to the command being run
-    @JsonProperty("Path")
+    @param:JsonProperty("Path")
     val path: String? = null,
     // The arguments to the command being run
-    @JsonProperty("Args")
+    @param:JsonProperty("Args")
     val args: List<String>? = null,
-    @JsonProperty("State")
+    @param:JsonProperty("State")
     val state: ContainerState? = null,
     // The container's image ID
-    @JsonProperty("Image")
+    @param:JsonProperty("Image")
     val image: String? = null,
-    @JsonProperty("ResolvConfPath")
+    @param:JsonProperty("ResolvConfPath")
     val resolvConfPath: String? = null,
-    @JsonProperty("HostnamePath")
+    @param:JsonProperty("HostnamePath")
     val hostnamePath: String? = null,
-    @JsonProperty("HostsPath")
+    @param:JsonProperty("HostsPath")
     val hostsPath: String? = null,
-    @JsonProperty("LogPath")
+    @param:JsonProperty("LogPath")
     val logPath: String? = null,
-    @JsonProperty("Name")
+    @param:JsonProperty("Name")
     val name: String? = null,
-    @JsonProperty("RestartCount")
+    @param:JsonProperty("RestartCount")
     val restartCount: Int? = null,
-    @JsonProperty("Driver")
+    @param:JsonProperty("Driver")
     val driver: String? = null,
-    @JsonProperty("Platform")
+    @param:JsonProperty("Platform")
     val platform: String? = null,
-    @JsonProperty("MountLabel")
+    @param:JsonProperty("MountLabel")
     val mountLabel: String? = null,
-    @JsonProperty("ProcessLabel")
+    @param:JsonProperty("ProcessLabel")
     val processLabel: String? = null,
-    @JsonProperty("AppArmorProfile")
+    @param:JsonProperty("AppArmorProfile")
     val appArmorProfile: String? = null,
     // IDs of exec instances that are running in the container.
-    @JsonProperty("ExecIDs")
+    @param:JsonProperty("ExecIDs")
     val execIDs: List<String>? = null,
-    @JsonProperty("HostConfig")
+    @param:JsonProperty("HostConfig")
     val hostConfig: HostConfig? = null,
-    @JsonProperty("GraphDriver")
+    @param:JsonProperty("GraphDriver")
     val graphDriver: GraphDriverData? = null,
     // The size of files that have been created or changed by this container.
-    @JsonProperty("SizeRw")
+    @param:JsonProperty("SizeRw")
     val sizeRw: Long? = null,
     // The total size of all the files in this container.
-    @JsonProperty("SizeRootFs")
+    @param:JsonProperty("SizeRootFs")
     val sizeRootFs: Long? = null,
-    @JsonProperty("Mounts")
+    @param:JsonProperty("Mounts")
     val mounts: List<MountPoint>? = null,
-    @JsonProperty("Config")
+    @param:JsonProperty("Config")
     val config: ContainerConfig? = null,
-    @JsonProperty("NetworkSettings")
+    @param:JsonProperty("NetworkSettings")
     val networkSettings: NetworkSettings? = null,
 )

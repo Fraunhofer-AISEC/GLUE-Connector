@@ -17,9 +17,8 @@ repositories {
 
 dependencies {
     implementation(libs.slf4j.api)
-    implementation(libs.okhttp)
     implementation(libs.ktor.client.core)
-    implementation(libs.ktor.client.okhttp)
+    implementation(libs.ktor.client.cio)
     implementation(libs.ktor.client.contentNegotiation)
     implementation(libs.ktor.client.auth)
     implementation(libs.ktor.serialization.jackson)
@@ -37,12 +36,12 @@ dependencies {
     implementation(libs.jakarta.json)
     implementation("fhg.glue.odrl:odrl-parser:1.0-SNAPSHOT")
     implementation(libs.duckdb)
-    implementation(libs.jnr.unixsocket)
     implementation(libs.ktorm.core)
     implementation(libs.ktorm.jackson)
     implementation(libs.dbcp)
     implementation(libs.kotlinLogging.jvm)
     implementation(libs.ktor.server.cors)
+    implementation(libs.ktor.server.callLogging)
     // For running example with gradle
     runtimeOnly(libs.slf4j.jdk14)
 
@@ -50,7 +49,6 @@ dependencies {
     testImplementation(libs.kotlin.test)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.ktor.server.test.host)
-    testImplementation(libs.ktor.server.callLogging)
     testImplementation(libs.ktor.client.mock)
     testImplementation(libs.mockk)
 }
@@ -63,6 +61,7 @@ tasks.jar {
 
 tasks.test {
     useJUnitPlatform()
+    jvmArgs("-Dkotlinx.coroutines.debug", "-Dkotlinx.coroutines.stacktrace.recovery=true")
 }
 
 kotlin {
@@ -74,7 +73,11 @@ application {
 }
 
 jib {
-    container.mainClass = "de.fraunhofer.aisec.glue.ApplicationKt"
+    container {
+        mainClass = "de.fraunhofer.aisec.glue.ApplicationKt"
+        // Activates Kotlin's debug mode inside the container
+        jvmFlags = listOf("-ea")
+    }
 }
 
 // Required for ./gradlew run in order to wait on readln()

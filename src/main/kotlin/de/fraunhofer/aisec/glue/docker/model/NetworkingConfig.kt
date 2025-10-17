@@ -9,6 +9,6 @@ import com.fasterxml.jackson.annotation.JsonProperty
  */
 data class NetworkingConfig(
     // A mapping of network name to endpoint configuration for that network.
-    @JsonProperty("EndpointsConfig")
+    @param:JsonProperty("EndpointsConfig")
     val endpointsConfig: Map<String, EndpointSettings>? = null,
 )

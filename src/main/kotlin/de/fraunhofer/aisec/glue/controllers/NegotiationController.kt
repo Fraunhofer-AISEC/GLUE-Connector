@@ -62,7 +62,7 @@ class NegotiationController(private val negotiationManager: BuiltinNegotiationMa
                 return@post
             }
 
-            //call.respond(HttpStatusCode.Created, negotiation.getStateMessageUnlocked())
+            // call.respond(HttpStatusCode.Created, negotiation.getStateMessageUnlocked())
             negotiation.processOffer(req, initial = true) { ok ->
                 if (ok) {
                     call.respond(HttpStatusCode.Created, negotiation.getStateMessageUnlocked())

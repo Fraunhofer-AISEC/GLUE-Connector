@@ -85,6 +85,7 @@ container_test:
     PROXY_IMAGE_NAME: $CI_REGISTRY_IMAGE/proxy:$CI_PIPELINE_ID
     HTTP_ECHO_IMAGE_NAME: $CI_REGISTRY_IMAGE/http-echo:$CI_PIPELINE_ID
     FORWARDER_IMAGE_NAME: $CI_REGISTRY_IMAGE/forwarder:$CI_PIPELINE_ID
+    DOCKER_HOSTNAME: docker
   services:
     - docker:28.1.1-dind
   stage: test

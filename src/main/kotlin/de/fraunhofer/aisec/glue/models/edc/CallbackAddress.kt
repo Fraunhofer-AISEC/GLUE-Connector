@@ -9,14 +9,14 @@ import de.fraunhofer.iosb.odrl.parser.JsonLd
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type")
 @JsonTypeName("${Namespaces.EDC}/CallbackAddress")
 data class CallbackAddress(
-    @JsonProperty("${Namespaces.EDC}/authCodeId")
+    @param:JsonProperty("${Namespaces.EDC}/authCodeId")
     val authCodeId: String?,
-    @JsonProperty("${Namespaces.EDC}/authKey")
+    @param:JsonProperty("${Namespaces.EDC}/authKey")
     val authKey: String?,
-    @JsonProperty("${Namespaces.EDC}/events")
+    @param:JsonProperty("${Namespaces.EDC}/events")
     val events: Set<String>,
-    @JsonProperty("${Namespaces.EDC}/transactional")
+    @param:JsonProperty("${Namespaces.EDC}/transactional")
     val transactional: Boolean,
-    @JsonProperty("${Namespaces.EDC}/uri")
+    @param:JsonProperty("${Namespaces.EDC}/uri")
     val uri: String,
 )

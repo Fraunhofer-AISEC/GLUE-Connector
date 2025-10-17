@@ -8,10 +8,10 @@ import com.fasterxml.jackson.annotation.JsonProperty
  *  * @param hard Hard limit
  */
 data class Ulimit(
-    @JsonProperty("Name")
+    @param:JsonProperty("Name")
     val name: String,
-    @JsonProperty("Soft")
+    @param:JsonProperty("Soft")
     val soft: Int,
-    @JsonProperty("Hard")
+    @param:JsonProperty("Hard")
     val hard: Int,
 )
