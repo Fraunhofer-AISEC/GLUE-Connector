@@ -1,6 +1,11 @@
 package de.fraunhofer.aisec.glue
 
-import io.github.oshai.kotlinlogging.KLogger
+import io.ktor.client.plugins.ClientRequestException
+import io.ktor.client.plugins.RedirectResponseException
+import io.ktor.client.plugins.ResponseException
+import io.ktor.client.plugins.ServerResponseException
+import io.ktor.client.statement.HttpResponse
+import io.ktor.client.statement.bodyAsText
 import io.ktor.http.*
 
 object Utils {
@@ -45,18 +50,18 @@ object Utils {
         return Pair(username, password)
     }
 
-    /**
-     * A simplified interface to the KLogger structured logger.
-     * @param msg The main log message
-     * @param args A series of key-value pairs that are used as payload for the message
-     */
-    fun KLogger.debugs(
-        msg: String,
-        vararg args: Any,
-    ) {
-        atDebug {
-            message = msg
-            payload = args.asSequence().windowed(2, 2).map { (k, v) -> k.toString() to v }.toMap()
-        }
+    suspend fun makeHttpException(
+        resp: HttpResponse,
+        body: String? = null,
+    ): ResponseException {
+        assert(!resp.status.isSuccess())
+        val ctor =
+            when (resp.status.value) {
+                in 300..399 -> ::RedirectResponseException
+                in 400..499 -> ::ClientRequestException
+                in 500..599 -> ::ServerResponseException
+                else -> ::ResponseException
+            }
+        return ctor(resp, body ?: resp.bodyAsText())
     }
 }

@@ -72,7 +72,7 @@ object EdcQuirks {
                 if (node.has("type")) {
                     val type = node.remove("type")
                     val copy = mutableListOf<Map.Entry<String, JsonNode>>()
-                    node.fields().forEach { copy.add(it) }
+                    node.properties().forEach { copy.add(it) }
                     node.removeAll()
                     node.set<JsonNode>("@type", type)
                     copy.forEach { (k, v) -> node.set<JsonNode>(k, v) }
@@ -94,7 +94,10 @@ object EdcQuirks {
      * EDC, as the agreement is stringified and the offer is a normal json tree.
      * This function tries to prevent this by preemptively converting all nodes of selected glue types to string.
      */
-    fun stringifyGlueKeys(objectMapper: ObjectMapper, serialization: ObjectNode) {
+    fun stringifyGlueKeys(
+        objectMapper: ObjectMapper,
+        serialization: ObjectNode,
+    ) {
         val glueTypes = listOf("http://fhg.de/glue/ContainerPipeline")
 
         // This function returns true if the currently processed node should be replaced.
@@ -121,7 +124,7 @@ object EdcQuirks {
             when (node) {
                 is ObjectNode -> {
                     val stringifiedNodes = mutableMapOf<String, String>()
-                    for ((key, value) in node.fields()) {
+                    for ((key, value) in node.properties()) {
                         if (shouldStringify(value)) {
                             // We do replacements after as I'm not sure if replacing inline invalidates the iterator
                             stringifiedNodes[key] = stringifyNode(value)
@@ -159,10 +162,13 @@ object EdcQuirks {
      * De-stringify nodes that the EDC does not know and therefore converts to string.
      * To keep this simple, we only process objects with known "leftOperand" properties and try to fail gracefully
      */
-    fun destringifyOperators(objectMapper: ObjectMapper, jsonObject: JsonNode) {
+    fun destringifyOperators(
+        objectMapper: ObjectMapper,
+        jsonObject: JsonNode,
+    ) {
         val knownOperations = listOf("http://fhg.de/glue/containerPipeline")
 
-        fun shouldDestringify(objectNode: ObjectNode): Boolean{
+        fun shouldDestringify(objectNode: ObjectNode): Boolean {
             if (!(objectNode.has("odrl:leftOperand") && objectNode.has("odrl:rightOperand"))) {
                 return false
             }

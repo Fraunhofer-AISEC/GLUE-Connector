@@ -14,24 +14,24 @@ import com.fasterxml.jackson.annotation.JsonProperty
  */
 data class Mount(
     // Container path.
-    @JsonProperty("Target")
+    @param:JsonProperty("Target")
     val target: String? = null,
     // Mount source (e.g. a volume name, a host path).
-    @JsonProperty("Source")
+    @param:JsonProperty("Source")
     val source: String? = null,
     // The mount type. Available types:  - `bind` Mounts a file or directory from the host into the container. Must exist prior to creating the container. - `volume` Creates a volume with the given name and options (or uses a pre-existing volume with the same name and options). These are **not** removed when the container is removed. - `tmpfs` Create a tmpfs with the given options. The mount source cannot be specified for tmpfs. - `npipe` Mounts a named pipe from the host into the container. Must exist prior to creating the container. - `cluster` a Swarm cluster volume
-    @JsonProperty("Type")
+    @param:JsonProperty("Type")
     val type: String? = null,
     // Whether the mount should be read-only.
-    @JsonProperty("ReadOnly")
+    @param:JsonProperty("ReadOnly")
     val readOnly: Boolean? = null,
     // The consistency requirement for the mount: `default`, `consistent`, `cached`, or `delegated`.
-    @JsonProperty("Consistency")
+    @param:JsonProperty("Consistency")
     val consistency: String? = null,
-    @JsonProperty("BindOptions")
+    @param:JsonProperty("BindOptions")
     val bindOptions: MountBindOptions? = null,
-    @JsonProperty("VolumeOptions")
+    @param:JsonProperty("VolumeOptions")
     val volumeOptions: MountVolumeOptions? = null,
-    @JsonProperty("TmpfsOptions")
+    @param:JsonProperty("TmpfsOptions")
     val tmpfsOptions: MountTmpfsOptions? = null,
 )

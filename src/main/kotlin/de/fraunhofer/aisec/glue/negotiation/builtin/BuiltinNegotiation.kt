@@ -198,7 +198,13 @@ class BuiltinNegotiation(
                 "not acceptable"
             }}"
             val (providerPid, consumerPid) = getProviderAndConsumerPid()
-            payload = mapOf<String, Any>("role" to role, "state" to internalState, "providerPid" to providerPid, "consumerPid" to consumerPid)
+            payload =
+                mapOf<String, Any>(
+                    "role" to role,
+                    "state" to internalState,
+                    "providerPid" to providerPid,
+                    "consumerPid" to consumerPid,
+                )
         }
 
         if (!ok) {
@@ -279,7 +285,13 @@ class BuiltinNegotiation(
                 "not acceptable"
             }}"
             val (providerPid, consumerPid) = getProviderAndConsumerPid()
-            payload = mapOf<String, Any>("role" to role, "state" to internalState, "providerPid" to providerPid, "consumerPid" to consumerPid)
+            payload =
+                mapOf<String, Any>(
+                    "role" to role,
+                    "state" to internalState,
+                    "providerPid" to providerPid,
+                    "consumerPid" to consumerPid,
+                )
         }
 
         if (!ok) {
@@ -404,7 +416,10 @@ class BuiltinNegotiation(
         responseCallback: suspend (Boolean) -> Unit,
     ): Unit =
         mutex.withLock {
-            if ((internalState != NegotiationState.REQUESTED && internalState != NegotiationState.ACCEPTED) || role != Negotiation.Role.CONSUMER) {
+            if (
+                (internalState != NegotiationState.REQUESTED && internalState != NegotiationState.ACCEPTED) ||
+                role != Negotiation.Role.CONSUMER
+            ) {
                 LOG.atDebug {
                     message = "The received message is invalid for the current negotiation state"
                     val (providerPid, consumerPid) = getProviderAndConsumerPid()

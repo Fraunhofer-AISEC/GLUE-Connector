@@ -9,8 +9,8 @@ import com.fasterxml.jackson.annotation.JsonProperty
  * @param config
  */
 data class LogConfig(
-    @JsonProperty("Type")
+    @param:JsonProperty("Type")
     val type: String? = null,
-    @JsonProperty("Config")
+    @param:JsonProperty("Config")
     val config: Map<String, String>? = null,
 )

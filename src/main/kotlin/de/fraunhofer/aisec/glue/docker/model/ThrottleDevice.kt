@@ -8,9 +8,9 @@ import com.fasterxml.jackson.annotation.JsonProperty
  */
 data class ThrottleDevice(
     // Device path
-    @JsonProperty("Path")
+    @param:JsonProperty("Path")
     val path: String? = null,
     // Rate
-    @JsonProperty("Rate")
+    @param:JsonProperty("Rate")
     val rate: Long? = null,
 )

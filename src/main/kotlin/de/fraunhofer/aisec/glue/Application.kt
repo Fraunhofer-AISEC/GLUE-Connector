@@ -8,14 +8,18 @@ import de.fraunhofer.aisec.glue.controllers.PipelineController
 import de.fraunhofer.aisec.glue.controllers.api.NegotiationApiController
 import de.fraunhofer.aisec.glue.controllers.api.RemotePipelineApiController
 import de.fraunhofer.aisec.glue.controllers.internal.ContainerInterfaceController
+import de.fraunhofer.aisec.glue.docker.DockerClient
 import de.fraunhofer.aisec.glue.negotiation.builtin.BuiltinNegotiationManager
 import de.fraunhofer.aisec.glue.negotiation.builtin.DummyNegotiator
+import de.fraunhofer.aisec.glue.pipeline.Backend
 import de.fraunhofer.aisec.glue.pipeline.PipelineManager
+import de.fraunhofer.aisec.glue.pipeline.RemotePipelineManager
+import de.fraunhofer.aisec.glue.pipeline.docker.DockerBackend
 import de.fraunhofer.aisec.glue.plugins.configureAuthentication
 import de.fraunhofer.aisec.glue.policy.PolicyEngine
 import de.fraunhofer.iosb.odrl.parser.OdrlParser
 import io.ktor.client.*
-import io.ktor.client.engine.okhttp.*
+import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.auth.*
 import io.ktor.client.plugins.auth.providers.*
@@ -24,7 +28,10 @@ import io.ktor.serialization.*
 import io.ktor.serialization.jackson.*
 import io.ktor.server.application.*
 import io.ktor.server.netty.*
+import io.ktor.server.plugins.calllogging.CallLogging
 import io.ktor.server.plugins.cors.routing.*
+import io.ktor.server.request.httpMethod
+import io.ktor.server.request.uri
 import io.ktor.server.routing.*
 import org.kodein.di.*
 import java.util.logging.Filter
@@ -35,19 +42,21 @@ import io.ktor.server.plugins.contentnegotiation.ContentNegotiation as ServerCon
 
 fun main(args: Array<String>) {
     val filteredLoggerPrefixes = listOf("sun.rmi", "javax.management")
-    val filteredMethods = hashSetOf(
-        Pair("java.io.ObjectInputFilter\$Config", "traceFilter"),
-        Pair("java.io.ObjectInputStream", "filterCheck"),
-    )
+    val filteredMethods =
+        hashSetOf(
+            Pair("java.io.ObjectInputFilter\$Config", "traceFilter"),
+            Pair("java.io.ObjectInputStream", "filterCheck"),
+        )
     Logger.getLogger("").apply {
         level = Level.ALL
         handlers.forEach { handler ->
             handler.level = Level.ALL
             // Filter background noise
-            handler.filter = Filter { record ->
-                filteredLoggerPrefixes.none { record.loggerName.startsWith(it) }
-                        && Pair(record.sourceClassName, record.sourceMethodName) !in filteredMethods
-            }
+            handler.filter =
+                Filter { record ->
+                    filteredLoggerPrefixes.none { record.loggerName.startsWith(it) } &&
+                        Pair(record.sourceClassName, record.sourceMethodName) !in filteredMethods
+                }
         }
     }
     EngineMain.main(args)
@@ -56,7 +65,7 @@ fun main(args: Array<String>) {
 val defaultDependencies by DI.Module {
     bind<HttpClient>() with
         singleton {
-            HttpClient(OkHttp) {
+            HttpClient(CIO) {
                 install(ClientContentNegotiation) {
                     register(ContentType.Application.Json, instance())
                 }
@@ -75,8 +84,11 @@ val defaultDependencies by DI.Module {
         }
     bind<OdrlParser>() with singleton { OdrlParser() }
     bind<ObjectMapper>() with singleton { instance<OdrlParser>().mapper }
+    bind<DockerClient>() with singleton { DockerClient.fromEnv() }
     bind<ContentConverter>() with singleton { JacksonConverter(instance()) }
-    bind<PipelineManager>() with singleton { PipelineManager(instance()) }
+    bind<RemotePipelineManager>() with singleton { RemotePipelineManager(instance(), instance()) }
+    bind<Backend>() with singleton { DockerBackend(instance(), instance(), instance()) }
+    bind<PipelineManager>() with singleton { PipelineManager(instance(), instance()) }
     bind<PolicyEngine>() with singleton { PolicyEngine(instance()) }
     bind<ContractStore>() with singleton { ContractStore(instance()) }
     bind<BuiltinNegotiationManager>() with
@@ -86,15 +98,15 @@ val defaultDependencies by DI.Module {
     bind<NegotiationController>() with singleton { NegotiationController(instance()) }
     bind<PipelineController>() with singleton { PipelineController(instance(), instance(), instance()) }
     bind<NegotiationApiController>() with singleton { NegotiationApiController(instance()) }
-    bind<RemotePipelineApiController>() with singleton { RemotePipelineApiController(instance(), instance()) }
+    bind<RemotePipelineApiController>() with singleton { RemotePipelineApiController(instance(), instance(), instance()) }
     bind<ContainerInterfaceController>() with
         singleton {
-            ContainerInterfaceController(instance(), instance(), instance(), instance(), instance(), instance())
+            ContainerInterfaceController(instance(), instance(), instance(), instance(), instance(), instance(), instance())
         }
 }
 
 fun Application.module() =
-    module(
+    moduleWithDeps(
         DI.direct {
             import(defaultDependencies)
             import(
@@ -106,7 +118,7 @@ fun Application.module() =
         },
     )
 
-fun Application.module(dependencies: DirectDI) {
+fun Application.moduleWithDeps(dependencies: DirectDI) {
     configureAuthentication()
     install(CORS) {
         anyHost()
@@ -116,6 +128,17 @@ fun Application.module(dependencies: DirectDI) {
 
     install(ServerContentNegotiation) {
         register(ContentType.Application.Json, dependencies.instance())
+    }
+
+    install(CallLogging) {
+        level = org.slf4j.event.Level.INFO
+        format { call ->
+            val status = call.response.status()
+            val httpMethod = call.request.httpMethod.value
+            val uri = call.request.uri
+            val userAgent = call.request.headers["User-Agent"]
+            "$httpMethod $uri -> $status (User-Agent: $userAgent)"
+        }
     }
 
     routing {

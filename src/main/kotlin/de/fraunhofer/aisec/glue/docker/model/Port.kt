@@ -12,15 +12,15 @@ import com.fasterxml.jackson.annotation.JsonProperty
  */
 data class Port(
     // Port on the container
-    @JsonProperty("PrivatePort")
+    @param:JsonProperty("PrivatePort")
     val privatePort: Int,
-    @JsonProperty("Type")
+    @param:JsonProperty("Type")
     val type: Type,
     // Host IP address that the container's port is mapped to
-    @JsonProperty("IP")
+    @param:JsonProperty("IP")
     val ip: String? = null,
     // Port exposed on the host
-    @JsonProperty("PublicPort")
+    @param:JsonProperty("PublicPort")
     val publicPort: Int? = null,
 ) {
     enum class Type(val value: String) {

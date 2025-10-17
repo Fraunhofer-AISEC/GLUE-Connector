@@ -9,8 +9,8 @@ import de.fraunhofer.iosb.odrl.parser.JsonLd
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type")
 @JsonTypeName("${Namespaces.DSPACE}/ContractAgreementVerificationMessage")
 data class ContractAgreementVerificationMessage(
-    @JsonProperty("${Namespaces.DSPACE}/providerPid")
+    @param:JsonProperty("${Namespaces.DSPACE}/providerPid")
     val providerPid: String,
-    @JsonProperty("${Namespaces.DSPACE}/consumerPid")
+    @param:JsonProperty("${Namespaces.DSPACE}/consumerPid")
     val consumerPid: String,
 )

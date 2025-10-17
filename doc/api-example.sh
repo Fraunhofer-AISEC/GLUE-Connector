@@ -78,7 +78,7 @@ pipeline_start_req='{"peer": "'"$remote_connector"'", "request": {"target": "'"$
 pipeline_start_resp="$(curl -X POST "${common_curl_opts[@]}" -d "$pipeline_start_req" "http://$local_connector/api/remote-pipelines")"
 
 pipeline_id="$(jq -r '.localId' <<< "$pipeline_start_resp")"
-pipeline_port="$(jq -r '.remote.pipelinePort' <<< "$pipeline_start_resp")"
+pipeline_port="$(jq -r '.ports' <<< "$pipeline_start_resp")"
 
 # Wait for the user to interrupt and then stop the remote pipeline
 stop_pipeline() {
@@ -88,7 +88,7 @@ stop_pipeline() {
 }
 
 trap stop_pipeline INT
-echo "Container pipeline running on port $pipeline_port (Press CTRL-C to stop)"
+echo "Container pipeline running on $pipeline_port (Press CTRL-C to stop)"
 
 # This may not be the most elegant solution but it keeps the script responsive to both CTRL-C and injected SIGINTs
 while true; do

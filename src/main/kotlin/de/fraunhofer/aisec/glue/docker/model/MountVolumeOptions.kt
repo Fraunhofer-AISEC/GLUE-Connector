@@ -11,11 +11,11 @@ import com.fasterxml.jackson.annotation.JsonProperty
  */
 data class MountVolumeOptions(
     // Populate volume with data from the target.
-    @JsonProperty("NoCopy")
+    @param:JsonProperty("NoCopy")
     val noCopy: Boolean? = false,
     // User-defined key/value metadata.
-    @JsonProperty("Labels")
+    @param:JsonProperty("Labels")
     val labels: Map<String, String>? = null,
-    @JsonProperty("DriverConfig")
+    @param:JsonProperty("DriverConfig")
     val driverConfig: MountVolumeOptionsDriverConfig? = null,
 )

@@ -3,30 +3,30 @@ package de.fraunhofer.aisec.glue.docker.model
 import com.fasterxml.jackson.annotation.JsonProperty
 
 data class Network(
-    @JsonProperty("Name")
+    @param:JsonProperty("Name")
     val name: String? = null,
-    @JsonProperty("Id")
+    @param:JsonProperty("Id")
     val id: String? = null,
-    @JsonProperty("Created")
+    @param:JsonProperty("Created")
     val created: String? = null,
-    @JsonProperty("Scope")
+    @param:JsonProperty("Scope")
     val scope: String? = null,
-    @JsonProperty("Driver")
+    @param:JsonProperty("Driver")
     val driver: String? = null,
-    @JsonProperty("EnableIPv6")
+    @param:JsonProperty("EnableIPv6")
     val enableIPv6: Boolean? = null,
-    @JsonProperty("IPAM")
+    @param:JsonProperty("IPAM")
     val ipam: IPAM? = null,
-    @JsonProperty("Internal")
+    @param:JsonProperty("Internal")
     val `internal`: Boolean? = null,
-    @JsonProperty("Attachable")
+    @param:JsonProperty("Attachable")
     val attachable: Boolean? = null,
-    @JsonProperty("Ingress")
+    @param:JsonProperty("Ingress")
     val ingress: Boolean? = null,
-    @JsonProperty("Containers")
+    @param:JsonProperty("Containers")
     val containers: Map<String, NetworkContainer>? = null,
-    @JsonProperty("Options")
+    @param:JsonProperty("Options")
     val options: Map<String, String>? = null,
-    @JsonProperty("Labels")
+    @param:JsonProperty("Labels")
     val labels: Map<String, String>? = null,
 )

@@ -12,16 +12,16 @@ import com.fasterxml.jackson.annotation.JsonProperty
  * @param options Driver-specific options, specified as a key/value pairs. These options are passed directly to the driver.
  */
 data class DeviceRequest(
-    @JsonProperty("Driver")
+    @param:JsonProperty("Driver")
     val driver: String? = null,
-    @JsonProperty("Count")
+    @param:JsonProperty("Count")
     val count: Int? = null,
-    @JsonProperty("DeviceIDs")
+    @param:JsonProperty("DeviceIDs")
     val deviceIDs: List<String>? = null,
     // A list of capabilities; an OR list of AND lists of capabilities.
-    @JsonProperty("Capabilities")
+    @param:JsonProperty("Capabilities")
     val capabilities: List<List<String>>? = null,
     // Driver-specific options, specified as a key/value pairs. These options are passed directly to the driver.
-    @JsonProperty("Options")
+    @param:JsonProperty("Options")
     val options: Map<String, String>? = null,
 )

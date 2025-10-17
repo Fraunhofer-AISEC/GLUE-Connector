@@ -12,8 +12,8 @@ import de.fraunhofer.iosb.odrl.OdrlParty
 import de.fraunhofer.iosb.odrl.parser.OdrlParser
 import io.ktor.client.*
 import io.ktor.client.call.*
+import io.ktor.client.engine.cio.*
 import io.ktor.client.engine.mock.*
-import io.ktor.client.engine.okhttp.*
 import io.ktor.client.plugins.auth.*
 import io.ktor.client.plugins.auth.providers.*
 import io.ktor.client.request.*
@@ -425,7 +425,7 @@ class NegotiationTest {
     fun `Test mutual contract negotiation`() =
         runTest(timeout = Duration.ofSeconds(30).toKotlinDuration()) {
             val testClient =
-                HttpClient(OkHttp) {
+                HttpClient(CIO) {
                     install(ClientContentNegotiation) {
                         register(ContentType.Application.Json, JacksonConverter(objectMapper))
                     }
