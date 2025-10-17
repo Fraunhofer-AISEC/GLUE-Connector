@@ -8,10 +8,13 @@ import de.fraunhofer.aisec.glue.controllers.PipelineController
 import de.fraunhofer.aisec.glue.controllers.api.NegotiationApiController
 import de.fraunhofer.aisec.glue.controllers.api.RemotePipelineApiController
 import de.fraunhofer.aisec.glue.controllers.internal.ContainerInterfaceController
+import de.fraunhofer.aisec.glue.docker.DockerClient
 import de.fraunhofer.aisec.glue.negotiation.builtin.BuiltinNegotiationManager
 import de.fraunhofer.aisec.glue.negotiation.builtin.DummyNegotiator
+import de.fraunhofer.aisec.glue.pipeline.Backend
 import de.fraunhofer.aisec.glue.pipeline.PipelineManager
 import de.fraunhofer.aisec.glue.pipeline.RemotePipelineManager
+import de.fraunhofer.aisec.glue.pipeline.docker.DockerBackend
 import de.fraunhofer.aisec.glue.plugins.configureAuthentication
 import de.fraunhofer.aisec.glue.policy.PolicyEngine
 import de.fraunhofer.iosb.odrl.parser.OdrlParser
@@ -81,8 +84,10 @@ val defaultDependencies by DI.Module {
         }
     bind<OdrlParser>() with singleton { OdrlParser() }
     bind<ObjectMapper>() with singleton { instance<OdrlParser>().mapper }
+    bind<DockerClient>() with singleton { DockerClient.fromEnv() }
     bind<ContentConverter>() with singleton { JacksonConverter(instance()) }
     bind<RemotePipelineManager>() with singleton { RemotePipelineManager(instance(), instance()) }
+    bind<Backend>() with singleton { DockerBackend(instance(), instance(), instance()) }
     bind<PipelineManager>() with singleton { PipelineManager(instance(), instance()) }
     bind<PolicyEngine>() with singleton { PolicyEngine(instance()) }
     bind<ContractStore>() with singleton { ContractStore(instance()) }

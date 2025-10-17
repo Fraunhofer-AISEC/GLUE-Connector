@@ -18,7 +18,6 @@ import io.ktor.http.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import java.net.InetAddress
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -29,6 +28,7 @@ class DockerContainerPipeline internal constructor(
     private val objectMapper: ObjectMapper,
     val containers: List<Container>,
     val networks: List<Network>,
+    private val config: DockerBackend.DockerConfig,
 ) : ContainerPipeline(name, contractId, targetId) {
     private val closed = AtomicBoolean(false)
     private val followUpContracts: MutableMap<String, MutableSet<OdrlPolicy>> = mutableMapOf()
@@ -133,16 +133,18 @@ class DockerContainerPipeline internal constructor(
         val containerPort = portComponents[0].toUShort()
         val protocol = portComponents[1]
 
+        // Since we use the port binding's addresses to connect to our containers from external hosts, we cannot use the
+        // catch-all addresses for binding to all interfaces.
+        // Instead, we allow the user to substitute an external, default address or domain name in the config.
         return bindings.map { b ->
-            //  Also, I think IPv6 addresses will automatically be converted to IPv4 addresses by this...
             val hostIp =
                 when (bindings[0].hostIp) {
-                    "0.0.0.0", "::" -> InetAddress.getLocalHost().hostAddress
+                    "0.0.0.0", "::" -> config.publicHostname
                     else -> bindings[0].hostIp
                 }
 
             ContainerPort(containerPort, "$hostIp:${b.hostPort}", protocol)
-        }
+        }.distinct()
     }
 
     override suspend fun getContainerInfo(index: Int): ContainerInfo {
