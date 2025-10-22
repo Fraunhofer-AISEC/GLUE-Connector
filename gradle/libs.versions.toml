@@ -14,6 +14,7 @@ duckdb = "1.1.1"
 ktorm = "4.1.1"
 dbcp2 = "2.13.0"
 kotlinLogging = "7.0.3"
+jsonKotlinSchemaCodegen = "0.121"
 
 [libraries]
 slf4j-api = { group = "org.slf4j", name = "slf4j-api", version.ref = "slf4j" }
@@ -47,6 +48,7 @@ ktorm-core = { group = "org.ktorm", name = "ktorm-core", version.ref = "ktorm" }
 ktorm-jackson = { group = "org.ktorm", name = "ktorm-jackson", version.ref = "ktorm" }
 dbcp = { group = "org.apache.commons", name = "commons-dbcp2", version.ref = "dbcp2" }
 kotlinLogging-jvm = { group = "io.github.oshai", name = "kotlin-logging-jvm", version.ref = "kotlinLogging" }
+jsonKotlinSchemaCodegen = { group = "net.pwall.json", name = "json-kotlin-gradle", version.ref = "jsonKotlinSchemaCodegen" }
 
 [plugins]
 kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
