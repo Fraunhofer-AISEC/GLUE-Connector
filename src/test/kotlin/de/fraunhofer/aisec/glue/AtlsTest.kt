@@ -10,7 +10,7 @@ import kotlin.test.assertTrue
 
 class AtlsTest {
     @Test
-    @DisabledIfEnvironmentVariable(named = "GITLAB_CI", matches = "*")
+    @DisabledIfEnvironmentVariable(named = "GITLAB_CI", matches = ".*")
     fun `Test functionality of the CMC API`() =
         runTest {
             val client = CMCClient(InetSocketAddress("127.0.0.1", 9955), jacksonObjectMapper())
