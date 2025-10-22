@@ -1,3 +1,6 @@
+import net.pwall.json.kotlin.codegen.gradle.JSONSchemaCodegen
+import net.pwall.json.kotlin.codegen.gradle.JSONSchemaCodegenPlugin
+
 plugins {
     alias(libs.plugins.kotlin)
     alias(libs.plugins.kotlin.serialization)
@@ -13,6 +16,26 @@ version = "1.0-SNAPSHOT"
 repositories {
     mavenLocal()
     mavenCentral()
+}
+
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath(libs.jsonKotlinSchemaCodegen)
+    }
+}
+
+apply<JSONSchemaCodegenPlugin>()
+
+kotlin {
+    jvmToolchain(24)
+    sourceSets {
+        main {
+            kotlin.srcDir("${layout.buildDirectory.get()}/generated-sources/kotlin")
+        }
+    }
 }
 
 dependencies {
@@ -64,9 +87,6 @@ tasks.test {
     jvmArgs("-Dkotlinx.coroutines.debug", "-Dkotlinx.coroutines.stacktrace.recovery=true")
 }
 
-kotlin {
-    jvmToolchain(24)
-}
 
 application {
     mainClass.set("de.fraunhofer.aisec.glue.ApplicationKt")
@@ -96,6 +116,10 @@ tasks.register<JavaExec>("runPolicyTool") {
     classpath = sourceSets["main"].runtimeClasspath
     mainClass.set("de.fraunhofer.aisec.glue.tools.RegisterPolicyKt")
     standardInput = System.`in`
+}
+
+configure<JSONSchemaCodegen> {
+    packageName.set("de.fraunhofer.aisec.glue.atls")
 }
 
 spotless {
