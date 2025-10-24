@@ -62,7 +62,7 @@ class CMCClient(
      */
     suspend fun attest(
         nonce: ByteArray,
-        cached: List<String> = listOf(),
+        cached: List<String>? = null,
     ): String {
         val encodedNonce = Base64.encode(nonce)
         val req = AttestationRequest(VERSION, encodedNonce, cached)
