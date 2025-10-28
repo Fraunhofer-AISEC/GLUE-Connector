@@ -33,7 +33,9 @@ import io.mockk.coJustRun
 import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeout
 import org.slf4j.event.Level
 import java.io.File
 import java.time.Duration
@@ -423,7 +425,7 @@ class NegotiationTest {
 
     @Test
     fun `Test mutual contract negotiation`() =
-        runTest(timeout = Duration.ofSeconds(30).toKotlinDuration()) {
+        runBlocking {
             val testClient =
                 HttpClient(CIO) {
                     install(ClientContentNegotiation) {
@@ -518,10 +520,12 @@ class NegotiationTest {
 
             // This indirectly checks if the consumer side negotiation completed successfully
             val negotiatedPolicy =
-                consumerNegotiationManager.startNegotiation(
-                    URLBuilder(providerAddress).appendPathSegments("negotiations").buildString(),
-                    exampleOffer,
-                ).await()
+                withTimeout(Duration.ofSeconds(30).toKotlinDuration()) {
+                    consumerNegotiationManager.startNegotiation(
+                        URLBuilder(providerAddress).appendPathSegments("negotiations").buildString(),
+                        exampleOffer,
+                    ).await()
+                }
 
             coVerify { providerContractStore.addContract(negotiatedPolicy) }
             coVerify { consumerContractStore.addContract(negotiatedPolicy) }
