@@ -248,17 +248,19 @@ class PipelineTest {
         val proxyImage = System.getenv("PROXY_IMAGE_NAME") ?: "container-pipeline/proxy"
         val httpEchoImage = System.getenv("HTTP_ECHO_IMAGE_NAME") ?: "container-pipeline/http-echo"
         return GlueContainerPipeline(
-            listOf(
-                GlueContainer(
-                    image = proxyImage,
-                    hash = "sha256:${getContainerIdHash(proxyImage, dockerClient)}",
-                    allowNetwork = true,
+            platformSecurity = listOf("tpm2"),
+            container =
+                listOf(
+                    GlueContainer(
+                        image = proxyImage,
+                        hash = "sha256:${getContainerIdHash(proxyImage, dockerClient)}",
+                        allowNetwork = true,
+                    ),
+                    GlueContainer(
+                        image = httpEchoImage,
+                        hash = "sha256:${getContainerIdHash(httpEchoImage, dockerClient)}",
+                    ),
                 ),
-                GlueContainer(
-                    image = httpEchoImage,
-                    hash = "sha256:${getContainerIdHash(httpEchoImage, dockerClient)}",
-                ),
-            ),
         )
     }
 
