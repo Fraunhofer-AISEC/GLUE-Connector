@@ -6,7 +6,7 @@ import java.net.URI
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NONE, defaultImpl = RdfValue::class)
 data class RdfValue(
-    @JsonProperty("@id")
+    @param:JsonProperty("@id")
     val uid: URI,
 ) {
     // Constructor necessary for Jackson to deserialize primitive type

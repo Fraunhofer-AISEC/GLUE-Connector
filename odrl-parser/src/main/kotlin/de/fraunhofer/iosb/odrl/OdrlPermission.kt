@@ -34,8 +34,8 @@ class OdrlPermission(
     constraint: List<OdrlConstraintRepresentation> = listOf(),
 
     // Properties of OdrlPermission
-    @JsonProperty(OdrlIdentifiers.HAS_DUTY)
-    @JsonSetter(nulls = Nulls.AS_EMPTY)
+    @param:JsonProperty(OdrlIdentifiers.HAS_DUTY)
+    @param:JsonSetter(nulls = Nulls.AS_EMPTY)
     val duty: List<OdrlDuty> = listOf()
 ): OdrlRule(uid, action, target, output, assignee, assigner, attributedParty, attributingParty, compensatedParty,
         compensatingParty, consentedParty, consentingParty, contractedParty, contractingParty, informedParty,

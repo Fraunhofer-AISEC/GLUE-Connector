@@ -28,6 +28,7 @@
               "operator": "eq",
               "rightOperand": {
                 "@type": "ContainerPipeline",
+                "platformSecurity": "tpm2",
                 "container": [
                   {
                     "@type": "Container",

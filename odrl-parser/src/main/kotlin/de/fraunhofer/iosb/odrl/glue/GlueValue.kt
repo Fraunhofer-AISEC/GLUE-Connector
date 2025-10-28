@@ -9,7 +9,7 @@ import de.fraunhofer.iosb.odrl.parser.JsonLd
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type", defaultImpl = GlueValue::class)
 @JsonTypeName(GlueIdentifiers.VALUE)
 data class GlueValue(
-    @JsonProperty(GlueIdentifiers.JSON)
+    @param:JsonProperty(GlueIdentifiers.JSON)
     val json: JsonNode
 ): OdrlRightOperand() {
     override fun compareTo(other: OdrlRightOperand): Int {

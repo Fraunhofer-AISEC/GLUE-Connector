@@ -34,8 +34,8 @@ class OdrlDuty(
     constraint: List<OdrlConstraintRepresentation> = listOf(),
 
     // Properties of OdrlDuty
-    @JsonProperty(OdrlIdentifiers.CONSEQUENCE)
-    @JsonSetter(nulls = Nulls.AS_EMPTY)
+    @param:JsonProperty(OdrlIdentifiers.CONSEQUENCE)
+    @param:JsonSetter(nulls = Nulls.AS_EMPTY)
     val consequence: List<OdrlDuty> = listOf(),
 ): OdrlRule(uid, action, target, output, assignee, assigner, attributedParty, attributingParty, compensatedParty,
         compensatingParty, consentedParty, consentingParty, contractedParty, contractingParty, informedParty,

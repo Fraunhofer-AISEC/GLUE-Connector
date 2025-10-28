@@ -12,7 +12,7 @@ import java.net.URI
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type", defaultImpl = OdrlConflictTerm::class)
 @JsonTypeName(OdrlIdentifiers.CONFLICT_TERM)
 data class OdrlConflictTerm(
-    @JsonProperty("@id")
+    @param:JsonProperty("@id")
     val uid: URI,
 ): JsonLdBeanValidator {
     // Constructor necessary for Jackson to deserialize primitive type

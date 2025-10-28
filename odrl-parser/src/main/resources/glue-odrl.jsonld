@@ -4,6 +4,7 @@
     "glue": "http://fhg.de/glue/",
 
     "ContainerPipeline": "glue:ContainerPipeline",
+    "platformSecurity": "glue:platformSecurity",
 
     "Container": "glue:Container",
     "container": {

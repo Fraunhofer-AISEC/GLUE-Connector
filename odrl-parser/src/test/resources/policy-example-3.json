@@ -32,6 +32,7 @@
               "odrl:operator": "http://www.w3.org/ns/odrl/2/eq",
               "odrl:rightOperand": {
                 "@type": "http://fhg.de/glue/ContainerPipeline",
+                "glue:platformSecurity": "tpm2",
                 "glue:container": [
                   {
                     "@type": "http://fhg.de/glue/Container",

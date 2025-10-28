@@ -1,6 +1,7 @@
 {
   "@context": {},
   "@type": "http://fhg.de/glue/ContainerPipeline",
+  "http://fhg.de/glue/platformSecurity": ["tpm2", "sgx"],
   "http://fhg.de/glue/container": [
     {
       "http://fhg.de/glue/image": "test/container1",

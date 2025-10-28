@@ -15,6 +15,7 @@ class GlueContainerPipelineTest {
     private val mapper = Commons.parserInstance.mapper
     private val pipelines = listOf(
         GlueContainerPipeline(
+            platformSecurity = listOf("tpm2", "sgx"),
             container = listOf(
                 GlueContainer(
                     image = "test/container1",
@@ -65,6 +66,7 @@ class GlueContainerPipelineTest {
     @Test
     fun testGlueContainerPipelineEquality() {
         val pipeline = GlueContainerPipeline(
+            platformSecurity = listOf("tpm2", "sgx"),
             container = listOf(
                 GlueContainer(
                     image = "test/container1",
@@ -120,8 +122,26 @@ class GlueContainerPipelineTest {
             "{\n" +
                     "  \"@context\": {},\n" +
                     "  \"@type\": \"http://fhg.de/glue/ContainerPipeline\",\n" +
-                    "  \"container\": []\n" +
+                    "  \"http://fhg.de/glue/container\": []\n" +
                     "}", GlueContainerPipeline::class.java
+            )
+        }
+    }
+
+    @Test
+    fun testGlueContainerPipelineWithInvalidPlatformSecurity() {
+        assertThrows<JsonMappingException> {
+            mapper.readValue(
+                "{\n" +
+                        "  \"@context\": {},\n" +
+                        "  \"@type\": \"http://fhg.de/glue/ContainerPipeline\",\n" +
+                        "  \"http://fhg.de/glue/platformSecurity\": [\"tpm\"],\n" +
+                        "  \"http://fhg.de/glue/container\": {\n" +
+                        "    \"@type\": \"http://fhg.de/glue/Container\",\n" +
+                        "    \"http://fhg.de/glue/image\": \"test/container1\",\n" +
+                        "    \"http://fhg.de/glue/hash\": \"364a4787748a98c1c28085d4154a06c3a9be9a67c0b08a56b3f69fa8fabf172e\"\n" +
+                        "  }\n" +
+                        "}", GlueContainerPipeline::class.java
             )
         }
     }

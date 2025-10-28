@@ -1,6 +1,7 @@
 package de.fraunhofer.iosb.odrl.glue
 
 import com.fasterxml.jackson.core.JsonParseException
+import com.fasterxml.jackson.databind.JsonMappingException
 import de.fraunhofer.iosb.odrl.*
 import de.fraunhofer.iosb.odrl.Commons.Companion.loadFileOrDie
 import org.junit.jupiter.api.assertThrows
@@ -36,23 +37,23 @@ class GlueContainerTest {
 
     @Test
     fun testGlueContainerWithEmptyImageAndHash() {
-        assertThrows<JsonParseException> {
+        assertThrows<JsonMappingException> {
             mapper.readValue(
             "{\n" +
                     "  \"@context\": {},\n" +
                     "  \"@type\": \"http://fhg.de/glue/Container\",\n" +
-                    "  \"image\": \"\"\n" +
-                    "  \"hash\": \"364a4787748a98c1c28085d4154a06c3a9be9a67c0b08a56b3f69fa8fabf172e\"\n" +
+                    "  \"http://fhg.de/glue/image\": \"\",\n" +
+                    "  \"http://fhg.de/glue/hash\": \"364a4787748a98c1c28085d4154a06c3a9be9a67c0b08a56b3f69fa8fabf172e\"\n" +
                     "}", GlueContainer::class.java
             )
         }
-        assertThrows<JsonParseException> {
+        assertThrows<JsonMappingException> {
             mapper.readValue(
                 "{\n" +
                         "  \"@context\": {},\n" +
                         "  \"@type\": \"http://fhg.de/glue/Container\",\n" +
-                        "  \"image\": \"test/container1\"\n" +
-                        "  \"hash\": \"\"\n" +
+                        "  \"http://fhg.de/glue/image\": \"test/container1\",\n" +
+                        "  \"http://fhg.de/glue/hash\": \"\"\n" +
                         "}", GlueContainer::class.java
             )
         }

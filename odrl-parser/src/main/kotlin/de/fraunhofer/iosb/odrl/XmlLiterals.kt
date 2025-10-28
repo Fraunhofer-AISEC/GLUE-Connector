@@ -11,7 +11,7 @@ import java.time.LocalTime
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type", defaultImpl = XmlBoolean::class)
 @JsonTypeName(XmlIdentifiers.BOOLEAN)
 data class XmlBoolean(
-    @JsonProperty("@value")
+    @param:JsonProperty("@value")
     val value: Boolean,
 ): OdrlRightOperand() {
     override fun compareTo(other: OdrlRightOperand) = compareBoolean(value, other)
@@ -22,7 +22,7 @@ data class XmlBoolean(
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type", defaultImpl = XmlByte::class)
 @JsonTypeName(XmlIdentifiers.BYTE)
 data class XmlByte(
-    @JsonProperty("@value")
+    @param:JsonProperty("@value")
     val value: Int,
 ): OdrlRightOperand() {
     override fun compareTo(other: OdrlRightOperand) = compareInt(value, other)
@@ -33,7 +33,7 @@ data class XmlByte(
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type", defaultImpl = XmlInt::class)
 @JsonTypeName(XmlIdentifiers.INT)
 data class XmlInt(
-    @JsonProperty("@value")
+    @param:JsonProperty("@value")
     val value: Int,
 ): OdrlRightOperand() {
     override fun compareTo(other: OdrlRightOperand) = compareInt(value, other)
@@ -44,7 +44,7 @@ data class XmlInt(
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type", defaultImpl = XmlInteger::class)
 @JsonTypeName(XmlIdentifiers.INTEGER)
 data class XmlInteger(
-    @JsonProperty("@value")
+    @param:JsonProperty("@value")
     val value: Int,
 ): OdrlRightOperand() {
     override fun compareTo(other: OdrlRightOperand) = compareInt(value, other)
@@ -55,7 +55,7 @@ data class XmlInteger(
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type", defaultImpl = XmlLong::class)
 @JsonTypeName(XmlIdentifiers.LONG)
 data class XmlLong(
-    @JsonProperty("@value")
+    @param:JsonProperty("@value")
     val value: Long,
 ): OdrlRightOperand() {
     override fun compareTo(other: OdrlRightOperand): Int {
@@ -78,7 +78,7 @@ data class XmlLong(
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type", defaultImpl = XmlDouble::class)
 @JsonTypeName(XmlIdentifiers.DOUBLE)
 data class XmlDouble(
-    @JsonProperty("@value")
+    @param:JsonProperty("@value")
     val value: Double,
 ): OdrlRightOperand() {
     override fun compareTo(other: OdrlRightOperand) = compareDouble(value, other)
@@ -89,7 +89,7 @@ data class XmlDouble(
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type", defaultImpl = XmlFloat::class)
 @JsonTypeName(XmlIdentifiers.FLOAT)
 data class XmlFloat(
-    @JsonProperty("@value")
+    @param:JsonProperty("@value")
     val value: Float,
 ): OdrlRightOperand() {
     override fun compareTo(other: OdrlRightOperand) = compareDouble(value.toDouble(), other)
@@ -100,7 +100,7 @@ data class XmlFloat(
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type", defaultImpl = XmlString::class)
 @JsonTypeName(XmlIdentifiers.STRING)
 data class XmlString(
-    @JsonProperty("@value")
+    @param:JsonProperty("@value")
     val value: String,
 ): OdrlRightOperand() {
     override fun compareTo(other: OdrlRightOperand) = compareString(value, other)
@@ -111,7 +111,7 @@ data class XmlString(
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type", defaultImpl = XmlDateTime::class)
 @JsonTypeName(XmlIdentifiers.DATETIME)
 data class XmlDateTime(
-    @JsonProperty("@value")
+    @param:JsonProperty("@value")
     val value: LocalDateTime,
 ): OdrlRightOperand() {
     override fun compareTo(other: OdrlRightOperand): Int {
@@ -129,7 +129,7 @@ data class XmlDateTime(
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type", defaultImpl = XmlDate::class)
 @JsonTypeName(XmlIdentifiers.DATE)
 data class XmlDate(
-    @JsonProperty("@value")
+    @param:JsonProperty("@value")
     val value: LocalDate,
 ): OdrlRightOperand() {
     override fun compareTo(other: OdrlRightOperand): Int {
@@ -146,7 +146,7 @@ data class XmlDate(
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type", defaultImpl = XmlTime::class)
 @JsonTypeName(XmlIdentifiers.TIME)
 data class XmlTime(
-    @JsonProperty("@value")
+    @param:JsonProperty("@value")
     val value: LocalTime,
 ): OdrlRightOperand() {
     override fun compareTo(other: OdrlRightOperand): Int {
@@ -163,7 +163,7 @@ data class XmlTime(
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type", defaultImpl = XmlAnyUri::class)
 @JsonTypeName(XmlIdentifiers.ANYURI)
 data class XmlAnyUri(
-    @JsonProperty("@value")
+    @param:JsonProperty("@value")
     val value: URI,
 ): OdrlRightOperand() {
     // Constructor necessary for Jackson to deserialize primitive type
@@ -178,7 +178,7 @@ data class XmlAnyUri(
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type", defaultImpl = XmlAnyType::class)
 @JsonTypeName(XmlIdentifiers.ANYTYPE)
 data class XmlAnyType(
-    @JsonProperty("@value")
+    @param:JsonProperty("@value")
     val value: URI,
 ): OdrlRightOperand() {
     // Constructor necessary for Jackson to deserialize primitive type

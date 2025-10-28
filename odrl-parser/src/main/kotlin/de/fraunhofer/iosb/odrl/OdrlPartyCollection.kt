@@ -11,11 +11,11 @@ import io.konform.validation.ValidationError
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type", defaultImpl = OdrlPartyCollection::class)
 @JsonTypeName(OdrlIdentifiers.PARTY_COLLECTION)
 data class OdrlPartyCollection(
-    @JsonProperty(OdrlIdentifiers.SOURCE)
+    @param:JsonProperty(OdrlIdentifiers.SOURCE)
     val source: OdrlIri? = null,
 
-    @JsonProperty(OdrlIdentifiers.REFINEMENT)
-    @JsonSetter(nulls = Nulls.AS_EMPTY)
+    @param:JsonProperty(OdrlIdentifiers.REFINEMENT)
+    @param:JsonSetter(nulls = Nulls.AS_EMPTY)
     val refinement: List<OdrlConstraintRepresentation> = listOf(),
 ): JsonLdBeanValidator {
     // Constructor necessary for Jackson to deserialize primitive type

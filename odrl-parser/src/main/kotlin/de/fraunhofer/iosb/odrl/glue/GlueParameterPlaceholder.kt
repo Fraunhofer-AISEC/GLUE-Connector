@@ -9,6 +9,6 @@ import de.fraunhofer.iosb.odrl.parser.JsonLd
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type", defaultImpl = GlueParameterPlaceholder::class)
 @JsonTypeName(GlueIdentifiers.PARAMETER_PLACEHOLDER)
 data class GlueParameterPlaceholder(
-    @JsonProperty(GlueIdentifiers.KEY)
+    @param:JsonProperty(GlueIdentifiers.KEY)
     val key: String,
 )

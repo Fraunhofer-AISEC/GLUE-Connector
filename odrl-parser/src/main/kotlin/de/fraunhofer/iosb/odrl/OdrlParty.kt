@@ -12,11 +12,11 @@ import java.net.URI
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type", defaultImpl = OdrlParty::class)
 @JsonTypeName(OdrlIdentifiers.PARTY)
 data class OdrlParty(
-    @JsonProperty("@id")
+    @param:JsonProperty("@id")
     val uid: URI? = null,
 
-    @JsonProperty(OdrlIdentifiers.PART_OF)
-    @JsonSetter(nulls = Nulls.AS_EMPTY)
+    @param:JsonProperty(OdrlIdentifiers.PART_OF)
+    @param:JsonSetter(nulls = Nulls.AS_EMPTY)
     val partOf: List<OdrlPartyCollection> = listOf(),
 ): JsonLdBeanValidator {
     // Constructor necessary for Jackson to deserialize primitive type

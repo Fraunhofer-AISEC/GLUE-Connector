@@ -13,23 +13,23 @@ import java.net.URI
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type", defaultImpl = OdrlLogicalConstraint::class)
 @JsonTypeName(OdrlIdentifiers.LOGICAL_CONSTRAINT)
 data class OdrlLogicalConstraint(
-    @JsonProperty("@id")
+    @param:JsonProperty("@id")
     val uid: URI? = null,
 
-    @JsonProperty(OdrlIdentifiers.OR)
-    @JsonSetter(nulls = Nulls.AS_EMPTY)
+    @param:JsonProperty(OdrlIdentifiers.OR)
+    @param:JsonSetter(nulls = Nulls.AS_EMPTY)
     val or: List<OdrlConstraint> = listOf(),
 
-    @JsonProperty(OdrlIdentifiers.XONE)
-    @JsonSetter(nulls = Nulls.AS_EMPTY)
+    @param:JsonProperty(OdrlIdentifiers.XONE)
+    @param:JsonSetter(nulls = Nulls.AS_EMPTY)
     val xone: List<OdrlConstraint> = listOf(),
 
-    @JsonProperty(OdrlIdentifiers.AND)
-    @JsonSetter(nulls = Nulls.AS_EMPTY)
+    @param:JsonProperty(OdrlIdentifiers.AND)
+    @param:JsonSetter(nulls = Nulls.AS_EMPTY)
     val and: List<OdrlConstraint> = listOf(),
 
-    @JsonProperty(OdrlIdentifiers.AND_SEQUENCE)
-    @JsonSetter(nulls = Nulls.AS_EMPTY)
+    @param:JsonProperty(OdrlIdentifiers.AND_SEQUENCE)
+    @param:JsonSetter(nulls = Nulls.AS_EMPTY)
     val andSequence: List<OdrlConstraint> = listOf(),
 ): OdrlConstraintRepresentation, JsonLdBeanValidator {
     override fun validate(): List<ValidationError> {
