@@ -34,7 +34,7 @@ dependencies {
     implementation(libs.jackson.datatype.jsr310)
     implementation(libs.titaniumJsonLd)
     implementation(libs.jakarta.json)
-    implementation("fhg.glue.odrl:odrl-parser:1.0-SNAPSHOT")
+    implementation("fhg.glue.odrl:odrl-parser:1.1-SNAPSHOT")
     implementation(libs.duckdb)
     implementation(libs.ktorm.core)
     implementation(libs.ktorm.jackson)
@@ -65,7 +65,7 @@ tasks.test {
 }
 
 kotlin {
-    jvmToolchain(21)
+    jvmToolchain(24)
 }
 
 application {
@@ -73,6 +73,9 @@ application {
 }
 
 jib {
+    from {
+        image = "eclipse-temurin:25-jre"
+    }
     container {
         mainClass = "de.fraunhofer.aisec.glue.ApplicationKt"
         // Activates Kotlin's debug mode inside the container
