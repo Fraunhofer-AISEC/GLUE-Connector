@@ -26,6 +26,7 @@ cache:
 jib_container_pipeline_build:
   stage: build
   script:
+    - sed -i 's/0.5.0/1.0.0/' odrl-parser/settings.gradle
     - ./gradlew jib
       -Djib.to.auth.username=${CI_REGISTRY_USER}
       -Djib.to.auth.password=${CI_REGISTRY_PASSWORD}
@@ -92,6 +93,7 @@ container_test:
   before_script:
     - export REGISTRY_AUTH_TOKEN="$(echo "{\"username\":\"$CI_REGISTRY_USER\",\"password\":\"$CI_REGISTRY_PASSWORD\",\"serveraddress\":\"$CI_REGISTRY\"}" | basenc --base64url -w0)"
   script:
+    - sed -i 's/0.5.0/1.0.0/' odrl-parser/settings.gradle
     - ./gradlew test
   tags:
     - munich-glue-local
