@@ -3,6 +3,11 @@ plugins {
 }
 rootProject.name = "uc-container-orchestration"
 
-includeBuild("odrl-parser")
-
-
+includeBuild("odrl-parser") {
+    dependencySubstitution {  }
+    pluginManagement {
+        plugins {
+            id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
+        }
+    }
+}
