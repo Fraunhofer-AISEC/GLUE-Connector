@@ -23,6 +23,9 @@ class AtlsHandshake(
     var state: State = State.Initial
         private set
 
+    val isRunning
+        get() = state != State.Completed && state != State.Failed
+
     /**
      * Start the ATLS handshake state machine, returning the initial packet to send to the peer.
      */
@@ -31,6 +34,7 @@ class AtlsHandshake(
             throw IllegalStateException("ATLS handshake state machine is already started")
         }
 
+        state = State.AwaitingRequest
         val req = AtlsHandshakeRequest(VERSION, attestationType.protocolValue)
         return objectMapper.writeValueAsBytes(req)
     }
