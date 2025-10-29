@@ -6,6 +6,7 @@ import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.io.InputStream
 import java.io.OutputStream
+import java.security.MessageDigest
 import javax.net.ssl.ExtendedSSLSession
 import javax.net.ssl.HandshakeCompletedListener
 import javax.net.ssl.SSLSession
@@ -26,6 +27,10 @@ class AtlsSocket(
         if (!handshakeCompleted) {
             val session = inner.session as ExtendedSSLSession
             val channelBinding = session.exportKeyingMaterialData("EXPORTER-Channel-Binding", null, 32)
+            val cacheKey =
+                session.peerCertificates.first()?.let {
+                    MessageDigest.getInstance("SHA-256").digest(it.encoded).toHexString()
+                }
 
             val atlsHandshake =
                 AtlsHandshake(
@@ -34,6 +39,7 @@ class AtlsSocket(
                     cmcClient,
                     AtlsHandshake.AttestationType.SERVER,
                     true,
+                    cacheKey,
                     dispatcher,
                 )
 

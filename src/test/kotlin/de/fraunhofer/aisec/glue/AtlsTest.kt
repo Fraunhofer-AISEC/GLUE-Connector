@@ -28,7 +28,7 @@ class AtlsTest {
             val client = CMCClient(InetSocketAddress("127.0.0.1", 9955), jacksonObjectMapper())
 
             val report = client.attest("This is a test".toByteArray())
-            val verify = client.verify("This is a test".toByteArray(), report)
+            val verify = client.verify("This is a test".toByteArray(), report.report, report.metadata)
             assertTrue(verify)
         }
 

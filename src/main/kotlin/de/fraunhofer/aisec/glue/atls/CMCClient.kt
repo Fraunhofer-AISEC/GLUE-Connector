@@ -63,12 +63,12 @@ class CMCClient(
     suspend fun attest(
         nonce: ByteArray,
         cached: List<String>? = null,
-    ): String {
+    ): CMCReport {
         val encodedNonce = Base64.encode(nonce)
         val req = AttestationRequest(VERSION, encodedNonce, cached)
         val resp = sendCmcRequest(req)
         when (resp) {
-            is AttestationResponse -> return resp.report
+            is AttestationResponse -> return CMCReport(resp.report, resp.metadata, resp.cacheMisses)
             is SocketError -> throw IllegalStateException("Received error from CMC: ${resp.msg}")
             else -> throw IllegalStateException("Unexpected response type ${resp::class.qualifiedName}")
         }
@@ -80,14 +80,27 @@ class CMCClient(
     suspend fun verify(
         nonce: ByteArray,
         report: String,
+        metadata: MetadataMap? = null,
+        cacheKey: String? = null,
+        cacheMisses: List<String>? = null,
     ): Boolean {
         // TODO: Other fields?
         val encodedNonce = Base64.encode(nonce)
-        val req = VerificationRequest(VERSION, encodedNonce, report)
+        val req = VerificationRequest(VERSION, encodedNonce, report, metadata, cacheKey, cacheMisses)
         val resp = sendCmcRequest(req)
         when (resp) {
             // TODO: Either return full report or define and document when we accept the verification result
             is VerificationResponse -> return resp.result.summary.status == "success"
+            is SocketError -> throw IllegalStateException("Received error from CMC: ${resp.msg}")
+            else -> throw IllegalStateException("Unexpected response type ${resp::class.qualifiedName}")
+        }
+    }
+
+    suspend fun fetchPeerCache(cacheKey: String): List<String>? {
+        val req = PeerCacheRequest(VERSION, cacheKey)
+        val resp = sendCmcRequest(req)
+        when (resp) {
+            is PeerCacheResponse -> return resp.cache
             is SocketError -> throw IllegalStateException("Received error from CMC: ${resp.msg}")
             else -> throw IllegalStateException("Unexpected response type ${resp::class.qualifiedName}")
         }
