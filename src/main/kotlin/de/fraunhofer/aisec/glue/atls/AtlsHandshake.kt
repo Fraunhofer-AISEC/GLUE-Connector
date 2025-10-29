@@ -23,6 +23,9 @@ class AtlsHandshake(
     var state: State = State.Initial
         private set
 
+    var failure: Throwable? = null
+        private set
+
     val isRunning
         get() = state != State.Completed && state != State.Failed
 
@@ -122,7 +125,26 @@ class AtlsHandshake(
             }
         } catch (e: Exception) {
             state = State.Failed
-            throw e
+            if (failure != null) {
+                // We've already failed previously, so don't overwrite the original failure reason
+                return null
+            }
+            failure = e
+
+            // If the exchange failed because the peer sent an error completion packet, we don't send one ourselves
+            val errorPacket = runCatching { objectMapper.readValue<AtlsHandshakeComplete>(packet) }.getOrNull()
+            if (errorPacket?.success == false) {
+                failure = IllegalStateException("Peer terminated the handshake with an error: ${errorPacket.error}")
+                return null
+            } else {
+                return objectMapper.writeValueAsBytes(
+                    AtlsHandshakeComplete(
+                        VERSION,
+                        success = false,
+                        error = e.message,
+                    ),
+                )
+            }
         }
     }
 

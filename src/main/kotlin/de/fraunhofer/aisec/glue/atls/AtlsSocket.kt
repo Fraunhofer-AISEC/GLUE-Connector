@@ -59,8 +59,8 @@ class AtlsSocket(
                 }
             }
 
-            if (atlsHandshake.state == AtlsHandshake.State.Failed) {
-                throw IllegalStateException("ATLS handshake failed")
+            if (atlsHandshake.failure != null) {
+                throw IllegalStateException("ATLS handshake failed", atlsHandshake.failure)
             }
 
             handshakeCompleted = true
