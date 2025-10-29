@@ -1,5 +1,7 @@
 import net.pwall.json.kotlin.codegen.gradle.JSONSchemaCodegen
 import net.pwall.json.kotlin.codegen.gradle.JSONSchemaCodegenPlugin
+import net.pwall.json.kotlin.codegen.gradle.mapping.ClassMappingByURI
+import java.net.URI
 
 plugins {
     alias(libs.plugins.kotlin)
@@ -30,7 +32,7 @@ buildscript {
 apply<JSONSchemaCodegenPlugin>()
 
 kotlin {
-    jvmToolchain(24)
+    jvmToolchain(25)
     sourceSets {
         main {
             kotlin.srcDir("${layout.buildDirectory.get()}/generated-sources/kotlin")
@@ -38,10 +40,15 @@ kotlin {
     }
 }
 
+java {
+    targetCompatibility = JavaVersion.VERSION_24
+}
+
 dependencies {
     implementation(libs.slf4j.api)
     implementation(libs.ktor.client.core)
     implementation(libs.ktor.client.cio)
+    implementation(libs.ktor.client.okhttp)
     implementation(libs.ktor.client.contentNegotiation)
     implementation(libs.ktor.client.auth)
     implementation(libs.ktor.serialization.jackson)
@@ -121,6 +128,18 @@ tasks.register<JavaExec>("runPolicyTool") {
 configure<JSONSchemaCodegen> {
     // TODO: If we ever want to generate non-cmc json schemata, we need to find a more flexible solution
     packageName.set("de.fraunhofer.aisec.glue.atls")
+    classMappings {
+        fun makeMetadataMapAlias(className: String): ClassMappingByURI {
+            return byURI(
+                "de.fraunhofer.aisec.glue.atls.MetadataMap",
+                URI("file", File("src/main/resources/schema/$className.json").absoluteFile.toString(), "/\$defs/$className/properties/metadata")
+            )
+        }
+
+        makeMetadataMapAlias("AtlsHandshakeResponse")
+        makeMetadataMapAlias("AttestationResponse")
+        makeMetadataMapAlias("VerificationRequest")
+    }
 }
 
 spotless {

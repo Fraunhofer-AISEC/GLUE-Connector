@@ -23,6 +23,9 @@ class AtlsHandshake(
     var state: State = State.Initial
         private set
 
+    val isRunning
+        get() = state != State.Completed && state != State.Failed
+
     /**
      * Start the ATLS handshake state machine, returning the initial packet to send to the peer.
      */
@@ -31,6 +34,7 @@ class AtlsHandshake(
             throw IllegalStateException("ATLS handshake state machine is already started")
         }
 
+        state = State.AwaitingRequest
         val req = AtlsHandshakeRequest(VERSION, attestationType.protocolValue)
         return objectMapper.writeValueAsBytes(req)
     }
@@ -106,7 +110,6 @@ class AtlsHandshake(
 
     /**
      * Feed a received packet to the state machine, returning the next packet to send to the peer (if any).
-     * TODO: This interface needs the caller to cut of the packets at the right point, which we may want to address.
      */
     fun feedPacket(packet: ByteArray): ByteArray? {
         try {
