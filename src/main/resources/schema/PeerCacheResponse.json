@@ -16,8 +16,7 @@
       },
       "type": "object",
       "required": [
-        "version",
-        "cache"
+        "version"
       ]
     }
   }

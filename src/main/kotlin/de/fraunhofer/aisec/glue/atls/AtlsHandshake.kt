@@ -16,6 +16,7 @@ class AtlsHandshake(
     private val cmcClient: CMCClient,
     private val attestationType: AttestationType,
     private val isClient: Boolean,
+    private val cacheKey: String?,
     dispatcher: CoroutineDispatcher,
 ) {
     private val handshakeScope = CoroutineScope(dispatcher)
@@ -29,6 +30,12 @@ class AtlsHandshake(
     val isRunning
         get() = state != State.Completed && state != State.Failed
 
+    private val attestSelf
+        get() = attestationType.attestClient && isClient || attestationType.attestServer && !isClient
+
+    private val attestPeer
+        get() = attestationType.attestClient && !isClient || attestationType.attestServer && isClient
+
     /**
      * Start the ATLS handshake state machine, returning the initial packet to send to the peer.
      */
@@ -37,8 +44,17 @@ class AtlsHandshake(
             throw IllegalStateException("ATLS handshake state machine is already started")
         }
 
+        val cache =
+            if (attestPeer && cacheKey != null) {
+                runBlocking(handshakeScope.coroutineContext) {
+                    cmcClient.fetchPeerCache(cacheKey)
+                }
+            } else {
+                null
+            }
+
         state = State.AwaitingRequest
-        val req = AtlsHandshakeRequest(VERSION, attestationType.protocolValue)
+        val req = AtlsHandshakeRequest(VERSION, attestationType.protocolValue, cache)
         return objectMapper.writeValueAsBytes(req)
     }
 
@@ -61,8 +77,8 @@ class AtlsHandshake(
             throw IllegalArgumentException("The peer's attestation type $peerAttestationType is incompatible with $attestationType")
         }
 
-        val report =
-            if (isClient && attestationType.attestClient || !isClient && attestationType.attestServer) {
+        val cmcResult =
+            if (attestSelf) {
                 runBlocking(handshakeScope.coroutineContext) {
                     cmcClient.attest(channelBinding, req.cached)
                 }
@@ -71,7 +87,14 @@ class AtlsHandshake(
             }
 
         state = State.AwaitingResponse
-        return objectMapper.writeValueAsBytes(AtlsHandshakeResponse(VERSION, report = report))
+        return objectMapper.writeValueAsBytes(
+            AtlsHandshakeResponse(
+                VERSION,
+                report = cmcResult?.report,
+                metadata = cmcResult?.metadata,
+                cacheMisses = cmcResult?.cacheMisses,
+            ),
+        )
     }
 
     private fun handleResponse(packet: ByteArray): ByteArray {
@@ -86,11 +109,13 @@ class AtlsHandshake(
         }
 
         val verificationResult =
-            if (isClient && attestationType.attestServer || !isClient && attestationType.attestClient) {
+            if (attestPeer) {
                 val report = req.report ?: throw IllegalArgumentException("Report is missing from attestation response")
-                runBlocking(handshakeScope.coroutineContext) { cmcClient.verify(channelBinding, report) }
+                runBlocking(
+                    handshakeScope.coroutineContext,
+                ) { cmcClient.verify(channelBinding, report, req.metadata, cacheKey, req.cacheMisses) }
             } else {
-                false
+                true
             }
 
         state = State.AwaitingComplete
