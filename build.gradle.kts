@@ -9,6 +9,7 @@ plugins {
     alias(libs.plugins.ktor)
     alias(libs.plugins.spotless)
     alias(libs.plugins.jib)
+    alias(libs.plugins.shadow)
     application
 }
 
