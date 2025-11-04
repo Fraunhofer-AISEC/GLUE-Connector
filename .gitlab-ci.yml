@@ -40,7 +40,7 @@ buildroot_overlay:
     - ./gradlew shadowJar
     - mkdir -p build/overlay
     - cp -r buildroot/* build/overlay/
-    - mkdir -p build/overlay/usr/lib
+    - mkdir -p build/overlay/usr/lib/glue-container-manager/
     - cp build/libs/*-all.jar build/overlay/usr/lib/glue-container-manager/glue-container-manager.jar
   artifacts:
     paths:
