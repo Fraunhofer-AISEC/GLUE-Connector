@@ -1,5 +1,7 @@
 package de.fraunhofer.aisec.glue
 
+import com.fasterxml.jackson.core.JsonFactoryBuilder
+import com.fasterxml.jackson.core.StreamReadFeature
 import com.fasterxml.jackson.databind.ObjectMapper
 import de.fraunhofer.aisec.glue.config.ConfigManager
 import de.fraunhofer.aisec.glue.controllers.Controller
@@ -14,6 +16,7 @@ import de.fraunhofer.aisec.glue.negotiation.builtin.DummyNegotiator
 import de.fraunhofer.aisec.glue.pipeline.Backend
 import de.fraunhofer.aisec.glue.pipeline.PipelineManager
 import de.fraunhofer.aisec.glue.pipeline.RemotePipelineManager
+import de.fraunhofer.aisec.glue.pipeline.atls.AtlsParameter
 import de.fraunhofer.aisec.glue.pipeline.docker.DockerBackend
 import de.fraunhofer.aisec.glue.plugins.configureAuthentication
 import de.fraunhofer.aisec.glue.policy.PolicyEngine
@@ -78,11 +81,15 @@ val defaultDependencies by DI.Module {
                     }
                 }
                 install(HttpTimeout) {
-                    socketTimeoutMillis = 30000
+                    // Required as we need to wait for a remote container to fetch the atls-proxy image in the the start
+                    // pipeline request
+                    socketTimeoutMillis = 180000
                 }
             }
         }
-    bind<OdrlParser>() with singleton { OdrlParser() }
+    bind<OdrlParser>() with singleton { OdrlParser(ObjectMapper(JsonFactoryBuilder().enable(StreamReadFeature.INCLUDE_SOURCE_IN_LOCATION).build()).apply {
+        registerSubtypes(AtlsParameter::class.java)
+    }) }
     bind<ObjectMapper>() with singleton { instance<OdrlParser>().mapper }
     bind<DockerClient>() with singleton { DockerClient.fromEnv() }
     bind<ContentConverter>() with singleton { JacksonConverter(instance()) }

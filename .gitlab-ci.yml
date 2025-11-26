@@ -91,6 +91,13 @@ podman-forwarder-build:
   #  - changes:
   #      - test-containers/forwarder
 
+podman-atls-proxy:
+  extends: .podman-build
+  variables:
+    CONTEXT_DIR: $CI_PROJECT_DIR/system-containers/atls-proxy
+    DOCKERFILE: system-containers/atls-proxy/Dockerfile
+    DOCKER_IMAGE: $CI_REGISTRY_IMAGE/atls-proxy
+
 container_test:
   variables:
     DOCKER_HOST: tcp://docker
