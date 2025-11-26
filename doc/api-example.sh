@@ -54,6 +54,7 @@ pull_and_get_hash() {
 pull_and_get_hash "http-echo" "HTTP_ECHO_HASH"
 pull_and_get_hash "proxy" "PROXY_HASH"
 pull_and_get_hash "forwarder" "FORWARDER_HASH"
+pull_and_get_hash "atls-proxy" "ATLS_PROXY_HASH"
 
 policy_content="$(envsubst < "$policy")"
 
