@@ -64,4 +64,15 @@ object Utils {
             }
         return ctor(resp, body ?: resp.bodyAsText())
     }
+
+    /**
+     * Return the string truncated to a maximum length followed by an ellipsis to indicate more data.
+     * Note that the maximum length applies to the full length of the output string, including the ellipsis characters.
+     */
+    fun String.truncate(maxLength: Int, ellipsis: String = "..."): String {
+        if (length <= maxLength) {
+            return this
+        }
+        return "${take(maxLength - 3)}$ellipsis"
+    }
 }
