@@ -7,4 +7,4 @@ FROM scratch
 COPY --from=builder /src/forwarder /
 EXPOSE 8080/tcp
 ENTRYPOINT [ "/forwarder" ]
-CMD [ "http://connector3" ]
+CMD [ "http://connector2" ]
