@@ -3,6 +3,8 @@ package de.fraunhofer.aisec.glue
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import de.fraunhofer.aisec.glue.atls.AtlsSocketFactory
 import de.fraunhofer.aisec.glue.atls.CMCClient
+import de.fraunhofer.aisec.glue.atls.CMCKeyManager
+import de.fraunhofer.aisec.glue.atls.CMCProvider
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.request.get
@@ -14,6 +16,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable
 import java.security.SecureRandom
+import java.security.Security
 import java.security.cert.X509Certificate
 import javax.net.ssl.SSLContext
 import javax.net.ssl.X509TrustManager
@@ -59,6 +62,55 @@ class AtlsTest {
                 httpClient.get("https://localhost:4443/get")
             }
         assert(resp.status.isSuccess())
+    }
+
+    @Test
+    @DisabledIfEnvironmentVariable(named = "GITLAB_CI", matches = ".*")
+    fun `Test CMC-Based signature and certificate handling`() {
+        // TODO: Should that be done statically by the CMC provider?
+        Security.addProvider(CMCProvider())
+        System.setProperty("javax.net.debug", "ssl:handshake")
+
+        val dispatcher = Dispatchers.IO
+        val objectMapper = jacksonObjectMapper()
+
+        val cmcClient = CMCClient(InetSocketAddress("127.0.0.1", 9955), objectMapper)
+        val cmcKeyManager = CMCKeyManager(cmcClient, dispatcher)
+        val trustManager = TrustingX509TrustManager
+
+        val tlsContext = SSLContext.getInstance("TLS")
+        tlsContext.init(arrayOf(cmcKeyManager), arrayOf(trustManager), SecureRandom())
+
+        val serverThread = Thread {
+            tlsContext.serverSocketFactory.createServerSocket(8974).use { serverSocket ->
+                serverSocket.accept().use { clientSocket ->
+                    val input = clientSocket.getInputStream()
+                    val output = clientSocket.getOutputStream()
+
+                    while (true) {
+                        val buffer = ByteArray(1024)
+                        val size = input.read(buffer)
+                        if (size == -1) {
+                            break
+                        }
+                        output.write(buffer, 0, size)
+                    }
+                }
+            }
+        }
+        serverThread.start()
+
+        tlsContext.socketFactory.createSocket("localhost", 8974).use { clientSocket ->
+            val input = clientSocket.getInputStream()
+            val output = clientSocket.getOutputStream()
+
+            output.write("GET /get HTTP/1.1\r\nHost: localhost:4443\r\n\r\n".toByteArray())
+            val buffer = ByteArray(1024)
+            val size = input.read(buffer)
+            println(String(buffer, 0, size))
+        }
+
+        serverThread.join()
     }
 
     object TrustingX509TrustManager : X509TrustManager {

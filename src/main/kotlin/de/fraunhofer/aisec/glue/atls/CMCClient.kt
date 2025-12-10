@@ -8,6 +8,8 @@ import io.ktor.utils.io.*
 import kotlinx.coroutines.Dispatchers
 import java.net.ProtocolException
 import java.nio.ByteBuffer
+import java.security.PEMDecoder
+import java.security.cert.X509Certificate
 import kotlin.io.encoding.Base64
 import kotlin.reflect.KClass
 
@@ -104,6 +106,58 @@ class CMCClient(
             is SocketError -> throw IllegalStateException("Received error from CMC: ${resp.msg}")
             else -> throw IllegalStateException("Unexpected response type ${resp::class.qualifiedName}")
         }
+    }
+
+    suspend fun tlsCerts(): List<X509Certificate> {
+        val req = TLSCertRequest(VERSION)
+        val resp = sendCmcRequest(req)
+        when (resp) {
+            is TLSCertResponse -> {
+                val decoder = PEMDecoder.of()
+                return resp.certificate.map(Base64::decode).map { pem ->
+                    decoder.decode(pem.inputStream(), X509Certificate::class.java)
+                }
+            }
+            is  SocketError -> throw IllegalStateException("Received error from CMC: ${resp.msg}")
+            else -> throw IllegalStateException("Unexpected response type ${resp::class.qualifiedName}")
+        }
+    }
+    
+    suspend fun tlsSign(content: ByteArray, hashType: HashType): ByteArray {
+        val req = TLSSignRequest(
+            VERSION,
+            Base64.encode(content),
+            hashType.ordinal.toLong(),
+            TLSSignRequest.PssOpts(0)
+        )
+        val resp = sendCmcRequest(req)
+        when (resp) {
+            is TLSSignResponse -> return Base64.decode(resp.signedContent)
+            is SocketError -> throw IllegalStateException("Received error from CMC: ${resp.msg}")
+            else -> throw IllegalStateException("Unexpected response type ${resp::class.qualifiedName}")
+        }
+    }
+
+    enum class HashType {
+        SHA1,
+        SHA224,
+        SHA256,
+        SHA384,
+        SHA512,
+        MD4,
+        MD5,
+        MD5SHA1,
+        RIPEMD160,
+        SHA3_224,
+        SHA3_256,
+        SHA3_384,
+        SHA3_512,
+        SHA512_224,
+        SHA512_256,
+        BLAKE2S_256,
+        BLAKE2B_256,
+        BLAKE2B_384,
+        BLAKE2B_512,
     }
 
     companion object {
