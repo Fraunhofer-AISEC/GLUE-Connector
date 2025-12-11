@@ -3,52 +3,46 @@ module atls-proxy
 go 1.24.0
 
 require (
-	github.com/Fraunhofer-AISEC/cmc v0.9.2
-	golang.org/x/sync v0.18.0
+	github.com/Fraunhofer-AISEC/cmc v0.9.4
+	golang.org/x/sync v0.19.0
 )
 
 require (
 	github.com/Fraunhofer-AISEC/go-attestation v0.5.2-0.20241227162048-d0a5b66c0bb6 // indirect
 	github.com/dsnet/golib/memfile v1.0.0 // indirect
-	github.com/edgelesssys/ego v1.4.1 // indirect
-	github.com/fxamacker/cbor/v2 v2.5.0 // indirect
-	github.com/go-jose/go-jose/v4 v4.0.5 // indirect
-	github.com/golang/protobuf v1.5.3 // indirect
-	github.com/google/certificate-transparency-go v1.1.6 // indirect
-	github.com/google/go-configfs-tsm v0.3.2 // indirect
+	github.com/edgelesssys/ego v1.8.0 // indirect
+	github.com/fxamacker/cbor/v2 v2.9.0 // indirect
+	github.com/go-jose/go-jose/v4 v4.1.3 // indirect
+	github.com/google/certificate-transparency-go v1.3.2 // indirect
+	github.com/google/go-configfs-tsm v0.3.3 // indirect
 	github.com/google/go-eventlog v0.0.2 // indirect
-	github.com/google/go-sev-guest v0.11.1 // indirect
+	github.com/google/go-sev-guest v0.14.1 // indirect
 	github.com/google/go-tdx-guest v0.3.2-0.20250131194449-460f94c01da7 // indirect
-	github.com/google/go-tpm v0.9.1 // indirect
+	github.com/google/go-tpm v0.9.7 // indirect
 	github.com/google/go-tspi v0.3.0 // indirect
 	github.com/google/logger v1.1.1 // indirect
-	github.com/google/uuid v1.3.1 // indirect
-	github.com/hashicorp/errwrap v1.1.0 // indirect
-	github.com/hashicorp/go-multierror v1.1.1 // indirect
-	github.com/mattn/go-sqlite3 v1.14.16 // indirect
-	github.com/opencontainers/runtime-spec v1.2.0 // indirect
-	github.com/pborman/uuid v1.2.1 // indirect
-	github.com/pion/dtls/v2 v2.2.7 // indirect
-	github.com/pion/logging v0.2.2 // indirect
-	github.com/pion/transport/v2 v2.2.1 // indirect
-	github.com/pion/udp/v2 v2.0.1 // indirect
-	github.com/pkg/errors v0.9.1 // indirect
-	github.com/plgd-dev/go-coap/v3 v3.1.2 // indirect
-	github.com/robertkrimen/otto v0.2.1 // indirect
+	github.com/google/uuid v1.6.0 // indirect
+	github.com/mattn/go-sqlite3 v1.14.32 // indirect
+	github.com/opencontainers/runtime-spec v1.3.0 // indirect
+	github.com/pion/dtls/v3 v3.0.8 // indirect
+	github.com/pion/logging v0.2.4 // indirect
+	github.com/pion/transport/v3 v3.1.1 // indirect
+	github.com/plgd-dev/go-coap/v3 v3.4.1 // indirect
+	github.com/robertkrimen/otto v0.5.1 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/veraison/go-cose v1.3.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
-	go.mozilla.org/pkcs7 v0.0.0-20210826202110-33d05740a352 // indirect
+	go.mozilla.org/pkcs7 v0.9.0 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/crypto v0.36.0 // indirect
-	golang.org/x/exp v0.0.0-20230522175609-2e198f4a06a1 // indirect
-	golang.org/x/net v0.38.0 // indirect
-	golang.org/x/sys v0.31.0 // indirect
-	golang.org/x/text v0.23.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20230530153820-e85fd2cbaebc // indirect
-	google.golang.org/grpc v1.56.3 // indirect
-	google.golang.org/protobuf v1.34.2 // indirect
+	golang.org/x/crypto v0.46.0 // indirect
+	golang.org/x/exp v0.0.0-20251209150349-8475f28825e9 // indirect
+	golang.org/x/net v0.48.0 // indirect
+	golang.org/x/sys v0.39.0 // indirect
+	golang.org/x/text v0.32.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20251202230838-ff82c1b0f217 // indirect
+	google.golang.org/grpc v1.77.0 // indirect
+	google.golang.org/protobuf v1.36.10 // indirect
 	gopkg.in/sourcemap.v1 v1.0.5 // indirect
 	gopkg.in/square/go-jose.v2 v2.6.0 // indirect
 )
