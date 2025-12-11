@@ -199,7 +199,7 @@ class DockerClient(internal val httpClient: HttpClient, private val baseUrl: Url
     companion object {
         private val LOG = KotlinLogging.logger {}
 
-        private const val API_VERSION = "v1.43"
+        private const val API_VERSION = "v1.44"
         internal val UNIX_BASE_URL = Url("http://localhost/$API_VERSION")
 
         private val defaultConfig: HttpClientConfig<CIOEngineConfig>.() -> Unit = {
