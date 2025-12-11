@@ -10,7 +10,6 @@ import java.security.Provider
  * The provider must be registered before creating SSLContext instances that use CMCKeyManager.
  */
 class CMCProvider : Provider(NAME, VERSION_STRING, INFO) {
-
     init {
         // Register signature algorithms for each hash type and asymmetric algorithm combination
         // Format: "HashAlgorithmWithAsymmetricAlgorithm" (e.g., "SHA256withRSA")

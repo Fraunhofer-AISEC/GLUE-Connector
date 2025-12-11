@@ -24,7 +24,6 @@ class CMCKeyManager(
     private val cmcClient: CMCClient,
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : X509ExtendedKeyManager() {
-
     private val certificateChain: Array<X509Certificate> by lazy {
         runBlocking(dispatcher) {
             cmcClient.tlsCerts().toTypedArray()

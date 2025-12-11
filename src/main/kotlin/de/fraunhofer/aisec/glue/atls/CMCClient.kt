@@ -118,18 +118,22 @@ class CMCClient(
                     decoder.decode(pem.inputStream(), X509Certificate::class.java)
                 }
             }
-            is  SocketError -> throw IllegalStateException("Received error from CMC: ${resp.msg}")
+            is SocketError -> throw IllegalStateException("Received error from CMC: ${resp.msg}")
             else -> throw IllegalStateException("Unexpected response type ${resp::class.qualifiedName}")
         }
     }
-    
-    suspend fun tlsSign(content: ByteArray, hashType: HashType): ByteArray {
-        val req = TLSSignRequest(
-            VERSION,
-            Base64.encode(content),
-            hashType.ordinal.toLong(),
-            TLSSignRequest.PssOpts(0)
-        )
+
+    suspend fun tlsSign(
+        content: ByteArray,
+        hashType: HashType,
+    ): ByteArray {
+        val req =
+            TLSSignRequest(
+                VERSION,
+                Base64.encode(content),
+                hashType.ordinal.toLong(),
+                TLSSignRequest.PssOpts(0),
+            )
         val resp = sendCmcRequest(req)
         when (resp) {
             is TLSSignResponse -> return Base64.decode(resp.signedContent)

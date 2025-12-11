@@ -43,6 +43,8 @@ class AtlsParameter(
     }
 
     override fun toString(): String {
-        return "AtlsParameter(mode=$mode, cmcAddress=$cmcAddress, caCertificates=${caCertificate.truncate(16)}, proxyConnections=$proxyConnections)"
+        return "AtlsParameter(mode=$mode, cmcAddress=$cmcAddress, caCertificates=${caCertificate.truncate(
+            16,
+        )}, proxyConnections=$proxyConnections)"
     }
 }

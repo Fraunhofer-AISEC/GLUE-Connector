@@ -81,24 +81,26 @@ class AtlsTest {
         val tlsContext = SSLContext.getInstance("TLS")
         tlsContext.init(arrayOf(cmcKeyManager), arrayOf(trustManager), SecureRandom())
 
-        val serverThread = Thread {
-            tlsContext.serverSocketFactory.createServerSocket(8974).use { serverSocket ->
-                serverSocket.accept().use { clientSocket ->
-                    val input = clientSocket.getInputStream()
-                    val output = clientSocket.getOutputStream()
+        val serverThread =
+            Thread {
+                tlsContext.serverSocketFactory.createServerSocket(8974).use { serverSocket ->
+                    serverSocket.accept().use { clientSocket ->
+                        val input = clientSocket.getInputStream()
+                        val output = clientSocket.getOutputStream()
 
-                    while (true) {
-                        val buffer = ByteArray(1024)
-                        val size = input.read(buffer)
-                        if (size == -1) {
-                            break
+                        while (true) {
+                            val buffer = ByteArray(1024)
+                            val size = input.read(buffer)
+                            if (size == -1) {
+                                break
+                            }
+                            output.write(buffer, 0, size)
                         }
-                        output.write(buffer, 0, size)
                     }
                 }
             }
-        }
         serverThread.start()
+        Thread.sleep(500)
 
         tlsContext.socketFactory.createSocket("localhost", 8974).use { clientSocket ->
             val input = clientSocket.getInputStream()
