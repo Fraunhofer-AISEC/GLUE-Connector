@@ -76,6 +76,7 @@ dependencies {
     // For running example with gradle
     runtimeOnly(libs.slf4j.jdk14)
 
+    testImplementation(platform("org.junit:junit-bom:5.13.4"))
     testImplementation(libs.slf4j.jdk14)
     testImplementation(libs.kotlin.test)
     testImplementation(libs.kotlinx.coroutines.test)
