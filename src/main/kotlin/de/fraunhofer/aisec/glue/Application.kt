@@ -95,7 +95,7 @@ val defaultDependencies by DI.Module {
     bind<ContentConverter>() with singleton { JacksonConverter(instance()) }
     bind<RemotePipelineManager>() with singleton { RemotePipelineManager(instance(), instance()) }
     bind<Backend>() with singleton { DockerBackend(instance(), instance(), instance()) }
-    bind<PipelineManager>() with singleton { PipelineManager(instance(), instance()) }
+    bind<PipelineManager>() with singleton { PipelineManager(instance(), instance(), instance()) }
     bind<PolicyEngine>() with singleton { PolicyEngine(instance()) }
     bind<ContractStore>() with singleton { ContractStore(instance()) }
     bind<BuiltinNegotiationManager>() with
