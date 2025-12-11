@@ -13,7 +13,6 @@ import java.security.*
 class CMCSignatureSpi(
     hashAlgorithm: String,
 ) : SignatureSpi() {
-
     private val digest: MessageDigest = MessageDigest.getInstance(hashAlgorithm)
     private val hashType: CMCClient.HashType = mapJcaHashToCmcHashType(hashAlgorithm)
     private var cmcPrivateKey: CMCPrivateKey? = null

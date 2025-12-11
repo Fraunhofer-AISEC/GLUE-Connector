@@ -1,21 +1,62 @@
 package de.fraunhofer.aisec.glue.pipeline
 
 import de.fraunhofer.aisec.glue.Utils.hexEncode
+import de.fraunhofer.aisec.glue.config.ConfigManager
+import de.fraunhofer.aisec.glue.pipeline.atls.AtlsConfig
+import de.fraunhofer.aisec.glue.pipeline.atls.AtlsParameter
+import de.fraunhofer.aisec.glue.pipeline.atls.AtlsProxyConnection
 import de.fraunhofer.iosb.odrl.glue.GlueContainerPipeline
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.ktor.network.sockets.UnixSocketAddress
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import java.io.File
 import kotlin.random.Random
 
 class PipelineManager(
     private val remoteManager: RemotePipelineManager,
     private val backend: Backend,
+    config: ConfigManager,
 ) {
     private val pipelines = mutableMapOf<String, ContainerPipeline>()
     private val pipelineMutex = Mutex()
+    private val pipelineConfig = config.getConfig(::AtlsConfig)
 
-    private fun createPipelineName(): String =
-        generateSequence { Random.Default.nextBytes(8).hexEncode() }.first { n -> !pipelines.contains(n) }
+    private fun createPipelineName(): String = generateSequence { Random.nextBytes(8).hexEncode() }.first { n -> !pipelines.contains(n) }
+
+    /**
+     * Augment the container pipeline object by properly configuring all ATLS proxy images
+     */
+    private fun augmentPipelineSpec(originalSpec: GlueContainerPipeline): List<AugmentedGlueContainer> {
+        return originalSpec.container.withIndex().map { (idx, container) ->
+            when (container.image) {
+                pipelineConfig.proxyContainer ->
+                    AugmentedGlueContainer(
+                        container.copy(
+                            parameter =
+                                container.parameter +
+                                    listOf(
+                                        AtlsParameter(
+                                            mode = if (idx == 0) "server" else "client",
+                                            cmcAddress = pipelineConfig.cmcAddress.toString(),
+                                            caCertificate = File(pipelineConfig.caCertPath).readText(),
+                                            proxyConnections = listOf(AtlsProxyConnection(8080, "connector2:8080")),
+                                        ),
+                                    ),
+                        ),
+                        buildMap {
+                            // If the CMC is made available via a unix socket, we need to mount it into the container
+                            //  possible nodes, which is reasonable but should be documented.
+                            if (pipelineConfig.cmcAddress is UnixSocketAddress) {
+                                val path = (pipelineConfig.cmcAddress as UnixSocketAddress).path
+                                put(path, path)
+                            }
+                        },
+                    )
+                else -> AugmentedGlueContainer(container, emptyMap())
+            }
+        }
+    }
 
     suspend fun createPipeline(
         pipelineSpec: GlueContainerPipeline,
@@ -23,8 +64,10 @@ class PipelineManager(
         targetId: String,
     ): ContainerPipeline =
         pipelineMutex.withLock {
+            val augmentedSpec = augmentPipelineSpec(pipelineSpec)
+
             val name = createPipelineName()
-            val pipeline = backend.createPipeline(name, pipelineSpec, contractId, targetId)
+            val pipeline = backend.createPipeline(name, augmentedSpec, contractId, targetId)
 
             try {
                 val containerInfo = pipeline.getContainerInfo()
@@ -37,7 +80,7 @@ class PipelineManager(
                         ContainerConfig(
                             controller = backend.getConnectorIp(current),
                             nextContainer = next,
-                            parameters = pipelineSpec.container[i].parameter,
+                            parameters = augmentedSpec[i].base.parameter,
                         ),
                     )
                 }
