@@ -9,14 +9,15 @@ import (
 	"net"
 	"time"
 
+	"github.com/Fraunhofer-AISEC/cmc/attestationreport"
 	"github.com/Fraunhofer-AISEC/cmc/attestedtls"
 )
 
 const (
-	serverListenAddr   = "0.0.0.0:8080"
-	nextContainerPort  = 8080
-	dialRetries        = 5
-	dialRetryDelay     = 5 * time.Second
+	serverListenAddr  = "0.0.0.0:8080"
+	nextContainerPort = 8080
+	dialRetries       = 5
+	dialRetryDelay    = 5 * time.Second
 )
 
 // ServerProxy manages the server-side proxy that accepts ATLS connections
@@ -79,6 +80,7 @@ func (sp *ServerProxy) listen() error {
 		attestedtls.WithAttest(attestedtls.Attest_Mutual),
 		attestedtls.WithCmcApi(attestedtls.CmcApi_Socket),
 		attestedtls.WithMtls(true),
+		attestedtls.WithApiSerializer(attestationreport.JsonSerializer{}),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to listen for ATLS connections on %s: %w", serverListenAddr, err)
@@ -135,6 +137,7 @@ func createServerTLSConfig(proxyConfig atlsProxyConfig) (*tls.Config, error) {
 	serverCert, err := attestedtls.GetCert(
 		attestedtls.WithCmcAddr(proxyConfig.CmcAddress),
 		attestedtls.WithCmcApi(attestedtls.CmcApi_Socket),
+		attestedtls.WithApiSerializer(attestationreport.JsonSerializer{}),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get the server certificate from the CMC: %w", err)

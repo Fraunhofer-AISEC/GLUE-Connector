@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"sync"
 
+	"github.com/Fraunhofer-AISEC/cmc/attestationreport"
 	"github.com/Fraunhofer-AISEC/cmc/attestedtls"
 	"golang.org/x/sync/errgroup"
 )
@@ -118,6 +119,7 @@ func (cp *ClientProxy) handleConnection(clientConn net.Conn) {
 		attestedtls.WithAttest(attestedtls.Attest_Mutual),
 		attestedtls.WithCmcApi(attestedtls.CmcApi_Socket),
 		attestedtls.WithMtls(true),
+		attestedtls.WithApiSerializer(attestationreport.JsonSerializer{}),
 	)
 	if err != nil {
 		slog.Error("Could not open connection to the peer", "error", err)
@@ -194,6 +196,7 @@ func createClientTLSConfig(proxyConfig atlsProxyConfig) (*tls.Config, error) {
 	clientCert, err := attestedtls.GetCert(
 		attestedtls.WithCmcAddr(proxyConfig.CmcAddress),
 		attestedtls.WithCmcApi(attestedtls.CmcApi_Socket),
+		attestedtls.WithApiSerializer(attestationreport.JsonSerializer{}),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get the client certificate from the CMC: %w", err)
