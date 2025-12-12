@@ -42,7 +42,7 @@ class AtlsManager(
                     } catch (_: EOFException) {
                         null
                     }
-                }
+                }.toList()
             }
 
         val certStore = KeyStore.getInstance(KeyStore.getDefaultType())
@@ -55,9 +55,13 @@ class AtlsManager(
         trustManagerFactory.trustManagers.filterIsInstance<X509TrustManager>().first()
     }
 
+    val sslContext: SSLContext by lazy {
+        val context = SSLContext.getInstance("TLS")
+        context.init(arrayOf(keyManager), arrayOf(trustManager), SecureRandom())
+        context
+    }
+
     override val socketFactory: SSLSocketFactory by lazy {
-        val tlsContext = SSLContext.getInstance("TLS")
-        tlsContext.init(arrayOf(keyManager), arrayOf(trustManager), SecureRandom())
-        AtlsSocketFactory(objectMapper, cmcClient, dispatcher, tlsContext.socketFactory)
+        AtlsSocketFactory(objectMapper, cmcClient, dispatcher, sslContext.socketFactory)
     }
 }

@@ -8,3 +8,5 @@ connector:
   identity: "https://glue-connector.local"
   edc:
     url: "http://localhost:29193"
+atls:
+  cmcAddress: "tcp://172.25.0.1:9955"

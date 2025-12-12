@@ -25,7 +25,7 @@ import de.fraunhofer.aisec.glue.plugins.configureAuthentication
 import de.fraunhofer.aisec.glue.policy.PolicyEngine
 import de.fraunhofer.iosb.odrl.parser.OdrlParser
 import io.ktor.client.*
-import io.ktor.client.engine.okhttp.OkHttp
+import io.ktor.client.engine.okhttp.*
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.auth.*
 import io.ktor.client.plugins.auth.providers.*
@@ -33,7 +33,7 @@ import io.ktor.http.*
 import io.ktor.serialization.*
 import io.ktor.serialization.jackson.*
 import io.ktor.server.application.*
-import io.ktor.server.config.MapApplicationConfig
+import io.ktor.server.config.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.calllogging.*
@@ -41,7 +41,7 @@ import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.request.*
 import io.ktor.server.routing.*
 import io.netty.handler.ssl.ClientAuth
-import io.netty.handler.ssl.SslContextBuilder
+import io.netty.handler.ssl.JdkSslContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import org.kodein.di.*
@@ -158,16 +158,22 @@ val defaultDependencies by DI.Module {
                     }
                     channelPipelineConfig = {
                         // Build SSL context with ATLS key and trust managers
-                        val sslContext =
-                            SslContextBuilder.forServer(atlsManager.keyManager)
-                                .trustManager(atlsManager.trustManager)
-                                .clientAuth(ClientAuth.REQUIRE)
-                                .build()
+
+                        val handler = JdkSslContext(
+                            atlsManager.sslContext,
+                            /* isClient = */ false,
+                            /* ciphers = */ null,
+                            /* cipherFilter = */ io.netty.handler.ssl.IdentityCipherSuiteFilter.INSTANCE,
+                            /* apn = */ null,
+                            /* clientAuth = */ ClientAuth.REQUIRE,
+                            /* protocols = */ null,
+                            /* startTls = */ false,
+                        ).newHandler(channel().alloc())
 
                         // codec is the first handler guaranteed to be registered by the ktor HTTP 1.1 pipeline.
                         // We don't make use of the TLS implementation supplied by ktor as it expects a more traditional
                         // keystore/truststore setup than we use.
-                        addBefore("codec", "ssl", sslContext.newHandler(channel().alloc()))
+                        addBefore("codec", "ssl", handler)
                         addAfter(
                             "ssl",
                             "atls-handshake",
