@@ -24,7 +24,7 @@ class PipelineController(
     private val pipelineManager: PipelineManager,
     private val policyEngine: PolicyEngine,
 ) :
-    Controller {
+    AtlsController {
     override fun Route.registerRoutes() {
         authenticate {
             route("/pipeline") {

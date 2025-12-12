@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import io.ktor.network.selector.*
 import io.ktor.network.sockets.*
 import io.ktor.utils.io.*
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import java.net.ProtocolException
 import java.nio.ByteBuffer
 import java.security.PEMDecoder
@@ -16,7 +16,8 @@ import kotlin.reflect.KClass
 class CMCClient(
     private val cmcAddress: SocketAddress,
     objectMapper: ObjectMapper,
-    private val selectorManager: SelectorManager = SelectorManager(Dispatchers.IO),
+    dispatcher: CoroutineDispatcher,
+    private val selectorManager: SelectorManager = SelectorManager(dispatcher),
 ) {
     private val objectMapper =
         objectMapper.copy().apply {
@@ -140,6 +141,7 @@ class CMCClient(
         }
     }
 
+    @Suppress("unused")
     enum class HashType {
         SHA1,
         SHA224,
