@@ -25,7 +25,7 @@ import de.fraunhofer.aisec.glue.plugins.configureAuthentication
 import de.fraunhofer.aisec.glue.policy.PolicyEngine
 import de.fraunhofer.iosb.odrl.parser.OdrlParser
 import io.ktor.client.*
-import io.ktor.client.engine.cio.*
+import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.auth.*
 import io.ktor.client.plugins.auth.providers.*
@@ -40,8 +40,6 @@ import io.ktor.server.plugins.calllogging.*
 import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.request.*
 import io.ktor.server.routing.*
-import io.netty.channel.ChannelInitializer
-import io.netty.channel.socket.SocketChannel
 import io.netty.handler.ssl.ClientAuth
 import io.netty.handler.ssl.SslContextBuilder
 import kotlinx.coroutines.CoroutineDispatcher
@@ -80,7 +78,7 @@ fun main(args: Array<String>) {
 val defaultDependencies by DI.Module {
     bind<HttpClient>() with
         singleton {
-            HttpClient(CIO) {
+            HttpClient(OkHttp) {
                 install(ClientContentNegotiation) {
                     register(ContentType.Application.Json, instance())
                 }
@@ -96,6 +94,12 @@ val defaultDependencies by DI.Module {
                     // Required as we need to wait for a remote container to fetch the atls-proxy image in the the start
                     // pipeline request
                     socketTimeoutMillis = 180000
+                }
+                engine {
+                    config {
+                        val atlsManager = instance<AtlsManager>()
+                        sslSocketFactory(atlsManager.socketFactory, atlsManager.trustManager)
+                    }
                 }
             }
         }
@@ -141,7 +145,7 @@ val defaultDependencies by DI.Module {
                 module = {
                     configureAuthentication()
                     install(ServerContentNegotiation) {
-                        register(ContentType.Application.Json, JacksonConverter(instance()))
+                        register(ContentType.Application.Json, instance())
                     }
                     routing {
                         allInstances<AtlsController>().forEach { it.apply { registerRoutes() } }
@@ -152,7 +156,7 @@ val defaultDependencies by DI.Module {
                         host = "0.0.0.0"
                         port = 8444
                     }
-                    configureBootstrap = {
+                    channelPipelineConfig = {
                         // Build SSL context with ATLS key and trust managers
                         val sslContext =
                             SslContextBuilder.forServer(atlsManager.keyManager)
@@ -160,22 +164,18 @@ val defaultDependencies by DI.Module {
                                 .clientAuth(ClientAuth.REQUIRE)
                                 .build()
 
-                        childHandler(
-                            object : ChannelInitializer<SocketChannel>() {
-                                override fun initChannel(ch: SocketChannel) {
-                                    // Add SSL handler first
-                                    ch.pipeline().addLast("ssl", sslContext.newHandler(ch.alloc()))
-                                    // Add ATLS post-handshake handler after SSL
-                                    ch.pipeline().addLast(
-                                        "atls-handshake",
-                                        NettyAtlsHandshakeHandler(
-                                            instance(),
-                                            atlsManager.cmcClient,
-                                            instance(),
-                                        ),
-                                    )
-                                }
-                            },
+                        // codec is the first handler guaranteed to be registered by the ktor HTTP 1.1 pipeline.
+                        // We don't make use of the TLS implementation supplied by ktor as it expects a more traditional
+                        // keystore/truststore setup than we use.
+                        addBefore("codec", "ssl", sslContext.newHandler(channel().alloc()))
+                        addAfter(
+                            "ssl",
+                            "atls-handshake",
+                            NettyAtlsHandshakeHandler(
+                                instance(),
+                                atlsManager.cmcClient,
+                                instance(),
+                            ),
                         )
                     }
                 },
