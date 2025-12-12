@@ -42,7 +42,7 @@ kotlin {
 }
 
 java {
-    targetCompatibility = JavaVersion.VERSION_24
+    targetCompatibility = JavaVersion.VERSION_25
 }
 
 dependencies {
@@ -76,13 +76,13 @@ dependencies {
     // For running example with gradle
     runtimeOnly(libs.slf4j.jdk14)
 
-    testImplementation(platform("org.junit:junit-bom:5.13.4"))
     testImplementation(libs.slf4j.jdk14)
     testImplementation(libs.kotlin.test)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.ktor.server.test.host)
     testImplementation(libs.ktor.client.mock)
     testImplementation(libs.mockk)
+    testImplementation(libs.bytebuddy)
 }
 
 tasks.jar {
