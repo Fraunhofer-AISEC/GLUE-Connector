@@ -1,7 +1,6 @@
 package de.fraunhofer.aisec.glue.atls
 
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import java.net.Socket
 import java.security.Principal
@@ -22,7 +21,7 @@ import javax.net.ssl.X509ExtendedKeyManager
  */
 class CMCKeyManager(
     private val cmcClient: CMCClient,
-    private val dispatcher: CoroutineDispatcher = Dispatchers.IO,
+    private val dispatcher: CoroutineDispatcher,
 ) : X509ExtendedKeyManager() {
     private val certificateChain: Array<X509Certificate> by lazy {
         runBlocking(dispatcher) {

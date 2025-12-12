@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import de.fraunhofer.aisec.glue.TlsManager
 import de.fraunhofer.aisec.glue.config.ConfigManager
 import de.fraunhofer.aisec.glue.pipeline.atls.AtlsConfig
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import java.io.EOFException
 import java.io.File
 import java.security.KeyStore
@@ -21,13 +21,15 @@ import javax.net.ssl.X509TrustManager
 class AtlsManager(
     configManager: ConfigManager,
     objectMapper: ObjectMapper,
+    dispatcher: CoroutineDispatcher,
 ) : TlsManager() {
     private val atlsConfig = configManager.getConfig(::AtlsConfig)
-    private val cmcClient = CMCClient(atlsConfig.cmcAddress, objectMapper)
+
+    override val cmcClient = CMCClient(atlsConfig.cmcAddress, objectMapper, dispatcher)
 
     override val keyManager: X509ExtendedKeyManager by lazy {
         Security.addProvider(CMCProvider())
-        CMCKeyManager(cmcClient)
+        CMCKeyManager(cmcClient, dispatcher)
     }
 
     override val trustManager: X509TrustManager by lazy {
@@ -56,6 +58,6 @@ class AtlsManager(
     override val socketFactory: SSLSocketFactory by lazy {
         val tlsContext = SSLContext.getInstance("TLS")
         tlsContext.init(arrayOf(keyManager), arrayOf(trustManager), SecureRandom())
-        AtlsSocketFactory(objectMapper, cmcClient, Dispatchers.IO, tlsContext.socketFactory)
+        AtlsSocketFactory(objectMapper, cmcClient, dispatcher, tlsContext.socketFactory)
     }
 }

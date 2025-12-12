@@ -28,7 +28,12 @@ class AtlsTest {
     @DisabledIfEnvironmentVariable(named = "GITLAB_CI", matches = ".*")
     fun `Test functionality of the CMC API`() =
         runTest {
-            val client = CMCClient(InetSocketAddress("127.0.0.1", 9955), jacksonObjectMapper())
+            val client =
+                CMCClient(
+                    InetSocketAddress("127.0.0.1", 9955),
+                    jacksonObjectMapper(),
+                    Dispatchers.IO,
+                )
 
             val report = client.attest("This is a test".toByteArray())
             val verify = client.verify("This is a test".toByteArray(), report.report, report.metadata)
@@ -42,7 +47,7 @@ class AtlsTest {
         val scope = CoroutineScope(dispatcher)
         val objectMapper = jacksonObjectMapper()
 
-        val cmcClient = CMCClient(InetSocketAddress("127.0.0.1", 9955), objectMapper)
+        val cmcClient = CMCClient(InetSocketAddress("127.0.0.1", 9955), objectMapper, dispatcher)
         val tlsContext = SSLContext.getInstance("TLS")
         tlsContext.init(null, arrayOf(TrustingX509TrustManager), SecureRandom())
         val httpClient =
@@ -74,7 +79,7 @@ class AtlsTest {
         val dispatcher = Dispatchers.IO
         val objectMapper = jacksonObjectMapper()
 
-        val cmcClient = CMCClient(InetSocketAddress("127.0.0.1", 9955), objectMapper)
+        val cmcClient = CMCClient(InetSocketAddress("127.0.0.1", 9955), objectMapper, dispatcher)
         val cmcKeyManager = CMCKeyManager(cmcClient, dispatcher)
         val trustManager = TrustingX509TrustManager
 

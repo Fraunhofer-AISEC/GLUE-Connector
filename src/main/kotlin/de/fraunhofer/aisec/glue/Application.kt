@@ -3,7 +3,10 @@ package de.fraunhofer.aisec.glue
 import com.fasterxml.jackson.core.JsonFactoryBuilder
 import com.fasterxml.jackson.core.StreamReadFeature
 import com.fasterxml.jackson.databind.ObjectMapper
+import de.fraunhofer.aisec.glue.atls.AtlsManager
+import de.fraunhofer.aisec.glue.atls.NettyAtlsHandshakeHandler
 import de.fraunhofer.aisec.glue.config.ConfigManager
+import de.fraunhofer.aisec.glue.controllers.AtlsController
 import de.fraunhofer.aisec.glue.controllers.Controller
 import de.fraunhofer.aisec.glue.controllers.NegotiationController
 import de.fraunhofer.aisec.glue.controllers.PipelineController
@@ -30,18 +33,27 @@ import io.ktor.http.*
 import io.ktor.serialization.*
 import io.ktor.serialization.jackson.*
 import io.ktor.server.application.*
+import io.ktor.server.config.MapApplicationConfig
+import io.ktor.server.engine.*
 import io.ktor.server.netty.*
-import io.ktor.server.plugins.calllogging.CallLogging
+import io.ktor.server.plugins.calllogging.*
 import io.ktor.server.plugins.cors.routing.*
-import io.ktor.server.request.httpMethod
-import io.ktor.server.request.uri
+import io.ktor.server.request.*
 import io.ktor.server.routing.*
+import io.netty.channel.ChannelInitializer
+import io.netty.channel.socket.SocketChannel
+import io.netty.handler.ssl.ClientAuth
+import io.netty.handler.ssl.SslContextBuilder
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import org.kodein.di.*
 import java.util.logging.Filter
 import java.util.logging.Level
 import java.util.logging.Logger
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation as ClientContentNegotiation
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation as ServerContentNegotiation
+
+typealias NettyServer = EmbeddedServer<NettyApplicationEngine, NettyApplicationEngine.Configuration>
 
 fun main(args: Array<String>) {
     val filteredLoggerPrefixes = listOf("sun.rmi", "javax.management")
@@ -87,9 +99,14 @@ val defaultDependencies by DI.Module {
                 }
             }
         }
-    bind<OdrlParser>() with singleton { OdrlParser(ObjectMapper(JsonFactoryBuilder().enable(StreamReadFeature.INCLUDE_SOURCE_IN_LOCATION).build()).apply {
-        registerSubtypes(AtlsParameter::class.java)
-    }) }
+    bind<OdrlParser>() with
+        singleton {
+            OdrlParser(
+                ObjectMapper(JsonFactoryBuilder().enable(StreamReadFeature.INCLUDE_SOURCE_IN_LOCATION).build()).apply {
+                    registerSubtypes(AtlsParameter::class.java)
+                },
+            )
+        }
     bind<ObjectMapper>() with singleton { instance<OdrlParser>().mapper }
     bind<DockerClient>() with singleton { DockerClient.fromEnv() }
     bind<ContentConverter>() with singleton { JacksonConverter(instance()) }
@@ -110,6 +127,60 @@ val defaultDependencies by DI.Module {
         singleton {
             ContainerInterfaceController(instance(), instance(), instance(), instance(), instance(), instance(), instance())
         }
+    bind<CoroutineDispatcher>() with singleton { Dispatchers.IO }
+    bind<AtlsManager>() with singleton { AtlsManager(instance(), instance(), instance()) }
+    bind<NettyServer>() with
+        singleton {
+            val atlsManager = instance<AtlsManager>()
+            embeddedServer(
+                Netty,
+                environment =
+                    applicationEnvironment {
+                        config = MapApplicationConfig()
+                    },
+                module = {
+                    configureAuthentication()
+                    install(ServerContentNegotiation) {
+                        register(ContentType.Application.Json, JacksonConverter(instance()))
+                    }
+                    routing {
+                        allInstances<AtlsController>().forEach { it.apply { registerRoutes() } }
+                    }
+                },
+                configure = {
+                    connector {
+                        host = "0.0.0.0"
+                        port = 8444
+                    }
+                    configureBootstrap = {
+                        // Build SSL context with ATLS key and trust managers
+                        val sslContext =
+                            SslContextBuilder.forServer(atlsManager.keyManager)
+                                .trustManager(atlsManager.trustManager)
+                                .clientAuth(ClientAuth.REQUIRE)
+                                .build()
+
+                        childHandler(
+                            object : ChannelInitializer<SocketChannel>() {
+                                override fun initChannel(ch: SocketChannel) {
+                                    // Add SSL handler first
+                                    ch.pipeline().addLast("ssl", sslContext.newHandler(ch.alloc()))
+                                    // Add ATLS post-handshake handler after SSL
+                                    ch.pipeline().addLast(
+                                        "atls-handshake",
+                                        NettyAtlsHandshakeHandler(
+                                            instance(),
+                                            atlsManager.cmcClient,
+                                            instance(),
+                                        ),
+                                    )
+                                }
+                            },
+                        )
+                    }
+                },
+            ).start(wait = false)
+        }
 }
 
 fun Application.module() =
@@ -127,6 +198,7 @@ fun Application.module() =
 
 fun Application.moduleWithDeps(dependencies: DirectDI) {
     configureAuthentication()
+
     install(CORS) {
         anyHost()
         allowMethod(HttpMethod.Delete)
@@ -151,4 +223,7 @@ fun Application.moduleWithDeps(dependencies: DirectDI) {
     routing {
         dependencies.allInstances<Controller>().forEach { it.apply { registerRoutes() } }
     }
+
+    // Start the ATLS server by resolving it
+    dependencies.instance<NettyServer>()
 }

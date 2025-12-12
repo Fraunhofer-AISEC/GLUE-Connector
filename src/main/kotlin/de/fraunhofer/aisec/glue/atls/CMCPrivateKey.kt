@@ -1,7 +1,6 @@
 package de.fraunhofer.aisec.glue.atls
 
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
 import java.security.PrivateKey
 import java.security.cert.X509Certificate
 
@@ -18,7 +17,7 @@ import java.security.cert.X509Certificate
 class CMCPrivateKey(
     internal val cmcClient: CMCClient,
     private val certificate: X509Certificate,
-    internal val dispatcher: CoroutineDispatcher = Dispatchers.IO,
+    internal val dispatcher: CoroutineDispatcher,
 ) : PrivateKey {
     /**
      * Returns the algorithm name from the associated certificate's public key.
