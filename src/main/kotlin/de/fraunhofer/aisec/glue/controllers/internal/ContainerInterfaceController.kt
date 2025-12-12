@@ -208,7 +208,7 @@ class ContainerInterfaceController(
                         // TODO: Replace with more generic handler once the negotiation-next branch is merged
                         val negotiation =
                             negotiationManager.startNegotiation(
-                                "http://$destinationHost:8080/negotiations",
+                                "https://$destinationHost:8444/negotiations",
                                 convertedNextPolicy,
                             )
 
@@ -360,7 +360,7 @@ class ContainerInterfaceController(
 
                     val remotePipeline =
                         remotePipelineManager.getOrCreate(
-                            Url("http://$destinationHost:8080"),
+                            Url("https://$destinationHost:8444"),
                             followingContract.uid.toString(),
                             callingPipeline.targetId,
                         )
@@ -437,7 +437,7 @@ class ContainerInterfaceController(
                 // TODO: Check if we already have an agreement with the destination node
                 val negotiation =
                     negotiationManager.startNegotiation(
-                        "http://$destinationHost:8080/negotiations",
+                        "https://$destinationHost:8444/negotiations",
                         convertedNextPolicy,
                     )
 
@@ -465,7 +465,7 @@ class ContainerInterfaceController(
                 // Wa may also want to add some sort of owner to it, so that the remote pipeline is stopped when this
                 // one shuts down (Assuming that is what we want).
                 val createResp =
-                    httpClient.post("http://$destinationHost:8080/pipeline") {
+                    httpClient.post("https://$destinationHost:8444/pipeline") {
                         header("Content-Type", ContentType.Application.Json)
                         setBody(createReq)
                         val (username, password) = Utils.getCredentials()
