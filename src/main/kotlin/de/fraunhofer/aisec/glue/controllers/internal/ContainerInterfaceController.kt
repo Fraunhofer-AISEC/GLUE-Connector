@@ -2,10 +2,7 @@ package de.fraunhofer.aisec.glue.controllers.internal
 
 import com.fasterxml.jackson.databind.JsonNode
 import de.fraunhofer.aisec.glue.ContractStore
-import de.fraunhofer.aisec.glue.Utils
 import de.fraunhofer.aisec.glue.controllers.Controller
-import de.fraunhofer.aisec.glue.models.pipeline.PipelineCreateRequest
-import de.fraunhofer.aisec.glue.models.pipeline.PipelineCreateResponse
 import de.fraunhofer.aisec.glue.negotiation.NegotiationManager
 import de.fraunhofer.aisec.glue.negotiation.toOffer
 import de.fraunhofer.aisec.glue.pipeline.ContainerPipeline
@@ -19,17 +16,12 @@ import de.fraunhofer.iosb.odrl.glue.GlueValueProcessor
 import de.fraunhofer.iosb.odrl.parser.OdrlParser
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ktor.client.*
-import io.ktor.client.call.*
-import io.ktor.client.request.*
-import io.ktor.client.statement.*
 import io.ktor.http.*
-import io.ktor.http.content.*
 import io.ktor.server.plugins.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.util.*
-import io.ktor.utils.io.*
 import java.net.URI
 
 /**
@@ -47,7 +39,6 @@ class ContainerInterfaceController(
     val remotePipelines: MutableMap<Pair<ContainerPipeline, OdrlPolicy>, Pair<String, String>> = mutableMapOf()
 
     override fun Route.registerRoutes() {
-        // TOOD: Insert some container-side authentication
         // Just IP-Address seems like it *could* be enough here (containers cannot really fake that as they cannot
         // That said, we could easily enough just inject a token for the container to authenticate with.
         route("/coordinator") {
@@ -135,9 +126,8 @@ class ContainerInterfaceController(
 
                 // Check if we already have a follow-up contract that matches this target
                 val contractCandidates =
-                    callingPipeline.contracts(destinationHost).filter {
-                            c ->
-                        c.permission.any { p -> p.target?.uid?.toString() == callingPipeline.targetId }
+                    callingPipeline.contracts(destinationHost).filter { c ->
+                        c.permission.any { it.target?.uid?.toString() == callingPipeline.targetId }
                     }
                 val followingContract =
                     if (contractCandidates.isNotEmpty()) {
@@ -231,117 +221,6 @@ class ContainerInterfaceController(
                 }
 
                 if (startPipeline) {
-                    /*// TODO: Add some form of remote pipeline registry to manage remote pipelines started with the API
-                    //  and new policies
-                    val remotePipeline = remotePipelines[callingPipeline to followingContract]
-                    if (remotePipeline != null) {
-                        val (remoteAddr, remoteId) = remotePipeline
-                        LOG.atDebug {
-                            message = "Remote pipeline already exists, checking liveness"
-                            payload =
-                                mapOf(
-                                    "origin" to callingAddress,
-                                    "destination" to destination,
-                                    "callingPipeline" to callingPipeline.name,
-                                    "remotePipeline" to remoteId,
-                                )
-                        }
-
-                        val statusResponse = httpClient.get("http://$destinationHost:8080/pipeline/$remoteId")
-                        if (statusResponse.status.isSuccess()) {
-                            LOG.atDebug {
-                                message = "Remote pipeline is up"
-                                payload =
-                                    mapOf(
-                                        "origin" to callingAddress,
-                                        "destination" to destination,
-                                        "callingPipeline" to callingPipeline.name,
-                                        "remotePipeline" to remoteId,
-                                    )
-                            }
-
-                            // We return a list of endpoints here alongside their protocol ("TCP" and "UDP")
-                            call.respond(listOf(mapOf("endpoint" to remoteAddr, "protocol" to "TCP")))
-                            return@post
-                        }
-
-                        LOG.atDebug {
-                            message = "Existing pipeline is down or invalid, recreating"
-                            payload =
-                                mapOf(
-                                    "origin" to callingAddress,
-                                    "destination" to destination,
-                                    "callingPipeline" to callingPipeline.name,
-                                    "remotePipeline" to remoteId,
-                                )
-                        }
-
-                        remotePipelines.remove(callingPipeline to followingContract)
-                    }
-
-                    LOG.atDebug {
-                        message = "Creating pipeline on next connector"
-                        payload =
-                            mapOf(
-                                "origin" to callingAddress,
-                                "destination" to destination,
-                                "callingPipeline" to callingPipeline.name,
-                            )
-                    }
-
-                    val createReq =
-                        PipelineCreateRequest(
-                            target = callingPipeline.targetId,
-                            contractId = followingContract.uid.toString(),
-                            action = OdrlIdentifiers.USE,
-                        )
-
-                    val createResp =
-                        httpClient.post("http://$destinationHost:8080/pipeline") {
-                            contentType(ContentType.Application.Json)
-                            setBody(createReq)
-                        }
-
-                    if (!createResp.status.isSuccess()) {
-                        val body = createResp.bodyAsText()
-                        LOG.atDebug {
-                            message = "Could not create remote pipeline"
-                            payload =
-                                mapOf(
-                                    "origin" to callingAddress,
-                                    "destination" to destination,
-                                    "callingPipeline" to callingPipeline.name,
-                                    "status" to createResp.status,
-                                    "description" to body,
-                                )
-                        }
-                        //  code for some reason.
-                        call.respond(HttpStatusCode.BadGateway, body)
-                        return@post
-                    }
-
-                    val createdPipeline = createResp.body<PipelineCreateResponse>()
-
-                    LOG.atDebug {
-                        message = "Created new pipeline on the remote host"
-                        payload =
-                            mapOf(
-                                "origin" to callingAddress,
-                                "destination" to destination,
-                                "callingPipeline" to callingPipeline.name,
-                                "remotePipeline" to createdPipeline.pipelineName,
-                            )
-                    }
-
-                    //  does not seem to work otherwise (something about docker refusing to resolve using another docker
-                    //  daemon's dns server...)
-                    val remoteAddr = createdPipeline.ports[0].hostAddress
-
-                    remotePipelines[callingPipeline to followingContract] = remoteAddr to createdPipeline.pipelineName
-
-                    call.respond(listOf(mapOf("endpoint" to remoteAddr, "protocol" to "TCP")))
-                     */
-
                     val remotePipeline =
                         remotePipelineManager.getOrCreate(
                             Url("https://$destinationHost:8444"),
@@ -351,135 +230,6 @@ class ContainerInterfaceController(
 
                     call.respond(remotePipeline.ports.map { p -> mapOf("endpoint" to p.hostAddress, "protocol" to p.protocol.uppercase()) })
                 }
-            }
-
-            post("/proxy") {
-                val logParams = mutableMapOf<String, Any>()
-
-                val destination = call.queryParameters.getOrFail("destination")
-                val port = call.queryParameters["port"] // TODO: Change the pipeline create response to allow more ports
-
-                LOG.atDebug {
-                    message = "Servicing proxy request from container"
-                    payload =
-                        logParams.apply {
-                            put("origin", call.request.local.remoteAddress)
-                            put("destination", destination)
-                        }
-                }
-
-                // Obtain the next policy to use on the third container.
-
-                val pipeline =
-                    pipelineManager.getPipelineByIp(call.request.local.remoteAddress)
-                        ?: throw NotFoundException("Pipeline not found")
-                val contract =
-                    contractStore.getContract(pipeline.contractId) ?: throw NotFoundException("Contract not found")
-
-                LOG.atDebug {
-                    message = "Obtained contract for pipeline"
-                    payload =
-                        logParams.apply {
-                            put("pipeline", pipeline.name)
-                            put("contract", contract.uid)
-                            put("params", pipeline.placeholderValues)
-                        }
-                }
-
-                val evaluationResult =
-                    policyEngine.evaluatePolicy(contract, URI(OdrlIdentifiers.DISTRIBUTE), URI(pipeline.targetId))
-
-                LOG.atDebug {
-                    message = "Next policy evaluation ${if (evaluationResult.isSuccess) "successful" else "failed"}"
-                    cause = evaluationResult.exceptionOrNull()
-                    payload = logParams
-                }
-
-                val evaluation = evaluationResult.getOrElse { e -> throw BadRequestException("Policy evaluation failed", e) }
-
-                val nextPolicy =
-                    GlueValueProcessor().resolvePlaceholders(
-                        evaluation.nextPolicyTemplate ?: throw BadRequestException("No follow-up policy found"),
-                    ) {
-                        pipeline.placeholderValues[it] ?: throw NotFoundException("No value for placeholder $it")
-                    }
-
-                // Split the destination address into usable parts
-                val destinationURI = URI(destination)
-                val destinationHost = destinationURI.host
-                val destinationPath = destinationURI.path
-
-                // Negotiate the policy with the next connector
-
-                val convertedNextPolicy =
-                    odrlParser.convertToOdrlPolicy(nextPolicy.json)
-                        .toOffer(odrlParser, OdrlParty(URI("todo:name-this-connector")))
-
-                val negotiation =
-                    negotiationManager.startNegotiation(
-                        "https://$destinationHost:8444/negotiations",
-                        convertedNextPolicy,
-                    )
-
-                LOG.atDebug {
-                    message = "Entering contract negotiation with destination connector"
-                    payload = logParams // TODO: Obtain some more info from the negotiation somehow
-                }
-
-                val newPolicy = negotiation.await()
-
-                // Spawn the pipeline on the next container
-                LOG.atDebug {
-                    message = "Creating pipeline on destination connector"
-                    payload = logParams
-                }
-
-                val createReq =
-                    PipelineCreateRequest(
-                        target = pipeline.targetId,
-                        action = OdrlIdentifiers.USE,
-                        contractId = newPolicy.uid.toString(),
-                    )
-
-                // Wa may also want to add some sort of owner to it, so that the remote pipeline is stopped when this
-                // one shuts down (Assuming that is what we want).
-                val createResp =
-                    httpClient.post("https://$destinationHost:8444/pipeline") {
-                        header("Content-Type", ContentType.Application.Json)
-                        setBody(createReq)
-                        val (username, password) = Utils.getCredentials()
-                        basicAuth(username, password)
-                    }
-
-                if (!createResp.status.isSuccess()) {
-                    call.respond(HttpStatusCode.BadGateway)
-                    return@post
-                }
-
-                val remotePipeline = createResp.body<PipelineCreateResponse>()
-
-                LOG.atDebug {
-                    message = "Created pipeline on destination connector"
-                    payload = logParams.apply { put("remotePipeline", remotePipeline) }
-                }
-
-                // Proxy the actual request to the next connector
-
-                val appUrl = "http://${remotePipeline.ports[0].hostAddress}$destinationPath"
-                val appResponse =
-                    httpClient.post(appUrl) {
-                        setBody(call.request.receiveChannel())
-                    }
-
-                LOG.info { "Proxy request returned ${appResponse.status}" }
-
-                call.respond(
-                    object : OutgoingContent.WriteChannelContent() {
-                        override suspend fun writeTo(channel: ByteWriteChannel) {
-                            appResponse.bodyAsChannel().copyTo(channel)
-                        }
-                    },
-                )
             }
         }
     }

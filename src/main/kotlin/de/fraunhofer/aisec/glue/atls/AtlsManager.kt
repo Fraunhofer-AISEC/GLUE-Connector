@@ -12,11 +12,7 @@ import java.security.PEMDecoder
 import java.security.SecureRandom
 import java.security.Security
 import java.security.cert.X509Certificate
-import javax.net.ssl.SSLContext
-import javax.net.ssl.SSLSocketFactory
-import javax.net.ssl.TrustManagerFactory
-import javax.net.ssl.X509ExtendedKeyManager
-import javax.net.ssl.X509TrustManager
+import javax.net.ssl.*
 
 class AtlsManager(
     configManager: ConfigManager,
@@ -56,9 +52,9 @@ class AtlsManager(
     }
 
     val sslContext: SSLContext by lazy {
-        val context = SSLContext.getInstance("TLS")
-        context.init(arrayOf(keyManager), arrayOf(trustManager), SecureRandom())
-        context
+        SSLContext.getInstance("TLS").apply {
+            init(arrayOf(keyManager), arrayOf(trustManager), SecureRandom())
+        }
     }
 
     override val socketFactory: SSLSocketFactory by lazy {
