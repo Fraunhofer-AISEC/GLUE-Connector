@@ -157,18 +157,18 @@ val defaultDependencies by DI.Module {
                         port = 8444
                     }
                     channelPipelineConfig = {
-                        // Build SSL context with ATLS key and trust managers
-
-                        val handler = JdkSslContext(
-                            atlsManager.sslContext,
-                            /* isClient = */ false,
-                            /* ciphers = */ null,
-                            /* cipherFilter = */ io.netty.handler.ssl.IdentityCipherSuiteFilter.INSTANCE,
-                            /* apn = */ null,
-                            /* clientAuth = */ ClientAuth.REQUIRE,
-                            /* protocols = */ null,
-                            /* startTls = */ false,
-                        ).newHandler(channel().alloc())
+                        // Build SSL context with CMC backing
+                        val handler =
+                            JdkSslContext(
+                                atlsManager.sslContext,
+                                false,
+                                null,
+                                io.netty.handler.ssl.IdentityCipherSuiteFilter.INSTANCE,
+                                null,
+                                ClientAuth.REQUIRE,
+                                null,
+                                false,
+                            ).newHandler(channel().alloc())
 
                         // codec is the first handler guaranteed to be registered by the ktor HTTP 1.1 pipeline.
                         // We don't make use of the TLS implementation supplied by ktor as it expects a more traditional
