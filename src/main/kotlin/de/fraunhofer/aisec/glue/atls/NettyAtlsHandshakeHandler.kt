@@ -1,6 +1,7 @@
 package de.fraunhofer.aisec.glue.atls
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.netty.buffer.ByteBuf
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.ChannelInboundHandlerAdapter
@@ -8,7 +9,6 @@ import io.netty.handler.ssl.SslHandler
 import io.netty.handler.ssl.SslHandshakeCompletionEvent
 import kotlinx.coroutines.CoroutineDispatcher
 import java.security.MessageDigest
-import java.util.logging.Logger
 import javax.net.ssl.ExtendedSSLSession
 
 /**
@@ -31,13 +31,26 @@ class NettyAtlsHandshakeHandler(
     ) {
         if (evt is SslHandshakeCompletionEvent) {
             if (evt.isSuccess) {
-                Logger.getLogger(NettyAtlsHandshakeHandler::class.java.name)
-                    .info("TLS handshake completed successfully, initiating ATLS handshake")
+                LOG.atInfo {
+                    message = "TLS handshake completed successfully, starting ATLS post-handshake"
+                    payload =
+                        mapOf(
+                            "channel" to ctx.channel().id().asShortText(),
+                            "remoteAddress" to ctx.channel().remoteAddress().toString(),
+                        )
+                }
                 handshakeComplete = true
                 performAtlsHandshakeExchange(ctx)
             } else {
-                Logger.getLogger(NettyAtlsHandshakeHandler::class.java.name)
-                    .warning("TLS handshake failed: ${evt.cause()?.message}")
+                LOG.atWarn {
+                    message = "TLS handshake failed"
+                    cause = evt.cause()
+                    payload =
+                        mapOf(
+                            "channel" to ctx.channel().id().asShortText(),
+                            "remoteAddress" to ctx.channel().remoteAddress().toString(),
+                        )
+                }
                 ctx.close()
             }
         }
@@ -50,14 +63,43 @@ class NettyAtlsHandshakeHandler(
             val sslHandler = ctx.pipeline().get(SslHandler::class.java)
             val session = sslHandler.engine().session as ExtendedSSLSession
 
+            LOG.atDebug {
+                message = "Extracting SSL session information"
+                payload =
+                    mapOf(
+                        "channel" to ctx.channel().id().asShortText(),
+                        "protocol" to session.protocol,
+                        "cipherSuite" to session.cipherSuite,
+                    )
+            }
+
             // Extract the Exporter Channel Binding
             val channelBinding = session.exportKeyingMaterialData("EXPORTER-Channel-Binding", null, 32)
+
+            LOG.atDebug {
+                message = "Extracted channel binding data"
+                payload =
+                    mapOf(
+                        "channel" to ctx.channel().id().asShortText(),
+                        "bindingLength" to channelBinding.size,
+                    )
+            }
 
             // Calculate cache key from peer certificate SHA-256 hash
             val cacheKey =
                 session.peerCertificates.firstOrNull()?.let {
                     MessageDigest.getInstance("SHA-256").digest(it.encoded).toHexString()
                 }
+
+            LOG.atDebug {
+                message = "Calculated peer certificate cache key"
+                payload =
+                    mapOf(
+                        "channel" to ctx.channel().id().asShortText(),
+                        "cacheKey" to (cacheKey ?: "null"),
+                        "hasPeerCert" to (session.peerCertificates.firstOrNull() != null),
+                    )
+            }
 
             // Create the ATLS handshake with channel binding
             atlsHandshake =
@@ -71,12 +113,36 @@ class NettyAtlsHandshakeHandler(
                     dispatcher,
                 )
 
+            LOG.atDebug {
+                message = "Created ATLS handshake instance"
+                payload =
+                    mapOf(
+                        "channel" to ctx.channel().id().asShortText(),
+                        "attestationType" to "SERVER",
+                        "useCaching" to false,
+                    )
+            }
+
             // Start the ATLS handshake and send the initial packet
             val initialPacket = atlsHandshake!!.start()
+            LOG.atDebug {
+                message = "Starting ATLS handshake, sending initial packet"
+                payload =
+                    mapOf(
+                        "channel" to ctx.channel().id().asShortText(),
+                        "packetSize" to initialPacket.size,
+                    )
+            }
             sendPacket(ctx, initialPacket)
         } catch (e: Exception) {
-            Logger.getLogger(NettyAtlsHandshakeHandler::class.java.name)
-                .warning("Failed to initiate ATLS handshake: ${e.message}")
+            LOG.atWarn {
+                message = "Failed to initiate ATLS handshake"
+                cause = e
+                payload =
+                    mapOf(
+                        "channel" to ctx.channel().id().asShortText(),
+                    )
+            }
             ctx.close()
         }
     }
@@ -90,11 +156,37 @@ class NettyAtlsHandshakeHandler(
         buffer.writeInt(packet.size)
         buffer.writeBytes(packet)
 
+        LOG.atDebug {
+            message = "Sending ATLS packet"
+            payload =
+                mapOf(
+                    "channel" to ctx.channel().id().asShortText(),
+                    "packetSize" to packet.size,
+                    "totalBufferSize" to (4 + packet.size),
+                )
+        }
+
         ctx.writeAndFlush(buffer).addListener { future ->
             if (!future.isSuccess) {
-                Logger.getLogger(NettyAtlsHandshakeHandler::class.java.name)
-                    .warning("Failed to send ATLS packet: ${future.cause()?.message}")
+                LOG.atWarn {
+                    message = "Failed to send ATLS packet"
+                    cause = future.cause()
+                    payload =
+                        mapOf(
+                            "channel" to ctx.channel().id().asShortText(),
+                            "packetSize" to packet.size,
+                        )
+                }
                 ctx.close()
+            } else {
+                LOG.atDebug {
+                    message = "ATLS packet sent successfully"
+                    payload =
+                        mapOf(
+                            "channel" to ctx.channel().id().asShortText(),
+                            "packetSize" to packet.size,
+                        )
+                }
             }
         }
     }
@@ -112,26 +204,73 @@ class NettyAtlsHandshakeHandler(
                     msg.readBytes(bytes)
                     receivedData.add(bytes)
 
-                    // Try to read length-prefixed packet
+                    LOG.atDebug {
+                        message = "Received data during ATLS handshake"
+                        payload =
+                            mapOf(
+                                "channel" to ctx.channel().id().asShortText(),
+                                "bytesReceived" to bytes.size,
+                                "totalBuffered" to receivedData.sumOf { it.size },
+                            )
+                    }
+
+                    // Try to read the length-prefixed packet
                     val packet = readPacketIfAvailable()
                     if (packet != null) {
+                        LOG.atDebug {
+                            message = "Complete ATLS packet received, feeding to handshake"
+                            payload =
+                                mapOf(
+                                    "channel" to ctx.channel().id().asShortText(),
+                                    "packetSize" to packet.size,
+                                )
+                        }
+
                         // Feed the packet to ATLS handshake
                         val responsePacket = atlsHandshake!!.feedPacket(packet)
 
                         // Send response if available
                         if (responsePacket != null) {
+                            LOG.atDebug {
+                                message = "ATLS handshake produced response packet"
+                                payload =
+                                    mapOf(
+                                        "channel" to ctx.channel().id().asShortText(),
+                                        "responseSize" to responsePacket.size,
+                                    )
+                            }
                             sendPacket(ctx, responsePacket)
+                        } else {
+                            LOG.atDebug {
+                                message = "ATLS handshake did not produce response packet"
+                                payload =
+                                    mapOf(
+                                        "channel" to ctx.channel().id().asShortText(),
+                                    )
+                            }
                         }
 
                         // Check if handshake is complete
                         if (!atlsHandshake!!.isRunning) {
                             if (atlsHandshake!!.failure != null) {
-                                Logger.getLogger(NettyAtlsHandshakeHandler::class.java.name)
-                                    .warning("ATLS handshake failed: ${atlsHandshake!!.failure?.message}")
+                                LOG.atWarn {
+                                    message = "ATLS handshake failed"
+                                    cause = atlsHandshake!!.failure
+                                    payload =
+                                        mapOf(
+                                            "channel" to ctx.channel().id().asShortText(),
+                                        )
+                                }
                                 ctx.close()
                             } else {
-                                Logger.getLogger(NettyAtlsHandshakeHandler::class.java.name)
-                                    .info("ATLS handshake completed successfully")
+                                LOG.atDebug {
+                                    message = "ATLS post-handshake completed successfully, removing handler from pipeline"
+                                    payload =
+                                        mapOf(
+                                            "channel" to ctx.channel().id().asShortText(),
+                                            "bufferedDataCleared" to receivedData.size,
+                                        )
+                                }
                                 postHandshakeComplete = true
                                 atlsHandshake = null
                                 receivedData.clear()
@@ -142,8 +281,14 @@ class NettyAtlsHandshakeHandler(
                         }
                     }
                 } catch (e: Exception) {
-                    Logger.getLogger(NettyAtlsHandshakeHandler::class.java.name)
-                        .warning("Error processing ATLS packet: ${e.message}")
+                    LOG.atWarn {
+                        message = "Error processing ATLS packet"
+                        cause = e
+                        payload =
+                            mapOf(
+                                "channel" to ctx.channel().id().asShortText(),
+                            )
+                    }
                     ctx.close()
                 } finally {
                     msg.release()
@@ -162,6 +307,14 @@ class NettyAtlsHandshakeHandler(
         // Combine all received data
         val totalSize = receivedData.sumOf { it.size }
         if (totalSize < 4) {
+            LOG.atWarn {
+                message = "Insufficient data for packet length prefix"
+                payload =
+                    mapOf(
+                        "bufferedBytes" to totalSize,
+                        "requiredBytes" to 4,
+                    )
+            }
             return null // Need at least 4 bytes for length
         }
 
@@ -179,6 +332,16 @@ class NettyAtlsHandshakeHandler(
                 ((combined[2].toInt() and 0xFF) shl 8) or
                 (combined[3].toInt() and 0xFF)
 
+        LOG.atDebug {
+            message = "Read packet length prefix"
+            payload =
+                mapOf(
+                    "expectedPacketSize" to length,
+                    "bufferedBytes" to totalSize,
+                    "hasCompletePacket" to (totalSize >= 4 + length),
+                )
+        }
+
         if (totalSize < 4 + length) {
             return null // Need more data
         }
@@ -189,7 +352,24 @@ class NettyAtlsHandshakeHandler(
         // Keep remaining data for next packet
         receivedData.clear()
         if (totalSize > 4 + length) {
+            val remainingSize = totalSize - (4 + length)
             receivedData.add(combined.copyOfRange(4 + length, totalSize))
+            LOG.atDebug {
+                message = "Extracted packet with remaining data"
+                payload =
+                    mapOf(
+                        "packetSize" to length,
+                        "remainingBuffered" to remainingSize,
+                    )
+            }
+        } else {
+            LOG.atDebug {
+                message = "Extracted complete packet"
+                payload =
+                    mapOf(
+                        "packetSize" to length,
+                    )
+            }
         }
 
         return packet
@@ -199,8 +379,20 @@ class NettyAtlsHandshakeHandler(
         ctx: ChannelHandlerContext,
         cause: Throwable,
     ) {
-        Logger.getLogger(NettyAtlsHandshakeHandler::class.java.name)
-            .warning("Exception in ATLS handshake handler: ${cause.message}")
+        LOG.atWarn {
+            message = "Exception in ATLS handshake handler"
+            this.cause = cause
+            payload =
+                mapOf(
+                    "channel" to ctx.channel().id().asShortText(),
+                    "handshakeComplete" to handshakeComplete,
+                    "postHandshakeComplete" to postHandshakeComplete,
+                )
+        }
         ctx.close()
+    }
+
+    companion object {
+        private val LOG = KotlinLogging.logger {}
     }
 }

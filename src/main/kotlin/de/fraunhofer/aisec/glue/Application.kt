@@ -45,9 +45,10 @@ import io.netty.handler.ssl.JdkSslContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import org.kodein.di.*
-import java.util.logging.Filter
-import java.util.logging.Level
-import java.util.logging.Logger
+import java.time.ZoneId
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
+import java.util.logging.*
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation as ClientContentNegotiation
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation as ServerContentNegotiation
 
@@ -59,11 +60,26 @@ fun main(args: Array<String>) {
         hashSetOf(
             Pair("java.io.ObjectInputFilter\$Config", "traceFilter"),
             Pair("java.io.ObjectInputStream", "filterCheck"),
+            Pair("jdk.internal.event.EventHelper", "logX509CertificateEvent"),
         )
     Logger.getLogger("").apply {
         level = Level.ALL
         handlers.forEach { handler ->
             handler.level = Level.ALL
+            // Configure the timestamp format with microseconds in ISO-8601 format with local timezone
+            handler.formatter = object : SimpleFormatter() {
+                private val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSSSSXXX")
+                override fun format(record: LogRecord): String {
+                    val timestamp = ZonedDateTime.now(ZoneId.systemDefault()).format(dateFormatter)
+                    val message = formatMessage(record)
+                    val throwable = if (record.thrown != null) {
+                        val sw = java.io.StringWriter()
+                        record.thrown.printStackTrace(java.io.PrintWriter(sw))
+                        "\n$sw"
+                    } else ""
+                    return "$timestamp [${record.level}] ${record.loggerName} - $message$throwable\n"
+                }
+            }
             // Filter background noise
             handler.filter =
                 Filter { record ->
@@ -93,7 +109,7 @@ val defaultDependencies by DI.Module {
                 install(HttpTimeout) {
                     // Required as we need to wait for a remote container to fetch the atls-proxy image in the the start
                     // pipeline request
-                    socketTimeoutMillis = 180000
+                    socketTimeoutMillis = 10000
                 }
                 engine {
                     config {
