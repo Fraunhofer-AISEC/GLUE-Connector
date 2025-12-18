@@ -1,6 +1,7 @@
 package de.fraunhofer.aisec.glue.atls
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.CoroutineDispatcher
 import java.io.DataInputStream
 import java.io.DataOutputStream
@@ -22,15 +23,57 @@ class AtlsSocket(
     private var handshakeCompleted: Boolean = false
 
     override fun startHandshake() {
+        LOG.atDebug {
+            message = "Starting TLS handshake"
+            payload = mapOf(
+                "socket" to inner.remoteSocketAddress.toString()
+            )
+        }
+
         inner.startHandshake()
 
         if (!handshakeCompleted) {
+            LOG.atDebug {
+                message = "TLS handshake completed, initiating ATLS post-handshake"
+                payload = mapOf(
+                    "socket" to inner.remoteSocketAddress.toString()
+                )
+            }
+
             val session = inner.session as ExtendedSSLSession
+
+            LOG.atDebug {
+                message = "Extracting SSL session information"
+                payload = mapOf(
+                    "socket" to inner.remoteSocketAddress.toString(),
+                    "protocol" to session.protocol,
+                    "cipherSuite" to session.cipherSuite
+                )
+            }
+
             val channelBinding = session.exportKeyingMaterialData("EXPORTER-Channel-Binding", null, 32)
+
+            LOG.atDebug {
+                message = "Extracted channel binding data"
+                payload = mapOf(
+                    "socket" to inner.remoteSocketAddress.toString(),
+                    "bindingLength" to channelBinding.size
+                )
+            }
+
             val cacheKey =
                 session.peerCertificates.first()?.let {
                     MessageDigest.getInstance("SHA-256").digest(it.encoded).toHexString()
                 }
+
+            LOG.atDebug {
+                message = "Calculated peer certificate cache key"
+                payload = mapOf(
+                    "socket" to inner.remoteSocketAddress.toString(),
+                    "cacheKey" to (cacheKey ?: "null"),
+                    "hasPeerCert" to (session.peerCertificates.firstOrNull() != null)
+                )
+            }
 
             val atlsHandshake =
                 AtlsHandshake(
@@ -43,10 +86,27 @@ class AtlsSocket(
                     dispatcher,
                 )
 
+            LOG.atDebug {
+                message = "Created ATLS handshake instance"
+                payload = mapOf(
+                    "socket" to inner.remoteSocketAddress.toString(),
+                    "attestationType" to "SERVER",
+                    "useCaching" to true
+                )
+            }
+
             val input = DataInputStream(inner.getInputStream())
             val output = DataOutputStream(inner.getOutputStream())
 
             val initialPacket = atlsHandshake.start()
+
+            LOG.atDebug {
+                message = "Starting ATLS handshake, sending initial packet"
+                payload = mapOf(
+                    "socket" to inner.remoteSocketAddress.toString(),
+                    "packetSize" to initialPacket.size
+                )
+            }
 
             output.writeInt(initialPacket.size)
             output.write(initialPacket)
@@ -54,19 +114,62 @@ class AtlsSocket(
 
             while (atlsHandshake.isRunning) {
                 val readLength = input.readInt()
+                LOG.atDebug {
+                    message = "Reading ATLS packet"
+                    payload = mapOf(
+                        "socket" to inner.remoteSocketAddress.toString(),
+                        "expectedLength" to readLength
+                    )
+                }
+
                 val readPacket = input.readNBytes(readLength)
+                LOG.atDebug {
+                    message = "Received ATLS packet, feeding to handshake"
+                    payload = mapOf(
+                        "socket" to inner.remoteSocketAddress.toString(),
+                        "packetSize" to readPacket.size
+                    )
+                }
 
                 val writePacket = atlsHandshake.feedPacket(readPacket)
 
                 if (writePacket != null) {
+                    LOG.atDebug {
+                        message = "ATLS handshake produced response packet, sending"
+                        payload = mapOf(
+                            "socket" to inner.remoteSocketAddress.toString(),
+                            "responseSize" to writePacket.size
+                        )
+                    }
                     output.writeInt(writePacket.size)
                     output.write(writePacket)
                     output.flush()
+                } else {
+                    LOG.atDebug {
+                        message = "ATLS handshake did not produce response packet"
+                        payload = mapOf(
+                            "socket" to inner.remoteSocketAddress.toString()
+                        )
+                    }
                 }
             }
 
             if (atlsHandshake.failure != null) {
+                LOG.atWarn {
+                    message = "ATLS handshake failed"
+                    cause = atlsHandshake.failure
+                    payload = mapOf(
+                        "socket" to inner.remoteSocketAddress.toString()
+                    )
+                }
                 throw IllegalStateException("ATLS handshake failed", atlsHandshake.failure)
+            }
+
+            LOG.atDebug {
+                message = "ATLS handshake completed successfully"
+                payload = mapOf(
+                    "socket" to inner.remoteSocketAddress.toString()
+                )
             }
 
             handshakeCompleted = true
@@ -349,5 +452,9 @@ class AtlsSocket(
 
     override fun getHandshakeApplicationProtocolSelector(): java.util.function.BiFunction<SSLSocket, MutableList<String>, String>? {
         return inner.handshakeApplicationProtocolSelector
+    }
+
+    companion object {
+        private val LOG = KotlinLogging.logger {}
     }
 }
