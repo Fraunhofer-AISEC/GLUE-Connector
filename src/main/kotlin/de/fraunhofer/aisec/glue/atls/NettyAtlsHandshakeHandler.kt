@@ -134,8 +134,6 @@ class NettyAtlsHandshakeHandler(
                     )
             }
             sendPacket(ctx, initialPacket)
-            // Request initial read to start receiving responses
-            ctx.read()
         } catch (e: Exception) {
             LOG.atWarn {
                 message = "Failed to initiate ATLS handshake"
