@@ -134,6 +134,8 @@ class NettyAtlsHandshakeHandler(
                     )
             }
             sendPacket(ctx, initialPacket)
+            // Request initial read to start receiving responses
+            ctx.read()
         } catch (e: Exception) {
             LOG.atWarn {
                 message = "Failed to initiate ATLS handshake"
@@ -187,6 +189,7 @@ class NettyAtlsHandshakeHandler(
                             "packetSize" to packet.size,
                         )
                 }
+                ctx.read()
             }
         }
     }
@@ -195,10 +198,15 @@ class NettyAtlsHandshakeHandler(
         ctx: ChannelHandlerContext,
         msg: Any,
     ) {
+        LOG.info { "Received message of type ${msg.javaClass.simpleName}" }
+
         if (handshakeComplete && !postHandshakeComplete && atlsHandshake != null) {
             // Process ATLS handshake packets
             if (msg is ByteBuf) {
                 try {
+                    if (msg.readableBytes() == 0) {
+                        throw IllegalStateException("Received empty buffer")
+                    }
                     // Accumulate received bytes
                     val bytes = ByteArray(msg.readableBytes())
                     msg.readBytes(bytes)
@@ -214,15 +222,15 @@ class NettyAtlsHandshakeHandler(
                             )
                     }
 
-                    // Try to read the length-prefixed packet
-                    val packet = readPacketIfAvailable()
-                    if (packet != null) {
+                    // Try to read all length-prefixed packets
+                    var packet = readPacketIfAvailable()
+                    while (packet != null) {
                         LOG.atDebug {
                             message = "Complete ATLS packet received, feeding to handshake"
                             payload =
                                 mapOf(
                                     "channel" to ctx.channel().id().asShortText(),
-                                    "packetSize" to packet.size,
+                                    "packetSize" to packet!!.size,
                                 )
                         }
 
@@ -248,6 +256,8 @@ class NettyAtlsHandshakeHandler(
                                         "channel" to ctx.channel().id().asShortText(),
                                     )
                             }
+                            // Request more data since we're waiting for a response
+                            ctx.read()
                         }
 
                         // Check if handshake is complete
@@ -268,17 +278,38 @@ class NettyAtlsHandshakeHandler(
                                     payload =
                                         mapOf(
                                             "channel" to ctx.channel().id().asShortText(),
-                                            "bufferedDataCleared" to receivedData.size,
+                                            "bufferedDataRemaining" to receivedData.sumOf { it.size },
                                         )
                                 }
                                 postHandshakeComplete = true
                                 atlsHandshake = null
+
+                                // Forward any remaining buffered data to the next handler
+                                if (receivedData.isNotEmpty()) {
+                                    val remaining = receivedData.sumOf { it.size }
+                                    val buffer = ctx.alloc().buffer(remaining)
+                                    receivedData.forEach { buffer.writeBytes(it) }
+                                    LOG.atDebug {
+                                        message = "Forwarding remaining buffered data to next handler"
+                                        payload =
+                                            mapOf(
+                                                "channel" to ctx.channel().id().asShortText(),
+                                                "remainingBytes" to remaining,
+                                            )
+                                    }
+                                    ctx.fireChannelRead(buffer)
+                                }
                                 receivedData.clear()
 
                                 // Remove this handler from the pipeline as its job is done
                                 ctx.pipeline().remove(this)
+                                ctx.read()
                             }
+                            break
                         }
+
+                        // Try to read the next packet
+                        packet = readPacketIfAvailable()
                     }
                 } catch (e: Exception) {
                     LOG.atWarn {
