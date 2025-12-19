@@ -6,6 +6,7 @@ ktor:
       - de.fraunhofer.aisec.glue.ApplicationKt.module
 connector:
   identity: "https://glue-connector.local"
+  publicUrl: "${?PUBLIC_URL}"
   edc:
     url: "http://localhost:29193"
 atls:
