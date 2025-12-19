@@ -67,19 +67,24 @@ fun main(args: Array<String>) {
         handlers.forEach { handler ->
             handler.level = Level.ALL
             // Configure the timestamp format with microseconds in ISO-8601 format with local timezone
-            handler.formatter = object : SimpleFormatter() {
-                private val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSSSSXXX")
-                override fun format(record: LogRecord): String {
-                    val timestamp = ZonedDateTime.now(ZoneId.systemDefault()).format(dateFormatter)
-                    val message = formatMessage(record)
-                    val throwable = if (record.thrown != null) {
-                        val sw = java.io.StringWriter()
-                        record.thrown.printStackTrace(java.io.PrintWriter(sw))
-                        "\n$sw"
-                    } else ""
-                    return "$timestamp [${record.level}] ${record.loggerName} - $message$throwable\n"
+            handler.formatter =
+                object : SimpleFormatter() {
+                    private val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSSSSXXX")
+
+                    override fun format(record: LogRecord): String {
+                        val timestamp = ZonedDateTime.now(ZoneId.systemDefault()).format(dateFormatter)
+                        val message = formatMessage(record)
+                        val throwable =
+                            if (record.thrown != null) {
+                                val sw = java.io.StringWriter()
+                                record.thrown.printStackTrace(java.io.PrintWriter(sw))
+                                "\n$sw"
+                            } else {
+                                ""
+                            }
+                        return "$timestamp [${record.level}] ${record.loggerName} - $message$throwable\n"
+                    }
                 }
-            }
             // Filter background noise
             handler.filter =
                 Filter { record ->

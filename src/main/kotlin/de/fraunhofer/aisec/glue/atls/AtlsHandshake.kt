@@ -47,13 +47,14 @@ class AtlsHandshake(
 
         LOG.atDebug {
             message = "Starting ATLS handshake state machine"
-            payload = mapOf(
-                "attestationType" to attestationType.name,
-                "isClient" to isClient,
-                "attestSelf" to attestSelf,
-                "attestPeer" to attestPeer,
-                "hasCacheKey" to (cacheKey != null)
-            )
+            payload =
+                mapOf(
+                    "attestationType" to attestationType.name,
+                    "isClient" to isClient,
+                    "attestSelf" to attestSelf,
+                    "attestPeer" to attestPeer,
+                    "hasCacheKey" to (cacheKey != null),
+                )
         }
 
         val cache =
@@ -67,19 +68,21 @@ class AtlsHandshake(
                 }.also { result ->
                     LOG.atDebug {
                         message = "Fetched peer cache from CMC"
-                        payload = mapOf(
-                            "cacheKey" to cacheKey,
-                            "cacheSize" to (result?.size ?: 0)
-                        )
+                        payload =
+                            mapOf(
+                                "cacheKey" to cacheKey,
+                                "cacheSize" to (result?.size ?: 0),
+                            )
                     }
                 }
             } else {
                 LOG.atDebug {
                     message = "Skipping peer cache fetch"
-                    payload = mapOf(
-                        "attestPeer" to attestPeer,
-                        "hasCacheKey" to (cacheKey != null)
-                    )
+                    payload =
+                        mapOf(
+                            "attestPeer" to attestPeer,
+                            "hasCacheKey" to (cacheKey != null),
+                        )
                 }
                 null
             }
@@ -90,12 +93,13 @@ class AtlsHandshake(
 
         LOG.atDebug {
             message = "ATLS handshake started, created initial request packet"
-            payload = mapOf(
-                "state" to state.name,
-                "packetSize" to packet.size,
-                "version" to VERSION,
-                "attestationTypeValue" to attestationType.protocolValue
-            )
+            payload =
+                mapOf(
+                    "state" to state.name,
+                    "packetSize" to packet.size,
+                    "version" to VERSION,
+                    "attestationTypeValue" to attestationType.protocolValue,
+                )
         }
 
         return packet
@@ -105,20 +109,22 @@ class AtlsHandshake(
         try {
             LOG.atDebug {
                 message = "Parsing ATLS packet"
-                payload = mapOf(
-                    "targetType" to T::class.simpleName,
-                    "packetSize" to packet.size
-                )
+                payload =
+                    mapOf(
+                        "targetType" to T::class.simpleName,
+                        "packetSize" to packet.size,
+                    )
             }
             return objectMapper.readValue<T>(packet)
         } catch (e: Exception) {
             LOG.atWarn {
                 message = "Failed to parse ATLS packet"
                 cause = e
-                payload = mapOf(
-                    "targetType" to T::class.simpleName,
-                    "packetSize" to packet.size
-                )
+                payload =
+                    mapOf(
+                        "targetType" to T::class.simpleName,
+                        "packetSize" to packet.size,
+                    )
             }
             throw IllegalArgumentException("Could not parse packet as a ${T::class.simpleName}", e)
         }
@@ -127,30 +133,33 @@ class AtlsHandshake(
     private fun handleRequest(packet: ByteArray): ByteArray {
         LOG.atDebug {
             message = "Handling ATLS request"
-            payload = mapOf(
-                "currentState" to state.name,
-                "packetSize" to packet.size
-            )
+            payload =
+                mapOf(
+                    "currentState" to state.name,
+                    "packetSize" to packet.size,
+                )
         }
 
         val req = parsePacket<AtlsHandshakeRequest>(packet)
 
         LOG.atDebug {
             message = "Parsed ATLS request"
-            payload = mapOf(
-                "version" to req.version,
-                "attestValue" to req.attest,
-                "hasCachedData" to (req.cached != null)
-            )
+            payload =
+                mapOf(
+                    "version" to req.version,
+                    "attestValue" to req.attest,
+                    "hasCachedData" to (req.cached != null),
+                )
         }
 
         if (req.version != VERSION) {
             LOG.atWarn {
                 message = "Unsupported ATLS version"
-                payload = mapOf(
-                    "receivedVersion" to req.version,
-                    "supportedVersion" to VERSION
-                )
+                payload =
+                    mapOf(
+                        "receivedVersion" to req.version,
+                        "supportedVersion" to VERSION,
+                    )
             }
             throw IllegalArgumentException("Version ${req.version} is not supported")
         }
@@ -158,20 +167,22 @@ class AtlsHandshake(
         val peerAttestationType = AttestationType.fromProtocolValue(req.attest)
         LOG.atDebug {
             message = "Checking attestation type compatibility"
-            payload = mapOf(
-                "ourAttestationType" to attestationType.name,
-                "peerAttestationType" to peerAttestationType.name,
-                "isClient" to isClient
-            )
+            payload =
+                mapOf(
+                    "ourAttestationType" to attestationType.name,
+                    "peerAttestationType" to peerAttestationType.name,
+                    "isClient" to isClient,
+                )
         }
 
         if (!attestationType.isCompatible(peerAttestationType, isClient)) {
             LOG.atWarn {
                 message = "Incompatible attestation types"
-                payload = mapOf(
-                    "ourAttestationType" to attestationType.name,
-                    "peerAttestationType" to peerAttestationType.name
-                )
+                payload =
+                    mapOf(
+                        "ourAttestationType" to attestationType.name,
+                        "peerAttestationType" to peerAttestationType.name,
+                    )
             }
             throw IllegalArgumentException("The peer's attestation type $peerAttestationType is incompatible with $attestationType")
         }
@@ -187,10 +198,11 @@ class AtlsHandshake(
                 }.also { result ->
                     LOG.atDebug {
                         message = "Received attestation from CMC"
-                        payload = mapOf(
-                            "hasMetadata" to (result.metadata != null),
-                            "cacheMissesCount" to (result.cacheMisses?.size ?: 0)
-                        )
+                        payload =
+                            mapOf(
+                                "hasMetadata" to (result.metadata != null),
+                                "cacheMissesCount" to (result.cacheMisses?.size ?: 0),
+                            )
                     }
                 }
             } else {
@@ -202,22 +214,24 @@ class AtlsHandshake(
             }
 
         state = State.AwaitingResponse
-        val response = AtlsHandshakeResponse(
-            VERSION,
-            report = cmcResult?.report,
-            metadata = cmcResult?.metadata,
-            cacheMisses = cmcResult?.cacheMisses,
-        )
+        val response =
+            AtlsHandshakeResponse(
+                VERSION,
+                report = cmcResult?.report,
+                metadata = cmcResult?.metadata,
+                cacheMisses = cmcResult?.cacheMisses,
+            )
         val responsePacket = objectMapper.writeValueAsBytes(response)
 
         LOG.atDebug {
             message = "Created ATLS response packet"
-            payload = mapOf(
-                "state" to state.name,
-                "packetSize" to responsePacket.size,
-                "hasReport" to (response.report != null),
-                "hasMetadata" to (response.metadata != null)
-            )
+            payload =
+                mapOf(
+                    "state" to state.name,
+                    "packetSize" to responsePacket.size,
+                    "hasReport" to (response.report != null),
+                    "hasMetadata" to (response.metadata != null),
+                )
         }
 
         return responsePacket
@@ -226,32 +240,35 @@ class AtlsHandshake(
     private fun handleResponse(packet: ByteArray): ByteArray {
         LOG.atDebug {
             message = "Handling ATLS response"
-            payload = mapOf(
-                "currentState" to state.name,
-                "packetSize" to packet.size
-            )
+            payload =
+                mapOf(
+                    "currentState" to state.name,
+                    "packetSize" to packet.size,
+                )
         }
 
         val req = parsePacket<AtlsHandshakeResponse>(packet)
 
         LOG.atDebug {
             message = "Parsed ATLS response"
-            payload = mapOf(
-                "version" to req.version,
-                "hasReport" to (req.report != null),
-                "hasMetadata" to (req.metadata != null),
-                "hasCacheMisses" to (req.cacheMisses != null),
-                "hasError" to (req.error != null)
-            )
+            payload =
+                mapOf(
+                    "version" to req.version,
+                    "hasReport" to (req.report != null),
+                    "hasMetadata" to (req.metadata != null),
+                    "hasCacheMisses" to (req.cacheMisses != null),
+                    "hasError" to (req.error != null),
+                )
         }
 
         if (req.version != VERSION) {
             LOG.atWarn {
                 message = "Unsupported ATLS version in response"
-                payload = mapOf(
-                    "receivedVersion" to req.version,
-                    "supportedVersion" to VERSION
-                )
+                payload =
+                    mapOf(
+                        "receivedVersion" to req.version,
+                        "supportedVersion" to VERSION,
+                    )
             }
             throw IllegalArgumentException("Version ${req.version} is not supported")
         }
@@ -267,21 +284,23 @@ class AtlsHandshake(
 
         val verificationResult =
             if (attestPeer) {
-                val report = req.report ?: run {
-                    LOG.atWarn {
-                        message = "Missing report in attestation response"
-                        payload = mapOf("attestPeer" to attestPeer)
+                val report =
+                    req.report ?: run {
+                        LOG.atWarn {
+                            message = "Missing report in attestation response"
+                            payload = mapOf("attestPeer" to attestPeer)
+                        }
+                        throw IllegalArgumentException("Report is missing from attestation response")
                     }
-                    throw IllegalArgumentException("Report is missing from attestation response")
-                }
                 LOG.atDebug {
                     message = "Verifying peer attestation with CMC"
-                    payload = mapOf(
-                        "hasReport" to true,
-                        "hasMetadata" to (req.metadata != null),
-                        "hasCacheKey" to (cacheKey != null),
-                        "cacheMissesCount" to (req.cacheMisses?.size ?: 0)
-                    )
+                    payload =
+                        mapOf(
+                            "hasReport" to true,
+                            "hasMetadata" to (req.metadata != null),
+                            "hasCacheKey" to (cacheKey != null),
+                            "cacheMissesCount" to (req.cacheMisses?.size ?: 0),
+                        )
                 }
                 runBlocking(
                     handshakeScope.coroutineContext,
@@ -304,11 +323,12 @@ class AtlsHandshake(
 
         LOG.atDebug {
             message = "Created ATLS complete packet"
-            payload = mapOf(
-                "state" to state.name,
-                "packetSize" to completePacket.size,
-                "success" to verificationResult
-            )
+            payload =
+                mapOf(
+                    "state" to state.name,
+                    "packetSize" to completePacket.size,
+                    "success" to verificationResult,
+                )
         }
 
         return completePacket
@@ -317,30 +337,33 @@ class AtlsHandshake(
     private fun handleComplete(packet: ByteArray): ByteArray? {
         LOG.atDebug {
             message = "Handling ATLS complete"
-            payload = mapOf(
-                "currentState" to state.name,
-                "packetSize" to packet.size
-            )
+            payload =
+                mapOf(
+                    "currentState" to state.name,
+                    "packetSize" to packet.size,
+                )
         }
 
         val req = parsePacket<AtlsHandshakeComplete>(packet)
 
         LOG.atDebug {
             message = "Parsed ATLS complete"
-            payload = mapOf(
-                "version" to req.version,
-                "success" to req.success,
-                "hasError" to (req.error != null)
-            )
+            payload =
+                mapOf(
+                    "version" to req.version,
+                    "success" to req.success,
+                    "hasError" to (req.error != null),
+                )
         }
 
         if (req.version != VERSION) {
             LOG.atWarn {
                 message = "Unsupported ATLS version in complete"
-                payload = mapOf(
-                    "receivedVersion" to req.version,
-                    "supportedVersion" to VERSION
-                )
+                payload =
+                    mapOf(
+                        "receivedVersion" to req.version,
+                        "supportedVersion" to VERSION,
+                    )
             }
             throw IllegalArgumentException("Version ${req.version} is not supported")
         }
@@ -357,10 +380,11 @@ class AtlsHandshake(
         LOG.info { "ATLS handshake state machine completed successfully" }
         LOG.atDebug {
             message = "ATLS handshake state machine completed"
-            payload = mapOf(
-                "finalState" to state.name,
-                "success" to req.success
-            )
+            payload =
+                mapOf(
+                    "finalState" to state.name,
+                    "success" to req.success,
+                )
         }
 
         return null
@@ -372,28 +396,31 @@ class AtlsHandshake(
     fun feedPacket(packet: ByteArray): ByteArray? {
         LOG.atDebug {
             message = "Feeding packet to ATLS state machine"
-            payload = mapOf(
-                "currentState" to state.name,
-                "packetSize" to packet.size
-            )
+            payload =
+                mapOf(
+                    "currentState" to state.name,
+                    "packetSize" to packet.size,
+                )
         }
 
         try {
-            val result = when (state) {
-                State.Initial -> throw IllegalStateException("ATLS handshake state machine was not started yet")
-                State.AwaitingRequest -> handleRequest(packet)
-                State.AwaitingResponse -> handleResponse(packet)
-                State.AwaitingComplete -> handleComplete(packet)
-                State.Completed, State.Failed -> throw IllegalStateException("ATLS handshake state machine has already completed")
-            }
+            val result =
+                when (state) {
+                    State.Initial -> throw IllegalStateException("ATLS handshake state machine was not started yet")
+                    State.AwaitingRequest -> handleRequest(packet)
+                    State.AwaitingResponse -> handleResponse(packet)
+                    State.AwaitingComplete -> handleComplete(packet)
+                    State.Completed, State.Failed -> throw IllegalStateException("ATLS handshake state machine has already completed")
+                }
 
             LOG.atDebug {
                 message = "State machine processed packet"
-                payload = mapOf(
-                    "newState" to state.name,
-                    "hasResponsePacket" to (result != null),
-                    "responseSize" to (result?.size ?: 0)
-                )
+                payload =
+                    mapOf(
+                        "newState" to state.name,
+                        "hasResponsePacket" to (result != null),
+                        "responseSize" to (result?.size ?: 0),
+                    )
             }
 
             return result
@@ -401,10 +428,11 @@ class AtlsHandshake(
             LOG.atWarn {
                 message = "ATLS handshake state machine encountered error"
                 cause = e
-                payload = mapOf(
-                    "currentState" to state.name,
-                    "hadPreviousFailure" to (failure != null)
-                )
+                payload =
+                    mapOf(
+                        "currentState" to state.name,
+                        "hadPreviousFailure" to (failure != null),
+                    )
             }
 
             state = State.Failed
@@ -428,19 +456,21 @@ class AtlsHandshake(
                 }
                 return null
             } else {
-                val errorResponse = objectMapper.writeValueAsBytes(
-                    AtlsHandshakeComplete(
-                        VERSION,
-                        success = false,
-                        error = e.message,
-                    ),
-                )
+                val errorResponse =
+                    objectMapper.writeValueAsBytes(
+                        AtlsHandshakeComplete(
+                            VERSION,
+                            success = false,
+                            error = e.message,
+                        ),
+                    )
                 LOG.atDebug {
                     message = "Sending error completion packet to peer"
-                    payload = mapOf(
-                        "errorMessage" to e.message,
-                        "packetSize" to errorResponse.size
-                    )
+                    payload =
+                        mapOf(
+                            "errorMessage" to e.message,
+                            "packetSize" to errorResponse.size,
+                        )
                 }
                 return errorResponse
             }

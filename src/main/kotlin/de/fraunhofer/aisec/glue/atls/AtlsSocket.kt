@@ -25,9 +25,10 @@ class AtlsSocket(
     override fun startHandshake() {
         LOG.atDebug {
             message = "Starting TLS handshake"
-            payload = mapOf(
-                "socket" to inner.remoteSocketAddress.toString()
-            )
+            payload =
+                mapOf(
+                    "socket" to inner.remoteSocketAddress.toString(),
+                )
         }
 
         inner.startHandshake()
@@ -35,30 +36,33 @@ class AtlsSocket(
         if (!handshakeCompleted) {
             LOG.atDebug {
                 message = "TLS handshake completed, initiating ATLS post-handshake"
-                payload = mapOf(
-                    "socket" to inner.remoteSocketAddress.toString()
-                )
+                payload =
+                    mapOf(
+                        "socket" to inner.remoteSocketAddress.toString(),
+                    )
             }
 
             val session = inner.session as ExtendedSSLSession
 
             LOG.atDebug {
                 message = "Extracting SSL session information"
-                payload = mapOf(
-                    "socket" to inner.remoteSocketAddress.toString(),
-                    "protocol" to session.protocol,
-                    "cipherSuite" to session.cipherSuite
-                )
+                payload =
+                    mapOf(
+                        "socket" to inner.remoteSocketAddress.toString(),
+                        "protocol" to session.protocol,
+                        "cipherSuite" to session.cipherSuite,
+                    )
             }
 
             val channelBinding = session.exportKeyingMaterialData("EXPORTER-Channel-Binding", null, 32)
 
             LOG.atDebug {
                 message = "Extracted channel binding data"
-                payload = mapOf(
-                    "socket" to inner.remoteSocketAddress.toString(),
-                    "bindingLength" to channelBinding.size
-                )
+                payload =
+                    mapOf(
+                        "socket" to inner.remoteSocketAddress.toString(),
+                        "bindingLength" to channelBinding.size,
+                    )
             }
 
             val cacheKey =
@@ -68,11 +72,12 @@ class AtlsSocket(
 
             LOG.atDebug {
                 message = "Calculated peer certificate cache key"
-                payload = mapOf(
-                    "socket" to inner.remoteSocketAddress.toString(),
-                    "cacheKey" to (cacheKey ?: "null"),
-                    "hasPeerCert" to (session.peerCertificates.firstOrNull() != null)
-                )
+                payload =
+                    mapOf(
+                        "socket" to inner.remoteSocketAddress.toString(),
+                        "cacheKey" to (cacheKey ?: "null"),
+                        "hasPeerCert" to (session.peerCertificates.firstOrNull() != null),
+                    )
             }
 
             val atlsHandshake =
@@ -88,11 +93,12 @@ class AtlsSocket(
 
             LOG.atDebug {
                 message = "Created ATLS handshake instance"
-                payload = mapOf(
-                    "socket" to inner.remoteSocketAddress.toString(),
-                    "attestationType" to "SERVER",
-                    "useCaching" to true
-                )
+                payload =
+                    mapOf(
+                        "socket" to inner.remoteSocketAddress.toString(),
+                        "attestationType" to "SERVER",
+                        "useCaching" to true,
+                    )
             }
 
             val input = DataInputStream(inner.getInputStream().buffered())
@@ -102,10 +108,11 @@ class AtlsSocket(
 
             LOG.atDebug {
                 message = "Starting ATLS handshake, sending initial packet"
-                payload = mapOf(
-                    "socket" to inner.remoteSocketAddress.toString(),
-                    "packetSize" to initialPacket.size
-                )
+                payload =
+                    mapOf(
+                        "socket" to inner.remoteSocketAddress.toString(),
+                        "packetSize" to initialPacket.size,
+                    )
             }
 
             output.writeInt(initialPacket.size)
@@ -116,19 +123,21 @@ class AtlsSocket(
                 val readLength = input.readInt()
                 LOG.atDebug {
                     message = "Reading ATLS packet"
-                    payload = mapOf(
-                        "socket" to inner.remoteSocketAddress.toString(),
-                        "expectedLength" to readLength
-                    )
+                    payload =
+                        mapOf(
+                            "socket" to inner.remoteSocketAddress.toString(),
+                            "expectedLength" to readLength,
+                        )
                 }
 
                 val readPacket = input.readNBytes(readLength)
                 LOG.atDebug {
                     message = "Received ATLS packet, feeding to handshake"
-                    payload = mapOf(
-                        "socket" to inner.remoteSocketAddress.toString(),
-                        "packetSize" to readPacket.size
-                    )
+                    payload =
+                        mapOf(
+                            "socket" to inner.remoteSocketAddress.toString(),
+                            "packetSize" to readPacket.size,
+                        )
                 }
 
                 val writePacket = atlsHandshake.feedPacket(readPacket)
@@ -136,10 +145,11 @@ class AtlsSocket(
                 if (writePacket != null) {
                     LOG.atDebug {
                         message = "ATLS handshake produced response packet, sending"
-                        payload = mapOf(
-                            "socket" to inner.remoteSocketAddress.toString(),
-                            "responseSize" to writePacket.size
-                        )
+                        payload =
+                            mapOf(
+                                "socket" to inner.remoteSocketAddress.toString(),
+                                "responseSize" to writePacket.size,
+                            )
                     }
                     output.writeInt(writePacket.size)
                     output.write(writePacket)
@@ -147,9 +157,10 @@ class AtlsSocket(
                 } else {
                     LOG.atDebug {
                         message = "ATLS handshake did not produce response packet"
-                        payload = mapOf(
-                            "socket" to inner.remoteSocketAddress.toString()
-                        )
+                        payload =
+                            mapOf(
+                                "socket" to inner.remoteSocketAddress.toString(),
+                            )
                     }
                 }
             }
@@ -158,18 +169,20 @@ class AtlsSocket(
                 LOG.atWarn {
                     message = "ATLS handshake failed"
                     cause = atlsHandshake.failure
-                    payload = mapOf(
-                        "socket" to inner.remoteSocketAddress.toString()
-                    )
+                    payload =
+                        mapOf(
+                            "socket" to inner.remoteSocketAddress.toString(),
+                        )
                 }
                 throw IllegalStateException("ATLS handshake failed", atlsHandshake.failure)
             }
 
             LOG.atDebug {
                 message = "ATLS handshake completed successfully"
-                payload = mapOf(
-                    "socket" to inner.remoteSocketAddress.toString()
-                )
+                payload =
+                    mapOf(
+                        "socket" to inner.remoteSocketAddress.toString(),
+                    )
             }
 
             handshakeCompleted = true
