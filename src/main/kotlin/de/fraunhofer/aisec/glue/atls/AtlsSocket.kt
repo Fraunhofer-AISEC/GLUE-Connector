@@ -95,8 +95,8 @@ class AtlsSocket(
                 )
             }
 
-            val input = DataInputStream(inner.getInputStream())
-            val output = DataOutputStream(inner.getOutputStream())
+            val input = DataInputStream(inner.getInputStream().buffered())
+            val output = DataOutputStream(inner.getOutputStream().buffered())
 
             val initialPacket = atlsHandshake.start()
 

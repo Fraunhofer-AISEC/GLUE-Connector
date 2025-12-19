@@ -34,7 +34,7 @@ class CMCClient(
         // Despite this method signature indicating support for TCP sockets only, unix sockets also work.
         // I suppose what the authors mean to say is that the socket is stream-oriented.
         return aSocket(selectorManager).tcp().connect(cmcAddress).use { socket ->
-            val output = socket.openWriteChannel(autoFlush = true)
+            val output = socket.openWriteChannel(autoFlush = false)
 
             output.writeInt(payloadLength)
             output.writeInt(
