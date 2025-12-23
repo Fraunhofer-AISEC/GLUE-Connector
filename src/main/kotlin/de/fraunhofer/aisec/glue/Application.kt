@@ -112,9 +112,9 @@ val defaultDependencies by DI.Module {
                     }
                 }
                 install(HttpTimeout) {
-                    // Required as we need to wait for a remote container to fetch the atls-proxy image in the the start
+                    // Required as we need to wait for a remote container to fetch the atls-proxy image in the start
                     // pipeline request
-                    socketTimeoutMillis = 10000
+                    socketTimeoutMillis = 180000
                 }
                 engine {
                     config {

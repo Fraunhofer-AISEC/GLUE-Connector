@@ -14,5 +14,5 @@ data class GraphDriverData(
     val name: String,
     // Low-level storage metadata, provided as key/value pairs.  This information is driver-specific, and depends on the storage-driver in use, and should be used for informational purposes only.
     @param:JsonProperty("Data")
-    val `data`: Map<String, String>,
+    val `data`: Map<String, Any>? = null,
 )

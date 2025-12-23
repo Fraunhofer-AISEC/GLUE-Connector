@@ -2,6 +2,7 @@ package de.fraunhofer.aisec.glue.docker
 
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.DeserializationFeature
+import de.fraunhofer.aisec.glue.docker.DockerClient.Companion.fromEnv
 import de.fraunhofer.aisec.glue.docker.model.*
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ktor.client.*
@@ -199,7 +200,7 @@ class DockerClient(internal val httpClient: HttpClient, private val baseUrl: Url
     companion object {
         private val LOG = KotlinLogging.logger {}
 
-        private const val API_VERSION = "v1.44"
+        private const val API_VERSION = "v1.51"
         internal val UNIX_BASE_URL = Url("http://localhost/$API_VERSION")
 
         private val defaultConfig: HttpClientConfig<CIOEngineConfig>.() -> Unit = {
