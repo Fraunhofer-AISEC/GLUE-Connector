@@ -61,6 +61,12 @@ fun main(args: Array<String>) {
             Pair("java.io.ObjectInputFilter\$Config", "traceFilter"),
             Pair("java.io.ObjectInputStream", "filterCheck"),
             Pair("jdk.internal.event.EventHelper", "logX509CertificateEvent"),
+            // Annoying netty debug output
+            Pair("io.netty.channel.nio.NioIoHandler", "openSelector"),
+            Pair("io.netty.channel.nio.NioIoHandler", "<clinit>"),
+            Pair("io.netty.channel.kqueue.KQueue", "<clinit>"),
+            Pair("io.netty.bootstrap.ChannelInitializerExtensions", "getExtensions"),
+            Pair("io.netty.util.internal.PlatformDependent\$Mpsc", "<clinit>"),
         )
     Logger.getLogger("").apply {
         level = Level.ALL
@@ -82,7 +88,9 @@ fun main(args: Array<String>) {
                             } else {
                                 ""
                             }
-                        return "$timestamp [${record.level}] ${record.loggerName} - $message$throwable\n"
+                        return "$timestamp [${record.level}] ${record.loggerName} - " +
+                                "${record.sourceClassName} ${record.sourceMethodName} - " +
+                                "$message$throwable\n"
                     }
                 }
             // Filter background noise
