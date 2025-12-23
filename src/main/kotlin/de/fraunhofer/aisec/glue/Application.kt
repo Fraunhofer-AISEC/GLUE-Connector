@@ -147,7 +147,7 @@ val defaultDependencies by DI.Module {
     bind<NegotiationController>() with singleton { NegotiationController(instance()) }
     bind<PipelineController>() with singleton { PipelineController(instance(), instance(), instance()) }
     bind<NegotiationApiController>() with singleton { NegotiationApiController(instance()) }
-    bind<RemotePipelineApiController>() with singleton { RemotePipelineApiController(instance(), instance(), instance()) }
+    bind<RemotePipelineApiController>() with singleton { RemotePipelineApiController(instance(), instance()) }
     bind<ContainerInterfaceController>() with
         singleton {
             ContainerInterfaceController(instance(), instance(), instance(), instance(), instance(), instance(), instance())

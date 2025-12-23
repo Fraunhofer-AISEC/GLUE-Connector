@@ -104,7 +104,7 @@ components:
         - peer
         - request
 paths:
-  /api/negotiations:
+  /api/v1.0/negotiations:
     get:
       summary: Return all currently ongoing negotiations
       tags:
@@ -139,7 +139,7 @@ paths:
               schema:
                 type: string
                 description: A description of the error that occurred
-  /api/remote-pipelines:
+  /api/v1.0/remote-pipelines:
     get:
       summary: Get all remote pipelines known to this connector
       tags:
@@ -178,7 +178,7 @@ paths:
               schema:
                 description: An error description of what went wrong
                 type: string
-  /api/remote-pipelines/{localId}:
+  /api/v1.0/remote-pipelines/{localId}:
     delete:
       summary: Stop a pipeline running on a remote connector
       tags:
