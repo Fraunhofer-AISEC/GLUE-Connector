@@ -34,13 +34,13 @@
                     "glue:allowNetwork": true,
                     "glue:parameter": {
                       "@type": "http://fhg.de/glue/internal/AtlsProxyConfiguration",
-                      "mode": "client",
-                      "cmcAddress": "172.25.0.0:9955",
-                      "caCertificates": "-----BEGIN CERTIFICATE-----\nMIICCDCCAa6gAwIBAgIUQXyGty0FiVTwuT+iZlbI3sutGZ8wCgYIKoZIzj0EAwIw\nYTELMAkGA1UEBhMCREUxEjAQBgNVBAcTCVRlc3QgQ2l0eTEVMBMGA1UEChMMVGVz\ndCBDb21wYW55MRAwDgYDVQQLEwdSb290IENBMRUwEwYDVQQDEwxUZXN0IFJvb3Qg\nQ0EwIBcNMjUxMTA1MDgzNjAwWhgPMjEyNTEwMTIwODM2MDBaMGExCzAJBgNVBAYT\nAkRFMRIwEAYDVQQHEwlUZXN0IENpdHkxFTATBgNVBAoTDFRlc3QgQ29tcGFueTEQ\nMA4GA1UECxMHUm9vdCBDQTEVMBMGA1UEAxMMVGVzdCBSb290IENBMFkwEwYHKoZI\nzj0CAQYIKoZIzj0DAQcDQgAEo2DmzABzPpjX772UeMqCVFAEc+BLVtl80aQzf3xG\nnYGdzvkGoeVRcrB1I7U4QncMP3j6fQuBq+s/IAsG06qKnKNCMEAwDgYDVR0PAQH/\nBAQDAgEGMA8GA1UdEwEB/wQFMAMBAf8wHQYDVR0OBBYEFABBdZWT2RZ7x+NWM2rb\nvp2BSKxhMAoGCCqGSM49BAMCA0gAMEUCIQDPzyc0fDmR4sMe6oV6dhP/lNvz6CBV\nuuvoHNnfNtMQywIgEBmtxh/C+UFzj26eZfrd4Jz0ouBAIW8o/ZxjM86p8Sc=\n-----END CERTIFICATE-----",
-                      "proxyConnections": [
+                      "glue:mode": "client",
+                      "glue:cmcAddress": "172.25.0.1:9955",
+                      "glue:caCertificates": "${CA_CERT}",
+                      "glue:proxyConnections": [
                         {
-                          "localPort": 8080,
-                          "remoteAddress": "172.25.0.4:8080"
+                          "glue:localPort": 8080,
+                          "glue:remoteAddress": "connector2:8080"
                         }
                       ]
                     }
@@ -95,10 +95,10 @@
                                     "glue:allowNetwork": true,
                                     "glue:parameter": {
                                       "@type": "http://fhg.de/glue/internal/AtlsProxyConfiguration",
-                                      "mode": "server",
-                                      "cmcAddress": "172.25.0.0:9955",
-                                      "caCertificates": "-----BEGIN CERTIFICATE-----\nMIICCDCCAa6gAwIBAgIUQXyGty0FiVTwuT+iZlbI3sutGZ8wCgYIKoZIzj0EAwIw\nYTELMAkGA1UEBhMCREUxEjAQBgNVBAcTCVRlc3QgQ2l0eTEVMBMGA1UEChMMVGVz\ndCBDb21wYW55MRAwDgYDVQQLEwdSb290IENBMRUwEwYDVQQDEwxUZXN0IFJvb3Qg\nQ0EwIBcNMjUxMTA1MDgzNjAwWhgPMjEyNTEwMTIwODM2MDBaMGExCzAJBgNVBAYT\nAkRFMRIwEAYDVQQHEwlUZXN0IENpdHkxFTATBgNVBAoTDFRlc3QgQ29tcGFueTEQ\nMA4GA1UECxMHUm9vdCBDQTEVMBMGA1UEAxMMVGVzdCBSb290IENBMFkwEwYHKoZI\nzj0CAQYIKoZIzj0DAQcDQgAEo2DmzABzPpjX772UeMqCVFAEc+BLVtl80aQzf3xG\nnYGdzvkGoeVRcrB1I7U4QncMP3j6fQuBq+s/IAsG06qKnKNCMEAwDgYDVR0PAQH/\nBAQDAgEGMA8GA1UdEwEB/wQFMAMBAf8wHQYDVR0OBBYEFABBdZWT2RZ7x+NWM2rb\nvp2BSKxhMAoGCCqGSM49BAMCA0gAMEUCIQDPzyc0fDmR4sMe6oV6dhP/lNvz6CBV\nuuvoHNnfNtMQywIgEBmtxh/C+UFzj26eZfrd4Jz0ouBAIW8o/ZxjM86p8Sc=\n-----END CERTIFICATE-----",
-                                      "proxyConnections": []
+                                      "glue:mode": "server",
+                                      "glue:cmcAddress": "172.25.0.1:9955",
+                                      "glue:caCertificates": "${CA_CERT}",
+                                      "glue:proxyConnections": []
                                     }
                                   },
                                   {

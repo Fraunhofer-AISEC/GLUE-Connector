@@ -42,7 +42,9 @@ pull_and_get_hash() {
     local var_name="$2"
 
     local image_path="${REGISTRY}/${image_name}:latest"
+    # shellcheck disable=SC2155
     local image=$(docker pull -q "$image_path")
+    # shellcheck disable=SC2155
     local image_hash=$(docker images --no-trunc --quiet "$image_path")
 
     # Export the hash with the provided variable name
@@ -57,15 +59,21 @@ pull_and_get_hash "proxy" "PROXY_HASH"
 pull_and_get_hash "forwarder" "FORWARDER_HASH"
 pull_and_get_hash "atls-proxy" "ATLS_PROXY_HASH"
 
+# Prepare CA certificate for insertion. Temporary workaround until we use app config for this.
+# shellcheck disable=SC2155
+if [ -f /var/ca.pem ]; then
+  export CA_CERT="$(sed -z 's/\n/\\n/g' /var/ca.pem)"
+fi
+
 policy_content="$(envsubst < "$policy")"
 
 echo "Starting the contract negotiation..."
-negotiation_req="$(jq '{"peer": "'"$remote_connector"'", "contractRequest": .}' <<< "$policy_content")"
-curl -v -X POST "${common_curl_opts[@]}" -d "$negotiation_req" "http://$local_connector/api/negotiations"
+negotiation_req="$(jq '{"peer": "'"https://$remote_connector:8444"'", "contractRequest": .}' <<< "$policy_content")"
+curl -v -X POST "${common_curl_opts[@]}" -d "$negotiation_req" "http://$local_connector:8080/api/v1.0/negotiations"
 
 # TODO: Once the negotiation objects have some ID for the API, use it instead of querying all negotiations
 echo "Requesting negotiated contracts..."
-while (( "$(curl "${common_curl_opts[@]}" "http://$local_connector/api/negotiations" | jq "length")" != 0 )); do
+while (( "$(curl "${common_curl_opts[@]}" "http://$local_connector:8080/api/v1.0/negotiations" | jq "length")" != 0 )); do
   sleep 1s
 done
 
@@ -77,8 +85,8 @@ contract_target="$(jq -r '.["odrl:permission"][0]["odrl:target"]' <<< "$policy_c
 contract_action="$(jq -r '.["odrl:permission"][0]["odrl:action"]' <<< "$policy_content")"
 
 echo "Starting remote pipeline..."
-pipeline_start_req='{"peer": "'"$remote_connector"'", "request": {"target": "'"$contract_target"'", "action": "'"$contract_action"'", "contractId": "'"$contract_id"'"}}'
-pipeline_start_resp="$(curl -X POST "${common_curl_opts[@]}" -d "$pipeline_start_req" "http://$local_connector/api/remote-pipelines")"
+pipeline_start_req='{"peer": "'"https://$remote_connector:8444"'", "request": {"target": "'"$contract_target"'", "action": "'"$contract_action"'", "contractId": "'"$contract_id"'"}}'
+pipeline_start_resp="$(curl -X POST "${common_curl_opts[@]}" -d "$pipeline_start_req" "http://$local_connector:8080/api/v1.0/remote-pipelines")"
 
 pipeline_id="$(jq -r '.localId' <<< "$pipeline_start_resp")"
 pipeline_port="$(jq -r '.ports' <<< "$pipeline_start_resp")"
@@ -86,7 +94,7 @@ pipeline_port="$(jq -r '.ports' <<< "$pipeline_start_resp")"
 # Wait for the user to interrupt and then stop the remote pipeline
 stop_pipeline() {
   echo "Stopping pipeline"
-  curl -X DELETE "${common_curl_opts[@]}" "http://$local_connector/api/remote-pipelines/$pipeline_id"
+  curl -X DELETE "${common_curl_opts[@]}" "http://$local_connector:8080/api/v1.0/remote-pipelines/$pipeline_id"
   exit 0
 }
 
