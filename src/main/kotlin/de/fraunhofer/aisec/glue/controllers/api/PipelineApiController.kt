@@ -17,9 +17,10 @@ class PipelineApiController(private val pipelineManager: PipelineManager) : Cont
         route(ApiConstants.API_BASE_PATH) {
             route("/pipelines") {
                 get {
-                    val pipelines = pipelineManager.getPipelines().map { (k, v) ->
-                        InlineId(k, ContainerPipelineInfo.from(v))
-                    }
+                    val pipelines =
+                        pipelineManager.getPipelines().map { (k, v) ->
+                            InlineId(k, ContainerPipelineInfo.from(v))
+                        }
                     call.respond(pipelines)
                 }
 

@@ -7,12 +7,12 @@ data class ContainerPipelineInfo(
     val backend: String,
     val containers: List<ContainerInfo>,
 ) {
-
     companion object {
         suspend fun from(pipeline: ContainerPipeline): ContainerPipelineInfo {
-            val backend = pipeline::class.simpleName
-                ?.removeSuffix("ContainerPipeline")
-                ?: "Unknown"
+            val backend =
+                pipeline::class.simpleName
+                    ?.removeSuffix("ContainerPipeline")
+                    ?: "Unknown"
 
             return ContainerPipelineInfo(
                 name = pipeline.name,

@@ -8,9 +8,12 @@ import de.fraunhofer.aisec.glue.pipeline.atls.AtlsProxyConnection
 import de.fraunhofer.iosb.odrl.glue.GlueContainerPipeline
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ktor.network.sockets.UnixSocketAddress
+import io.ktor.network.sockets.toJavaAddress
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.io.File
+import java.lang.IllegalStateException
+import java.net.InetAddress
 import kotlin.random.Random
 
 class PipelineManager(
@@ -22,8 +25,7 @@ class PipelineManager(
     private val pipelineMutex = Mutex()
     private val pipelineConfig = config.getConfig(::AtlsConfig)
 
-    private fun createPipelineName(): String =
-        generateSequence { Random.nextBytes(8).hexEncode() }.first { n -> !pipelines.contains(n) }
+    private fun createPipelineName(): String = generateSequence { Random.nextBytes(8).hexEncode() }.first { n -> !pipelines.contains(n) }
 
     /**
      * Augment the container pipeline object by properly configuring all ATLS proxy images
@@ -39,10 +41,33 @@ class PipelineManager(
                                     listOf(
                                         AtlsParameter(
                                             mode = if (idx == 0) "server" else "client",
-                                            cmcAddress = pipelineConfig.cmcAddress.toString(),
+                                            // Unfortunately, the default toString for InetSocketAddress returns "hostname/ip address" strings
+                                            // which are not parseable as ip addresses or hostnames.
+                                            cmcAddress =
+                                                pipelineConfig.cmcAddress.let {
+                                                    when (val addr = it.toJavaAddress()) {
+                                                        is java.net.InetSocketAddress -> "${addr.hostString}:${addr.port}"
+                                                        else -> addr.toString()
+                                                    }
+                                                },
                                             caCertificate = File(pipelineConfig.caCertPath).readText(),
-                                            // TODO: No, bad...
-                                            proxyConnections = listOf(AtlsProxyConnection(8080, "connector2:8080")),
+                                            // TODO: No, very bad...
+                                            //  While we could fix that code, we are planing to redo the atls proxy so fixing it makes little sense.
+                                            proxyConnections =
+                                                run {
+                                                    val localhost = InetAddress.getLocalHost().hostAddress
+                                                    val nextConnector =
+                                                        when (localhost) {
+                                                            "172.25.0.2" -> "connector1"
+                                                            "172.25.0.3" -> "connector2"
+                                                            // This is only needed for compatibility
+                                                            "172.25.0.4" -> "connector3"
+                                                            else -> throw IllegalStateException(
+                                                                "The hacky ATLS proxy config does not support the address $localhost",
+                                                            )
+                                                        }
+                                                    listOf(AtlsProxyConnection(8080, "$nextConnector:8444"))
+                                                },
                                         ),
                                     ),
                         ),
@@ -56,6 +81,7 @@ class PipelineManager(
                             }
                         },
                     )
+
                 else -> AugmentedGlueContainer(container, emptyMap())
             }
         }

@@ -42,6 +42,8 @@ abstract class ContainerPipeline(val name: String, val contractId: String, val t
         contract: OdrlPolicy,
     ): Boolean
 
+    abstract suspend fun contracts(): Map<String, Set<OdrlPolicy>>
+
     /**
      * Get all follow-up contracts from this pipeline.
      */
