@@ -90,8 +90,8 @@ fun main(args: Array<String>) {
                                 ""
                             }
                         return "$timestamp [${record.level}] ${record.loggerName} - " +
-                                "${record.sourceClassName} ${record.sourceMethodName} - " +
-                                "$message$throwable\n"
+                            "${record.sourceClassName} ${record.sourceMethodName} - " +
+                            "$message$throwable\n"
                     }
                 }
             // Filter background noise
@@ -155,7 +155,7 @@ val defaultDependencies by DI.Module {
         }
     bind<NegotiationController>() with singleton { NegotiationController(instance()) }
     bind<PipelineController>() with singleton { PipelineController(instance(), instance(), instance()) }
-    bind<NegotiationApiController>() with singleton { NegotiationApiController(instance()) }
+    bind<NegotiationApiController>() with singleton { NegotiationApiController(instance(), instance()) }
     bind<PipelineApiController>() with singleton { PipelineApiController(instance()) }
     bind<RemotePipelineApiController>() with singleton { RemotePipelineApiController(instance(), instance()) }
     bind<ContainerInterfaceController>() with

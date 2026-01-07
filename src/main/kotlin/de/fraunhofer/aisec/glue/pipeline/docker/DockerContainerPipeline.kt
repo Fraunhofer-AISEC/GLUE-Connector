@@ -186,6 +186,11 @@ class DockerContainerPipeline internal constructor(
             followUpContracts.getOrPut(peer, ::mutableSetOf).add(contract)
         }
 
+    override suspend fun contracts(): Map<String, Set<OdrlPolicy>> =
+        contractsLock.withLock {
+            followUpContracts
+        }
+
     override suspend fun contracts(peer: String): Set<OdrlPolicy> =
         contractsLock.withLock {
             followUpContracts[peer] ?: setOf()

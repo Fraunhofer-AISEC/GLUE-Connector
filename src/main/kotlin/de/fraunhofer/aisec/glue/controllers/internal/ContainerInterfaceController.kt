@@ -5,13 +5,11 @@ import de.fraunhofer.aisec.glue.ContractStore
 import de.fraunhofer.aisec.glue.controllers.Controller
 import de.fraunhofer.aisec.glue.negotiation.NegotiationManager
 import de.fraunhofer.aisec.glue.negotiation.toOffer
-import de.fraunhofer.aisec.glue.pipeline.ContainerPipeline
 import de.fraunhofer.aisec.glue.pipeline.PipelineManager
 import de.fraunhofer.aisec.glue.pipeline.RemotePipelineManager
 import de.fraunhofer.aisec.glue.policy.PolicyEngine
 import de.fraunhofer.iosb.odrl.OdrlIdentifiers
 import de.fraunhofer.iosb.odrl.OdrlParty
-import de.fraunhofer.iosb.odrl.OdrlPolicy
 import de.fraunhofer.iosb.odrl.glue.GlueValueProcessor
 import de.fraunhofer.iosb.odrl.parser.OdrlParser
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -36,7 +34,6 @@ class ContainerInterfaceController(
     private val odrlParser: OdrlParser,
     private val remotePipelineManager: RemotePipelineManager,
 ) : Controller {
-    val remotePipelines: MutableMap<Pair<ContainerPipeline, OdrlPolicy>, Pair<String, String>> = mutableMapOf()
 
     override fun Route.registerRoutes() {
         // Just IP-Address seems like it *could* be enough here (containers cannot really fake that as they cannot
@@ -122,7 +119,7 @@ class ContainerInterfaceController(
 
                 // Split the destination address into usable parts
                 val destinationURI = URI(destination)
-                val destinationHost = destinationURI.host
+                val destinationHost = "${destinationURI.host}:${destinationURI.port}"
 
                 // Check if we already have a follow-up contract that matches this target
                 val contractCandidates =
@@ -187,7 +184,7 @@ class ContainerInterfaceController(
 
                         val negotiation =
                             negotiationManager.startNegotiation(
-                                "https://$destinationHost:8444/negotiations",
+                                "https://$destinationHost/negotiations",
                                 convertedNextPolicy,
                             )
 
@@ -223,7 +220,7 @@ class ContainerInterfaceController(
                 if (startPipeline) {
                     val remotePipeline =
                         remotePipelineManager.getOrCreate(
-                            Url("https://$destinationHost:8444"),
+                            Url("https://$destinationHost"),
                             followingContract.uid.toString(),
                             callingPipeline.targetId,
                         )

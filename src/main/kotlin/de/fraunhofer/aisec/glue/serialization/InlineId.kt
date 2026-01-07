@@ -9,5 +9,5 @@ data class InlineId<K, V>(
     val id: K,
     @param:JsonUnwrapped
     @field:JsonUnwrapped
-    val value: V
+    val value: V,
 )
