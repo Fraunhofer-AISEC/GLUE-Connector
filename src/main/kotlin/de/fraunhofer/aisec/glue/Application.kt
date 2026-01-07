@@ -11,6 +11,7 @@ import de.fraunhofer.aisec.glue.controllers.Controller
 import de.fraunhofer.aisec.glue.controllers.NegotiationController
 import de.fraunhofer.aisec.glue.controllers.PipelineController
 import de.fraunhofer.aisec.glue.controllers.api.NegotiationApiController
+import de.fraunhofer.aisec.glue.controllers.api.PipelineApiController
 import de.fraunhofer.aisec.glue.controllers.api.RemotePipelineApiController
 import de.fraunhofer.aisec.glue.controllers.internal.ContainerInterfaceController
 import de.fraunhofer.aisec.glue.docker.DockerClient
@@ -155,6 +156,7 @@ val defaultDependencies by DI.Module {
     bind<NegotiationController>() with singleton { NegotiationController(instance()) }
     bind<PipelineController>() with singleton { PipelineController(instance(), instance(), instance()) }
     bind<NegotiationApiController>() with singleton { NegotiationApiController(instance()) }
+    bind<PipelineApiController>() with singleton { PipelineApiController(instance()) }
     bind<RemotePipelineApiController>() with singleton { RemotePipelineApiController(instance(), instance()) }
     bind<ContainerInterfaceController>() with
         singleton {

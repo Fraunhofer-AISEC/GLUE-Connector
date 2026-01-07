@@ -22,7 +22,8 @@ class PipelineManager(
     private val pipelineMutex = Mutex()
     private val pipelineConfig = config.getConfig(::AtlsConfig)
 
-    private fun createPipelineName(): String = generateSequence { Random.nextBytes(8).hexEncode() }.first { n -> !pipelines.contains(n) }
+    private fun createPipelineName(): String =
+        generateSequence { Random.nextBytes(8).hexEncode() }.first { n -> !pipelines.contains(n) }
 
     /**
      * Augment the container pipeline object by properly configuring all ATLS proxy images
@@ -107,6 +108,8 @@ class PipelineManager(
                 // Note: We are not calling close here since that just invokes stop and remove in the background.
             } != null
         }
+
+    suspend fun getPipelines(): Map<String, ContainerPipeline> = pipelineMutex.withLock { pipelines }
 
     suspend fun getPipelineStatus(id: String): Boolean =
         pipelineMutex.withLock {
