@@ -21,7 +21,7 @@ type ClientProxy struct {
 	ctx              context.Context
 	config           config
 	proxyConfig      atlsProxyConfig
-	connectionConfig proxyConnection
+	connectionConfig proxyEndpoint
 	tlsConfig        *tls.Config
 
 	// For triggering the follow-up negotiation
@@ -35,7 +35,7 @@ func (cp *ClientProxy) negotiateWithCoordinator() error {
 	coordinatorUrl := fmt.Sprintf(
 		"http://%s:8080/coordinator/negotiate?destination=http://%s&startPipeline=true",
 		cp.config.Controller,
-		cp.connectionConfig.RemoteAddress,
+		cp.connectionConfig.NextEndpoint,
 	)
 
 	resp, err := http.Post(coordinatorUrl, "application/json", nil)
@@ -131,7 +131,7 @@ func (cp *ClientProxy) handleConnection(clientConn net.Conn) {
 
 // listen accepts incoming connections and handles them
 func (cp *ClientProxy) listen() error {
-	listenAddr := fmt.Sprintf("0.0.0.0:%d", cp.connectionConfig.LocalPort)
+	listenAddr := cp.connectionConfig.ListenEndpoint
 	listener, err := net.Listen("tcp", listenAddr)
 	if err != nil {
 		return fmt.Errorf("failed to listen for connections on %s: %w", listenAddr, err)
@@ -140,7 +140,7 @@ func (cp *ClientProxy) listen() error {
 
 	slog.Info("Listening for connections",
 		"listenAddress", listenAddr,
-		"nextConnector", cp.connectionConfig.RemoteAddress)
+		"nextConnector", cp.connectionConfig.NextEndpoint)
 
 	go func() {
 		<-cp.ctx.Done()
@@ -152,7 +152,7 @@ func (cp *ClientProxy) listen() error {
 		if err != nil {
 			slog.Error("Failed to accept client connection",
 				"listenAddress", listenAddr,
-				"nextConnector", cp.connectionConfig.RemoteAddress,
+				"nextConnector", cp.connectionConfig.NextEndpoint,
 				"error", err)
 			continue
 		}
@@ -172,9 +172,9 @@ func clientMain(config config, proxyConfig atlsProxyConfig) error {
 		return err
 	}
 
-	slog.Info("Starting client listeners", "count", len(proxyConfig.ProxyConnections))
+	slog.Info("Starting client listeners", "count", len(proxyConfig.ProxyEndpoints))
 
-	for _, connConfig := range proxyConfig.ProxyConnections {
+	for _, connConfig := range proxyConfig.ProxyEndpoints {
 		proxy := &ClientProxy{
 			ctx:              ctx,
 			config:           config,

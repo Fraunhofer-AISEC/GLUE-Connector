@@ -20,30 +20,27 @@
               "odrl:operator": "http://www.w3.org/ns/odrl/2/eq",
               "odrl:rightOperand": {
                 "@type": "http://fhg.de/glue/ContainerPipeline",
+                "glue:atlsProxyIn": {
+                  "@type": "http://fhg.de/glue/AtlsProxyConfiguration",
+                  "glue:proxyMode": "server"
+                },
+                "glue:atlsProxyOut": {
+                  "@type": "http://fhg.de/glue/AtlsProxyConfiguration",
+                  "glue:proxyMode": "client",
+                  "glue:proxyEndpoint": [
+                    {
+                      "@type": "http://fhg.de/glue/AtlsProxyEndpoint",
+                      "glue:listenEndpoint": "0.0.0.0:8080",
+                      "glue:nextEndpoint": "connector2:8444"
+                    }
+                  ]
+                },
                 "glue:container": [
                   {
                     "@type": "http://fhg.de/glue/Container",
                     "glue:image": "container-registry.gitlab.cc-asp.fraunhofer.de/ccit-glue/usage-control/container-pipeline/proxy:latest",
                     "glue:hash": "${PROXY_HASH}",
-                    "glue:allowNetwork": true
-                  },
-                  {
-                    "@type": "http://fhg.de/glue/Container",
-                    "glue:image": "container-registry.gitlab.cc-asp.fraunhofer.de/ccit-glue/usage-control/container-pipeline/atls-proxy:latest",
-                    "glue:hash": "${ATLS_PROXY_HASH}",
-                    "glue:allowNetwork": true,
-                    "glue:parameter": {
-                      "@type": "http://fhg.de/glue/internal/AtlsProxyConfiguration",
-                      "glue:mode": "client",
-                      "glue:cmcAddress": "172.25.0.1:9955",
-                      "glue:caCertificates": "${CA_CERT}",
-                      "glue:proxyConnections": [
-                        {
-                          "glue:localPort": 8080,
-                          "glue:remoteAddress": "connector2:8080"
-                        }
-                      ]
-                    }
+                    "glue:allowNetwork": false
                   }
                 ]
               }
@@ -87,20 +84,11 @@
                               "odrl:operator": "http://www.w3.org/ns/odrl/2/eq",
                               "odrl:rightOperand": {
                                 "@type": "http://fhg.de/glue/ContainerPipeline",
+                                "glue:atlsProxyIn": {
+                                  "@type": "http://fhg.de/glue/AtlsProxyConfiguration",
+                                  "glue:proxyMode": "server"
+                                },
                                 "glue:container": [
-                                  {
-                                    "@type": "http://fhg.de/glue/Container",
-                                    "glue:image": "container-registry.gitlab.cc-asp.fraunhofer.de/ccit-glue/usage-control/container-pipeline/atls-proxy:latest",
-                                    "glue:hash": "${ATLS_PROXY_HASH}",
-                                    "glue:allowNetwork": true,
-                                    "glue:parameter": {
-                                      "@type": "http://fhg.de/glue/internal/AtlsProxyConfiguration",
-                                      "glue:mode": "server",
-                                      "glue:cmcAddress": "172.25.0.1:9955",
-                                      "glue:caCertificates": "${CA_CERT}",
-                                      "glue:proxyConnections": []
-                                    }
-                                  },
                                   {
                                     "@type": "http://fhg.de/glue/Container",
                                     "glue:image": "container-registry.gitlab.cc-asp.fraunhofer.de/ccit-glue/usage-control/container-pipeline/proxy:latest",
@@ -110,7 +98,7 @@
                                       "glue:httpUrl": "http://0.0.0.0:1234/dockerEndpoint?key1=value1",
                                       "glue:httpType": "GET"
                                     },
-                                    "glue:allowNetwork": true
+                                    "glue:allowNetwork": false
                                   },
                                   {
                                     "@type": "http://fhg.de/glue/Container",
@@ -121,7 +109,7 @@
                                       "glue:httpUrl": "http://0.0.0.0:1234/dockerEndpoint?key1=value1",
                                       "glue:httpType": "GET"
                                     },
-                                    "glue:allowNetwork": true
+                                    "glue:allowNetwork": false
                                   }
                                 ]
                               }

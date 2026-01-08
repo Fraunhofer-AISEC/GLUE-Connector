@@ -13,7 +13,7 @@ import de.fraunhofer.aisec.glue.pipeline.Backend
 import de.fraunhofer.aisec.glue.pipeline.ContainerInfo
 import de.fraunhofer.aisec.glue.pipeline.ContainerPipeline
 import de.fraunhofer.aisec.glue.pipeline.atls.AtlsConfig
-import io.ktor.server.config.ApplicationConfig
+import io.ktor.server.config.*
 import org.slf4j.LoggerFactory
 import java.net.Inet4Address
 import java.net.InetAddress
@@ -230,7 +230,7 @@ class DockerBackend(
             try {
                 linkContainers(id, containers, contractId, targetId)
             } catch (e: Exception) {
-                containers.forEach { c -> c.runCatching { remove() } }
+                containers.forEach { it.runCatching { remove() } }
                 throw e
             }
 
