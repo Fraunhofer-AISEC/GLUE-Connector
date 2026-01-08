@@ -84,17 +84,22 @@ policy_content="$(envsubst < "$policy")"
 # shellcheck disable=SC2016
 local_pipeline_def="$(envsubst <<<'{
   "@type": "http://fhg.de/glue/ContainerPipeline",
+  "http://fhg.de/glue/atlsProxyOut": {
+    "@type": "http://fhg.de/glue/AtlsProxyConfiguration",
+    "http://fhg.de/glue/proxyMode": "client",
+    "http://fhg.de/glue/proxyEndpoint": [
+      {
+        "@type": "http://fhg.de/glue/AtlsProxyEndpoint",
+        "http://fhg.de/glue/listenEndpoint": "0.0.0.0:8080",
+        "http://fhg.de/glue/nextEndpoint": "connector1:8444"
+      }
+    ]
+  },
   "http://fhg.de/glue/container": [
     {
       "@type": "http://fhg.de/glue/Container",
       "http://fhg.de/glue/image": "container-registry.gitlab.cc-asp.fraunhofer.de/ccit-glue/usage-control/container-pipeline/proxy:latest",
       "http://fhg.de/glue/hash": "${PROXY_HASH}",
-      "http://fhg.de/glue/allowNetwork": true
-    },
-    {
-      "@type": "http://fhg.de/glue/Container",
-      "http://fhg.de/glue/image": "container-registry.gitlab.cc-asp.fraunhofer.de/ccit-glue/usage-control/container-pipeline/atls-proxy:latest",
-      "http://fhg.de/glue/hash": "${ATLS_PROXY_HASH}",
       "http://fhg.de/glue/allowNetwork": true
     }
   ]
@@ -109,13 +114,6 @@ while (( "$(curl "${common_curl_opts[@]}" "http://$local_connector:8080/api/v1.0
   sleep 1s
 done
 
-# Parse out the relevant fields from the proposed contract (we just assume the negotiation was a success)
-# Note: This assumes that the policy is not expanded and is using the same context names as in the example policy
-# Also, note that this will just look at the first permission
-contract_id="$(jq -r '.["@id"]' <<< "$policy_content")"
-contract_target="$(jq -r '.["odrl:permission"][0]["odrl:target"]' <<< "$policy_content")"
-contract_action="$(jq -r '.["odrl:permission"][0]["odrl:action"]' <<< "$policy_content")"
-
 echo "Requesting local pipelines"
 while (( "$(curl "${common_curl_opts[@]}" "http://$local_connector:8080/api/v1.0/pipelines" | jq "length")" == 0 )); do
     sleep 1
@@ -126,14 +124,6 @@ pipeline="$(curl "${common_curl_opts[@]}" "http://$local_connector:8080/api/v1.0
 
 pipeline_id="$(jq -r '.id' <<< "$pipeline")"
 pipeline_port="$(jq -r '.["containers"][0]["ports"][0]' <<< "$pipeline")"
-
-
-#echo "Starting remote pipeline..."
-#pipeline_start_req="$(jo peer="https://$remote_connector:8444" request="$(jo target="$contract_target" action="$contract_action" contractId="$contract_id")")"
-#pipeline_start_resp="$(curl -X POST "${common_curl_opts[@]}" -d "$pipeline_start_req" "http://$local_connector:8080/api/v1.0/remote-pipelines")"
-
-#pipeline_id="$(jq -r '.localId' <<< "$pipeline_start_resp")"
-#pipeline_port="$(jq -r '.ports' <<< "$pipeline_start_resp")"
 
 # Wait for the user to interrupt and then stop the pipeline
 stop_pipeline() {

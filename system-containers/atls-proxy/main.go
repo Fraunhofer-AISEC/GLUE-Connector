@@ -23,11 +23,11 @@ type config struct {
 	Parameters []json.RawMessage `json:"parameters"`
 }
 
-type proxyConnection struct {
-	// The local port to open for this connection
-	LocalPort uint16 `json:"http://fhg.de/glue/localPort"`
-	// The remote address to open a tunnel to
-	RemoteAddress string `json:"http://fhg.de/glue/remoteAddress"`
+type proxyEndpoint struct {
+	// The local endpoint to listen on for incoming connections
+	ListenEndpoint string `json:"http://fhg.de/glue/listenEndpoint"`
+	// The remote endpoint (next container port for server mode, peer for client mode)
+	NextEndpoint string `json:"http://fhg.de/glue/nextEndpoint"`
 }
 
 type atlsProxyConfig struct {
@@ -39,7 +39,7 @@ type atlsProxyConfig struct {
 	// PEM-encoded CA certificates to allow for ATLS connections
 	CaCertificates string `json:"http://fhg.de/glue/caCertificates"`
 	// The connections this instance of the ATLS proxy should handle
-	ProxyConnections []proxyConnection `json:"http://fhg.de/glue/proxyConnections"`
+	ProxyEndpoints []proxyEndpoint `json:"http://fhg.de/glue/proxyEndpoint"`
 }
 
 func parseConfig() (config, atlsProxyConfig, error) {

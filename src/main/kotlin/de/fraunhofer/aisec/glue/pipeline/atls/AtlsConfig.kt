@@ -1,15 +1,19 @@
 package de.fraunhofer.aisec.glue.pipeline.atls
 
 import de.fraunhofer.aisec.glue.config.Config
-import io.ktor.network.sockets.InetSocketAddress
-import io.ktor.network.sockets.UnixSocketAddress
-import io.ktor.server.config.ApplicationConfig
+import io.ktor.network.sockets.*
+import io.ktor.server.config.*
 import java.net.URI
 
 class AtlsConfig(rawConfig: ApplicationConfig) : Config(rawConfig) {
     val proxyContainer by withDefault(
         stringProp(),
-        "container-registry.gitlab.cc-asp.fraunhofer.de/ccit-glue/usage-control/container-pipeline/atls-proxy:feature-cmc-integration",
+        "container-registry.gitlab.cc-asp.fraunhofer.de/ccit-glue/usage-control/container-pipeline/atls-proxy:latest",
+    )
+
+    val proxyHash by withDefault(
+        stringProp(),
+        "sha256:cfe581c9dfdd73146d4d338e009492ba885b1d6da6d405f7dfe59057781c68fa",
     )
 
     val cmcAddress by withDefault(

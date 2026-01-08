@@ -18,6 +18,10 @@ data class GlueContainerPipeline(
     @param:JsonProperty(GlueIdentifiers.HAS_CONTAINER)
     @param:JsonSetter(nulls = Nulls.AS_EMPTY)
     val container: List<GlueContainer> = listOf(),
+    @param:JsonProperty(GlueIdentifiers.ATLS_PROXY_IN)
+    val atlsProxyIn: GlueAtlsProxyConfiguration? = null,
+    @param:JsonProperty(GlueIdentifiers.ATLS_PROXY_OUT)
+    val atlsProxyOut: GlueAtlsProxyConfiguration? = null,
 ) : OdrlRightOperand(), JsonLdBeanValidator {
     override fun validate(): List<ValidationError> {
         return validateGlueContainerPipeline.validate(this).errors

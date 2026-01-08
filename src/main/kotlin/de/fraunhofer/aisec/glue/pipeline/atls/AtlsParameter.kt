@@ -1,11 +1,8 @@
 package de.fraunhofer.aisec.glue.pipeline.atls
 
-import com.fasterxml.jackson.annotation.JsonProperty
-import com.fasterxml.jackson.annotation.JsonSetter
-import com.fasterxml.jackson.annotation.JsonTypeInfo
-import com.fasterxml.jackson.annotation.JsonTypeName
-import com.fasterxml.jackson.annotation.Nulls
+import com.fasterxml.jackson.annotation.*
 import de.fraunhofer.aisec.glue.Utils.truncate
+import de.fraunhofer.iosb.odrl.glue.GlueAtlsProxyEndpoint
 import de.fraunhofer.iosb.odrl.glue.GlueParameter
 import de.fraunhofer.iosb.odrl.glue.GlueValue
 
@@ -21,14 +18,11 @@ class AtlsParameter(
     val cmcAddress: String,
     @param:JsonProperty("http://fhg.de/glue/caCertificates")
     val caCertificate: String,
-    @param:JsonProperty("http://fhg.de/glue/proxyConnections")
+    @param:JsonProperty("http://fhg.de/glue/proxyEndpoint")
     @param:JsonSetter(nulls = Nulls.AS_EMPTY)
-    val proxyConnections: List<AtlsProxyConnection>,
+    val proxyEndpoint: List<GlueAtlsProxyEndpoint>? = null,
     value: GlueValue? = null,
 ) : GlueParameter(value) {
-    override fun hashCode(): Int {
-        return ((super.hashCode() * 31) + cmcAddress.hashCode() * 31) + proxyConnections.hashCode()
-    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -37,14 +31,28 @@ class AtlsParameter(
 
         other as AtlsParameter
 
+        if (mode != other.mode) return false
         if (cmcAddress != other.cmcAddress) return false
-        if (proxyConnections != other.proxyConnections) return false
+        if (caCertificate != other.caCertificate) return false
+        if (proxyEndpoint != other.proxyEndpoint) return false
+
         return true
     }
 
+    override fun hashCode(): Int {
+        var result = super.hashCode()
+        result = 31 * result + mode.hashCode()
+        result = 31 * result + cmcAddress.hashCode()
+        result = 31 * result + caCertificate.hashCode()
+        result = 31 * result + proxyEndpoint.hashCode()
+        return result
+    }
+
     override fun toString(): String {
-        return "AtlsParameter(mode=$mode, cmcAddress=$cmcAddress, caCertificates=${caCertificate.truncate(
-            16,
-        )}, proxyConnections=$proxyConnections)"
+        return "AtlsParameter(mode=$mode, cmcAddress=$cmcAddress, caCertificates=${
+            caCertificate.truncate(
+                16,
+            )
+        }, proxyConnections=$proxyEndpoint)"
     }
 }

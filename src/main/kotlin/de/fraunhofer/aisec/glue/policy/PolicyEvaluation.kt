@@ -58,7 +58,7 @@ internal class PolicyEvaluation {
             return Result(false, "Only one container pipeline can be created at this time")
         }
 
-        // Return this as tuple to also support a pipeline for next contract
+        // Return this as a tuple to also support a pipeline for the next contract
         containerPipeline = pipelineDefs[0]
         return Result(true)
     }
