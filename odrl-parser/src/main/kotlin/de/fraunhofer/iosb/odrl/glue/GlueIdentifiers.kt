@@ -8,6 +8,16 @@ object GlueIdentifiers {
     // Core vocabulary
     const val CONTAINER_PIPELINE = "http://fhg.de/glue/ContainerPipeline"
     const val PLATFORM_SECURITY = "http://fhg.de/glue/platformSecurity"
+    const val ATLS_PROXY_IN = "http://fhg.de/glue/atlsProxyIn"
+    const val ATLS_PROXY_OUT = "http://fhg.de/glue/atlsProxyOut"
+
+    const val ATLS_PROXY_CONFIGURATION = "http://fhg.de/glue/AtlsProxyConfiguration"
+    const val PROXY_MODE = "http://fhg.de/glue/proxyMode"
+    const val PROXY_ENDPOINT = "http://fhg.de/glue/proxyEndpoint"
+
+    const val ATLS_PROXY_ENDPOINT = "http://fhg.de/glue/AtlsProxyEndpoint"
+    const val LISTEN_ENDPOINT = "http://fhg.de/glue/listenEndpoint"
+    const val NEXT_ENDPOINT = "http://fhg.de/glue/nextEndpoint"
 
     const val CONTAINER = "http://fhg.de/glue/Container"
     const val HAS_CONTAINER = "http://fhg.de/glue/container"

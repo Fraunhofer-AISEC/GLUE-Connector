@@ -75,7 +75,7 @@ class PipelineTest {
 
             val mockRemotePipelineManager = mockk<RemotePipelineManager>()
 
-            val pipelineManager = PipelineManager(mockRemotePipelineManager, mockBackend)
+            val pipelineManager = PipelineManager(mockRemotePipelineManager, mockBackend, ConfigManager(MapApplicationConfig()))
 
             val pipeline = pipelineManager.createPipeline(getTestContainers(), "testContract", "testTarget")
 
@@ -130,7 +130,7 @@ class PipelineTest {
 
             val mockRemotePipelineManager = mockk<RemotePipelineManager>()
             val contractStore = ContractStore(objectMapper)
-            val pipelineManager = PipelineManager(mockRemotePipelineManager, mockBackend)
+            val pipelineManager = PipelineManager(mockRemotePipelineManager, mockBackend, ConfigManager(MapApplicationConfig()))
             val policyEngine = PolicyEngine(pipelineManager)
             val pipelineController = PipelineController(contractStore, pipelineManager, policyEngine)
 
@@ -209,7 +209,7 @@ class PipelineTest {
                         ),
                     )
                 val dockerBackend = DockerBackend(objectMapper, dockerClient, configManager)
-                val pipelineManager = PipelineManager(remotePipelineManager, dockerBackend)
+                val pipelineManager = PipelineManager(remotePipelineManager, dockerBackend, ConfigManager(MapApplicationConfig()))
 
                 LOG.info { "Test setup complete" }
 

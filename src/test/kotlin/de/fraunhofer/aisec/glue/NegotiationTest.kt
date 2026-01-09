@@ -1,7 +1,7 @@
 package de.fraunhofer.aisec.glue
 
 import de.fraunhofer.aisec.glue.config.ConfigManager
-import de.fraunhofer.aisec.glue.controllers.Controller
+import de.fraunhofer.aisec.glue.controllers.AtlsController
 import de.fraunhofer.aisec.glue.controllers.NegotiationController
 import de.fraunhofer.aisec.glue.models.negotiation.*
 import de.fraunhofer.aisec.glue.negotiation.builtin.BuiltinNegotiationManager
@@ -71,7 +71,7 @@ class NegotiationTest {
                 httpClient { req ->
                     when (req.url.encodedPath) {
                         "/negotiations/$consumerPid/agreement" -> {
-                            val reqBody = convertValue<ContractAgreementMessage>(req.body)
+                            convertValue<ContractAgreementMessage>(req.body)
                             consumerState = NegotiationState.AGREED
                             respond("")
                         }
@@ -222,7 +222,7 @@ class NegotiationTest {
             coVerify { contractStore.addContract(any()) }
         }
 
-    private fun ApplicationTestBuilder.configureTestApp(controller: Controller) {
+    private fun ApplicationTestBuilder.configureTestApp(controller: AtlsController) {
         environment {
             // We want to configure the application modules ourselves
             config = ApplicationConfig("/dev/null")
@@ -258,7 +258,7 @@ class NegotiationTest {
                 httpClient { req ->
                     when (req.url.encodedPath) {
                         "/negotiations/$consumerPid/agreement" -> {
-                            val reqBody = convertValue<ContractAgreementMessage>(req.body)
+                            convertValue<ContractAgreementMessage>(req.body)
                             consumerState = NegotiationState.AGREED
                             respond("")
                         }

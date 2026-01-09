@@ -8,12 +8,12 @@ import de.fraunhofer.aisec.glue.docker.DockerClient
 import de.fraunhofer.aisec.glue.docker.InetUtil
 import de.fraunhofer.aisec.glue.docker.Network
 import de.fraunhofer.aisec.glue.docker.model.*
+import de.fraunhofer.aisec.glue.pipeline.AugmentedGlueContainer
 import de.fraunhofer.aisec.glue.pipeline.Backend
 import de.fraunhofer.aisec.glue.pipeline.ContainerInfo
 import de.fraunhofer.aisec.glue.pipeline.ContainerPipeline
-import de.fraunhofer.aisec.glue.pipeline.docker.DockerBackend.DockerConfig
-import de.fraunhofer.iosb.odrl.glue.GlueContainerPipeline
-import io.ktor.server.config.ApplicationConfig
+import de.fraunhofer.aisec.glue.pipeline.atls.AtlsConfig
+import io.ktor.server.config.*
 import org.slf4j.LoggerFactory
 import java.net.Inet4Address
 import java.net.InetAddress
@@ -30,6 +30,7 @@ class DockerBackend(
         InetUtil.getSubnets(InetUtil.parseInet4Address(dockerSubnet), 16, subnetLen)
             .iterator()
     private val config = configManager.getConfig(::DockerConfig)
+    private val atlsConfig = configManager.getConfig(::AtlsConfig)
 
     // Note: This is an implementation detail of docker that should not be relied upon.
     // Unfortunately, we don't have much of a choice.
@@ -53,19 +54,21 @@ class DockerBackend(
 
     private suspend fun convertPipeline(
         id: String,
-        pipelineDef: GlueContainerPipeline,
+        pipelineSpec: List<AugmentedGlueContainer>,
         contractId: String,
         targetId: String,
     ): MutableList<ContainerCreateRequest> {
-        checkHashes(pipelineDef)
-        return pipelineDef.container.map { c ->
+        checkHashes(pipelineSpec)
+        return pipelineSpec.map { c ->
             //       We probably should persist this to the point where we inject the config
             ContainerCreateRequest(
-                image = c.image,
+                image = c.base.image,
                 hostConfig =
                     HostConfig(
-                        networkMode = if (c.allowNetwork == true) "bridge" else "none",
+                        networkMode = if (c.base.allowNetwork == true) "bridge" else "none",
+                        binds = c.extraVolumes.map { (hostPath, containerPath) -> "$hostPath:$containerPath" },
                     ),
+                volumes = c.extraVolumes.map { (_, containerPath) -> containerPath to object {} }.toMap(),
                 // Attach labels to the containers so we can recover running pipelines if we crash and/or restart
                 labels =
                     mapOf(
@@ -79,10 +82,10 @@ class DockerBackend(
     }
 
     // Hash check adapted from https://github.com/Fraunhofer-AISEC/trusted-connector/blob/16fb97953c89e796d80c52cacc7a4445c1dda019/ids-dataflow-control/src/main/kotlin/de/fhg/aisec/ids/dataflowcontrol/usagecontrol/DockerImageConstraint.kt#L104
-    private suspend fun checkHashes(pipelineDef: GlueContainerPipeline): Boolean {
-        for (glueContainer in pipelineDef.container) {
-            val expectedHash = glueContainer.hash.split(":").last()
-            val imageToCheck = dockerClient.images.get(glueContainer.image)
+    private suspend fun checkHashes(pipelineDef: List<AugmentedGlueContainer>): Boolean {
+        for (glueContainer in pipelineDef) {
+            val expectedHash = glueContainer.base.hash.split(":").last()
+            val imageToCheck = dockerClient.images.get(glueContainer.base.image)
             val inspectResponse = imageToCheck.inspect()
             val idHash = inspectResponse.id?.split(":")?.last()
 
@@ -93,7 +96,7 @@ class DockerBackend(
             }
 
             throw Exception(
-                "The hash check for container ${glueContainer.image} failed. " +
+                "The hash check for container ${glueContainer.base.image} failed. " +
                     "Expected $expectedHash, found candidates:\nID Hash: $idHash, " +
                     "Repo Digests: ${inspectResponse.repoDigests?.joinToString(", ")}",
             )
@@ -186,11 +189,11 @@ class DockerBackend(
 
     override suspend fun createPipeline(
         id: String,
-        policyObject: GlueContainerPipeline,
+        pipelineSpec: List<AugmentedGlueContainer>,
         contractId: String,
         targetId: String,
     ): ContainerPipeline {
-        val containerCreateReqs = convertPipeline(id, policyObject, contractId, targetId)
+        val containerCreateReqs = convertPipeline(id, pipelineSpec, contractId, targetId)
 
         if (containerCreateReqs.isEmpty()) {
             throw IllegalArgumentException("The provided spec contains no containers")
@@ -221,7 +224,7 @@ class DockerBackend(
             try {
                 linkContainers(id, containers, contractId, targetId)
             } catch (e: Exception) {
-                containers.forEach { c -> c.runCatching { remove() } }
+                containers.forEach { it.runCatching { remove() } }
                 throw e
             }
 

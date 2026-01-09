@@ -6,11 +6,7 @@ import de.fraunhofer.aisec.glue.docker.Network
 import de.fraunhofer.aisec.glue.docker.model.ContainerState
 import de.fraunhofer.aisec.glue.docker.model.EndpointSettings
 import de.fraunhofer.aisec.glue.docker.model.PortBinding
-import de.fraunhofer.aisec.glue.pipeline.ContainerConfig
-import de.fraunhofer.aisec.glue.pipeline.ContainerInfo
-import de.fraunhofer.aisec.glue.pipeline.ContainerPipeline
-import de.fraunhofer.aisec.glue.pipeline.ContainerPort
-import de.fraunhofer.aisec.glue.pipeline.RemotePipeline
+import de.fraunhofer.aisec.glue.pipeline.*
 import de.fraunhofer.iosb.odrl.OdrlPolicy
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ktor.client.plugins.*
@@ -176,6 +172,10 @@ class DockerContainerPipeline internal constructor(
         containers[index].copyToContainer {
             writeFile("config.json", objectMapper.writeValueAsBytes(config))
         }
+        LOG.atDebug {
+            message = "Injected config into container $index"
+            payload = mapOf("config" to config)
+        }
     }
 
     override suspend fun addContract(
@@ -184,6 +184,11 @@ class DockerContainerPipeline internal constructor(
     ): Boolean =
         contractsLock.withLock {
             followUpContracts.getOrPut(peer, ::mutableSetOf).add(contract)
+        }
+
+    override suspend fun contracts(): Map<String, Set<OdrlPolicy>> =
+        contractsLock.withLock {
+            followUpContracts
         }
 
     override suspend fun contracts(peer: String): Set<OdrlPolicy> =

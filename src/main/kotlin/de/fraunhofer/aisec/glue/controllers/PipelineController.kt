@@ -24,7 +24,7 @@ class PipelineController(
     private val pipelineManager: PipelineManager,
     private val policyEngine: PolicyEngine,
 ) :
-    Controller {
+    AtlsController {
     override fun Route.registerRoutes() {
         authenticate {
             route("/pipeline") {
@@ -37,6 +37,7 @@ class PipelineController(
                     val contract =
                         contractStore.getContract(req.contractId)
 
+                    // Responds with `NotFound` if contract missing
                     if (contract == null) {
                         LOG.atDebug {
                             message = "The requested contract could not be found in the contract store"
@@ -49,6 +50,7 @@ class PipelineController(
                     val policyResult = policyEngine.evaluatePolicy(contract, URI(req.action ?: DEFAULT_ACTION), URI(req.target))
                     policyResult.map { eval ->
                         val pipeline = eval.containerPipeline
+                        // Responds with `BadRequest` if no pipeline found
                         if (pipeline == null) {
                             LOG.atDebug {
                                 message = "The contract evaluation yielded no container pipeline"
@@ -99,7 +101,6 @@ class PipelineController(
     companion object {
         // The port that is exposed on the first container
         private const val DEFAULT_ACTION = OdrlIdentifiers.USE
-        private const val DEFAULT_PORT = "8080/tcp"
         private val LOG = KotlinLogging.logger {}
     }
 }

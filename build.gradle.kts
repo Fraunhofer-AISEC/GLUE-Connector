@@ -1,9 +1,15 @@
+import net.pwall.json.kotlin.codegen.gradle.JSONSchemaCodegen
+import net.pwall.json.kotlin.codegen.gradle.JSONSchemaCodegenPlugin
+import net.pwall.json.kotlin.codegen.gradle.mapping.ClassMappingByURI
+import java.net.URI
+
 plugins {
     alias(libs.plugins.kotlin)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ktor)
     alias(libs.plugins.spotless)
     alias(libs.plugins.jib)
+    alias(libs.plugins.shadow)
     application
 }
 
@@ -15,10 +21,35 @@ repositories {
     mavenCentral()
 }
 
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath(libs.jsonKotlinSchemaCodegen)
+    }
+}
+
+apply<JSONSchemaCodegenPlugin>()
+
+kotlin {
+    jvmToolchain(25)
+    sourceSets {
+        main {
+            kotlin.srcDir("${layout.buildDirectory.get()}/generated-sources/kotlin")
+        }
+    }
+}
+
+java {
+    targetCompatibility = JavaVersion.VERSION_25
+}
+
 dependencies {
     implementation(libs.slf4j.api)
     implementation(libs.ktor.client.core)
     implementation(libs.ktor.client.cio)
+    implementation(libs.ktor.client.okhttp)
     implementation(libs.ktor.client.contentNegotiation)
     implementation(libs.ktor.client.auth)
     implementation(libs.ktor.serialization.jackson)
@@ -51,6 +82,7 @@ dependencies {
     testImplementation(libs.ktor.server.test.host)
     testImplementation(libs.ktor.client.mock)
     testImplementation(libs.mockk)
+    testImplementation(libs.bytebuddy)
 }
 
 tasks.jar {
@@ -64,9 +96,6 @@ tasks.test {
     jvmArgs("-Dkotlinx.coroutines.debug", "-Dkotlinx.coroutines.stacktrace.recovery=true")
 }
 
-kotlin {
-    jvmToolchain(24)
-}
 
 application {
     mainClass.set("de.fraunhofer.aisec.glue.ApplicationKt")
@@ -96,6 +125,22 @@ tasks.register<JavaExec>("runPolicyTool") {
     classpath = sourceSets["main"].runtimeClasspath
     mainClass.set("de.fraunhofer.aisec.glue.tools.RegisterPolicyKt")
     standardInput = System.`in`
+}
+
+configure<JSONSchemaCodegen> {
+    packageName.set("de.fraunhofer.aisec.glue.atls")
+    classMappings {
+        fun makeMetadataMapAlias(className: String): ClassMappingByURI {
+            return byURI(
+                "de.fraunhofer.aisec.glue.atls.MetadataMap",
+                URI("file", File("src/main/resources/schema/$className.json").absoluteFile.toString(), "/\$defs/$className/properties/metadata")
+            )
+        }
+
+        makeMetadataMapAlias("AtlsHandshakeResponse")
+        makeMetadataMapAlias("AttestationResponse")
+        makeMetadataMapAlias("VerificationRequest")
+    }
 }
 
 spotless {

@@ -1,0 +1,19 @@
+[Unit]
+Description=Glue Container Manager
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/glue-container-manager
+Restart=on-failure
+# Systemd hardening features - disable if they cause problems
+ProtectHome=true
+ProtectSystem=strict
+PrivateTmp=true
+NoNewPrivileges=true
+User=glue
+Group=glue
+
+[Install]
+WantedBy=multi-user.target

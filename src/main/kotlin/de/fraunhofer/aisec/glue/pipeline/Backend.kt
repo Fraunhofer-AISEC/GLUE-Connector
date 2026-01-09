@@ -1,7 +1,5 @@
 package de.fraunhofer.aisec.glue.pipeline
 
-import de.fraunhofer.iosb.odrl.glue.GlueContainerPipeline
-
 /**
  * This interface abstracts over all possible backends that a container pipeline may have.
  * Currently, only the docker backend exists, but other runtimes (i.e. k8s) may come later.
@@ -12,7 +10,7 @@ interface Backend {
      */
     suspend fun createPipeline(
         id: String,
-        policyObject: GlueContainerPipeline,
+        pipelineSpec: List<AugmentedGlueContainer>,
         contractId: String,
         targetId: String,
     ): ContainerPipeline

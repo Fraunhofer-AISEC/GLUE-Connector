@@ -173,85 +173,86 @@ class BuiltinNegotiation(
         req: ContractRequestMessage,
         initial: Boolean = false,
         responseCallback: suspend (Boolean) -> Unit,
-    ) = mutex.withLock {
-        // When we first construct a negotiation, we initialize it to the requested state right away.
-        // For later stages, we only allow the consumer to request new contract offers if we have already offered a
-        // contract.
-        val allowedState =
-            if (initial) {
-                NegotiationState.REQUESTED
-            } else {
-                NegotiationState.OFFERED
+    ): Unit =
+        mutex.withLock {
+            // When we first construct a negotiation, we initialize it to the requested state right away.
+            // For later stages, we only allow the consumer to request new contract offers if we have already offered a
+            // contract.
+            val allowedState =
+                if (initial) {
+                    NegotiationState.REQUESTED
+                } else {
+                    NegotiationState.OFFERED
+                }
+            if (!precondition(allowedState, Negotiation.Role.PROVIDER)) {
+                responseCallback(false)
+                return
             }
-        if (!precondition(allowedState, Negotiation.Role.PROVIDER)) {
-            responseCallback(false)
-            return
-        }
 
-        responseCallback(true)
+            responseCallback(true)
 
-        val (ok, counter) = negotiator.evaluateRequest(req.offer)
-        LOG.atDebug {
-            message = "Negotiator evaluates the request as ${if (ok) {
-                "acceptable"
-            } else {
-                "not acceptable"
-            }}"
-            val (providerPid, consumerPid) = getProviderAndConsumerPid()
-            payload =
-                mapOf<String, Any>(
-                    "role" to role,
-                    "state" to internalState,
-                    "providerPid" to providerPid,
-                    "consumerPid" to consumerPid,
-                )
-        }
-
-        if (!ok) {
-            if (counter != null) {
-                if (!terminateOnError(
-                        sendMessage(
-                            "$peerPid/offers",
-                            ContractOfferMessage(
-                                providerPid = id,
-                                consumerPid = peerPid,
-                                callbackAddress = ownEndpoint.toString(),
-                                offer = counter,
-                            ),
-                        ),
+            val (ok, counter) = negotiator.evaluateRequest(req.offer)
+            LOG.atDebug {
+                message = "Negotiator evaluates the request as ${if (ok) {
+                    "acceptable"
+                } else {
+                    "not acceptable"
+                }}"
+                val (providerPid, consumerPid) = getProviderAndConsumerPid()
+                payload =
+                    mapOf<String, Any>(
+                        "role" to role,
+                        "state" to internalState,
+                        "providerPid" to providerPid,
+                        "consumerPid" to consumerPid,
                     )
-                ) {
+            }
+
+            if (!ok) {
+                if (counter != null) {
+                    if (!terminateOnError(
+                            sendMessage(
+                                "$peerPid/offers",
+                                ContractOfferMessage(
+                                    providerPid = id,
+                                    consumerPid = peerPid,
+                                    callbackAddress = ownEndpoint.toString(),
+                                    offer = counter,
+                                ),
+                            ),
+                        )
+                    ) {
+                        return
+                    }
+                    currentPolicy = counter
+                    internalState = NegotiationState.OFFERED
+                    return
+                } else {
+                    terminateNegotiation("errPolicyFailure", "No counteroffer can be computed for this request")
                     return
                 }
-                currentPolicy = counter
-                internalState = NegotiationState.OFFERED
-                return
-            } else {
-                terminateNegotiation("errPolicyFailure", "No counteroffer can be computed for this request")
+            }
+
+            val agreement = req.offer.toAgreement(odrlParser, OdrlParty())
+
+            // We have accepted the contract as is, tell the consumer and anyone waiting for this contract negotiation
+            if (!terminateOnError(
+                    sendMessage(
+                        "$peerPid/agreement",
+                        ContractAgreementMessage(
+                            providerPid = id,
+                            consumerPid = peerPid,
+                            agreement = agreement,
+                            callbackAddress = ownEndpoint.toString(),
+                        ),
+                    ),
+                )
+            ) {
                 return
             }
+            currentPolicy = agreement
+            internalState = NegotiationState.AGREED
         }
-
-        val agreement = req.offer.toAgreement(odrlParser, OdrlParty())
-
-        // We have accepted the contract as is, tell the consumer and anyone waiting for this contract negotiation
-        if (!terminateOnError(
-                sendMessage(
-                    "$peerPid/agreement",
-                    ContractAgreementMessage(
-                        providerPid = id,
-                        consumerPid = peerPid,
-                        agreement = agreement,
-                        callbackAddress = ownEndpoint.toString(),
-                    ),
-                ),
-            )
-        ) {
-            return
-        }
-        currentPolicy = agreement
-        internalState = NegotiationState.AGREED
-    }
 
     /**
      * Process a contract offer sent from the provider.
@@ -262,74 +263,75 @@ class BuiltinNegotiation(
         req: ContractOfferMessage,
         initial: Boolean = false,
         responseCallback: suspend (Boolean) -> Unit,
-    ) = mutex.withLock {
-        val allowedState =
-            if (initial) {
-                NegotiationState.OFFERED
-            } else {
-                NegotiationState.REQUESTED
-            }
+    ): Unit =
+        mutex.withLock {
+            val allowedState =
+                if (initial) {
+                    NegotiationState.OFFERED
+                } else {
+                    NegotiationState.REQUESTED
+                }
 
-        if (!precondition(allowedState, Negotiation.Role.CONSUMER)) {
-            responseCallback(false)
-            return
-        }
-
-        responseCallback(true)
-
-        val (ok, newOffer) = negotiator.evaluateOffer(req.offer)
-        LOG.atDebug {
-            message = "Negotiator evaluates the offer as ${if (ok) {
-                "acceptable"
-            } else {
-                "not acceptable"
-            }}"
-            val (providerPid, consumerPid) = getProviderAndConsumerPid()
-            payload =
-                mapOf<String, Any>(
-                    "role" to role,
-                    "state" to internalState,
-                    "providerPid" to providerPid,
-                    "consumerPid" to consumerPid,
-                )
-        }
-
-        if (!ok) {
-            if (newOffer != null) {
-                sendMessage(
-                    "$peerPid/request",
-                    ContractRequestMessage(
-                        providerPid = peerPid,
-                        consumerPid = id,
-                        callbackAddress = ownEndpoint.toString(),
-                        offer = newOffer,
-                    ),
-                )
-                internalState = NegotiationState.REQUESTED
-                currentPolicy = newOffer
-                return
-            } else {
-                terminateNegotiation("errPolicyFailure", "No counteroffer can be computed for this request")
+            if (!precondition(allowedState, Negotiation.Role.CONSUMER)) {
+                responseCallback(false)
                 return
             }
-        }
 
-        currentPolicy = req.offer
-        if (!terminateOnError(
-                sendMessage(
-                    "$peerPid/events",
-                    ContractNegotiationEventMessage(
-                        providerPid = peerPid,
-                        consumerPid = id,
-                        eventType = NegotiationEvent.ACCEPTED,
+            responseCallback(true)
+
+            val (ok, newOffer) = negotiator.evaluateOffer(req.offer)
+            LOG.atDebug {
+                message = "Negotiator evaluates the offer as ${if (ok) {
+                    "acceptable"
+                } else {
+                    "not acceptable"
+                }}"
+                val (providerPid, consumerPid) = getProviderAndConsumerPid()
+                payload =
+                    mapOf<String, Any>(
+                        "role" to role,
+                        "state" to internalState,
+                        "providerPid" to providerPid,
+                        "consumerPid" to consumerPid,
+                    )
+            }
+
+            if (!ok) {
+                if (newOffer != null) {
+                    sendMessage(
+                        "$peerPid/request",
+                        ContractRequestMessage(
+                            providerPid = peerPid,
+                            consumerPid = id,
+                            callbackAddress = ownEndpoint.toString(),
+                            offer = newOffer,
+                        ),
+                    )
+                    internalState = NegotiationState.REQUESTED
+                    currentPolicy = newOffer
+                    return
+                } else {
+                    terminateNegotiation("errPolicyFailure", "No counteroffer can be computed for this request")
+                    return
+                }
+            }
+
+            currentPolicy = req.offer
+            if (!terminateOnError(
+                    sendMessage(
+                        "$peerPid/events",
+                        ContractNegotiationEventMessage(
+                            providerPid = peerPid,
+                            consumerPid = id,
+                            eventType = NegotiationEvent.ACCEPTED,
+                        ),
                     ),
-                ),
-            )
-        ) {
-            return
+                )
+            ) {
+                return
+            }
+            internalState = NegotiationState.ACCEPTED
         }
-        internalState = NegotiationState.ACCEPTED
-    }
 
     suspend fun processAccept(responseCallback: suspend (Boolean) -> Unit): Unit =
         mutex.withLock {
