@@ -46,13 +46,13 @@ type pipelinePort struct {
 	Protocol string `json:"protocol"`
 }
 
-func negotiateAndProxy(conn net.Conn, coordiantor string, destination string) {
+func negotiateAndProxy(conn net.Conn, coordinator string, destination string) {
 	var httpClient http.Client
 	defer closeSilent(conn)
 
-	// Register the dnextDestionation parameter with the coordinator (control plane)
+	// Register the nextDestination parameter with the coordinator (control plane)
 
-	parameterUrl := fmt.Sprintf("http://%s:8080/coordinator/policy-parameter", coordiantor)
+	parameterUrl := fmt.Sprintf("http://%s:8080/coordinator/policy-parameter", coordinator)
 	var paramBuffer bytes.Buffer
 	err := json.NewEncoder(&paramBuffer).Encode(map[string]string{"nextDataReceiverUid": destination})
 	if err != nil {
@@ -73,7 +73,7 @@ func negotiateAndProxy(conn net.Conn, coordiantor string, destination string) {
 
 	// Kick of the negotiation on the coordinator
 
-	coordinatorUrl := fmt.Sprintf("http://%s:8080/coordinator/negotiate?destination=%s&startPipeline=true", coordiantor, destination)
+	coordinatorUrl := fmt.Sprintf("http://%s:8080/coordinator/negotiate?destination=%s&startPipeline=true", coordinator, destination)
 	resp, err := httpClient.Post(coordinatorUrl, "application/json", nil)
 	if err != nil {
 		log.Printf("Error in coordinator negotiation request: %s", err)

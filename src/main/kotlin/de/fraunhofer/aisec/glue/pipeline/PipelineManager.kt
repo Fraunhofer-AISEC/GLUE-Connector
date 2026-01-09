@@ -1,21 +1,86 @@
 package de.fraunhofer.aisec.glue.pipeline
 
 import de.fraunhofer.aisec.glue.Utils.hexEncode
+import de.fraunhofer.aisec.glue.config.ConfigManager
+import de.fraunhofer.aisec.glue.pipeline.atls.AtlsConfig
+import de.fraunhofer.aisec.glue.pipeline.atls.AtlsParameter
+import de.fraunhofer.iosb.odrl.glue.GlueAtlsProxyConfiguration
+import de.fraunhofer.iosb.odrl.glue.GlueContainer
 import de.fraunhofer.iosb.odrl.glue.GlueContainerPipeline
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.ktor.network.sockets.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import java.io.File
+import java.net.InetSocketAddress
 import kotlin.random.Random
 
 class PipelineManager(
     private val remoteManager: RemotePipelineManager,
     private val backend: Backend,
+    config: ConfigManager,
 ) {
     private val pipelines = mutableMapOf<String, ContainerPipeline>()
     private val pipelineMutex = Mutex()
+    private val pipelineConfig = config.getConfig(::AtlsConfig)
 
-    private fun createPipelineName(): String =
-        generateSequence { Random.Default.nextBytes(8).hexEncode() }.first { n -> !pipelines.contains(n) }
+    private fun createPipelineName(): String = generateSequence { Random.nextBytes(8).hexEncode() }.first { n -> !pipelines.contains(n) }
+
+    private fun createAtlsContainer(proxyConfig: GlueAtlsProxyConfiguration): AugmentedGlueContainer {
+        return AugmentedGlueContainer(
+            GlueContainer(
+                pipelineConfig.proxyContainer,
+                pipelineConfig.proxyHash,
+                true,
+                listOf(
+                    AtlsParameter(
+                        mode = proxyConfig.proxyMode,
+                        cmcAddress =
+                            pipelineConfig.cmcAddress.let {
+                                when (val addr = it.toJavaAddress()) {
+                                    is InetSocketAddress -> "${addr.hostString}:${addr.port}"
+                                    else -> addr.toString()
+                                }
+                            },
+                        caCertificate = File(pipelineConfig.caCertPath).readText(),
+                        proxyEndpoint = proxyConfig.proxyEndpoint
+                    ),
+                ),
+            ),
+            buildMap {
+                // If the CMC is made available via a unix socket, we need to mount it into the container
+                // TODO: This way of handling this adds the constraint that the CMC must be on the same path on all
+                //  possible nodes, which is reasonable but should be documented.
+                if (pipelineConfig.cmcAddress is UnixSocketAddress) {
+                    val path = (pipelineConfig.cmcAddress as UnixSocketAddress).path
+                    put(path, path)
+                }
+            },
+        )
+    }
+
+    /**
+     * Augment the container pipeline object by properly configuring all ATLS proxy images
+     */
+    private fun augmentPipelineSpec(originalSpec: GlueContainerPipeline): List<AugmentedGlueContainer> {
+        val augmentedSpec = mutableListOf<AugmentedGlueContainer>()
+        originalSpec.atlsProxyIn?.let {
+            LOG.atDebug {
+                message = "Adding ATLS input proxy container"
+                payload = mapOf("atlsProxyIn" to it)
+            }
+            augmentedSpec += createAtlsContainer(it)
+        }
+        originalSpec.container.forEach { augmentedSpec += AugmentedGlueContainer(it, emptyMap()) }
+        originalSpec.atlsProxyOut?.let {
+            LOG.atDebug {
+                message = "Adding ATLS output proxy container"
+                payload = mapOf("atlsProxyOut" to it)
+            }
+            augmentedSpec += createAtlsContainer(it)
+        }
+        return augmentedSpec
+    }
 
     suspend fun createPipeline(
         pipelineSpec: GlueContainerPipeline,
@@ -23,8 +88,10 @@ class PipelineManager(
         targetId: String,
     ): ContainerPipeline =
         pipelineMutex.withLock {
+            val augmentedSpec = augmentPipelineSpec(pipelineSpec)
+
             val name = createPipelineName()
-            val pipeline = backend.createPipeline(name, pipelineSpec, contractId, targetId)
+            val pipeline = backend.createPipeline(name, augmentedSpec, contractId, targetId)
 
             try {
                 val containerInfo = pipeline.getContainerInfo()
@@ -37,7 +104,7 @@ class PipelineManager(
                         ContainerConfig(
                             controller = backend.getConnectorIp(current),
                             nextContainer = next,
-                            parameters = pipelineSpec.container[i].parameter,
+                            parameters = augmentedSpec[i].base.parameter,
                         ),
                     )
                 }
@@ -62,6 +129,8 @@ class PipelineManager(
                 // Note: We are not calling close here since that just invokes stop and remove in the background.
             } != null
         }
+
+    suspend fun getPipelines(): Map<String, ContainerPipeline> = pipelineMutex.withLock { pipelines }
 
     suspend fun getPipelineStatus(id: String): Boolean =
         pipelineMutex.withLock {

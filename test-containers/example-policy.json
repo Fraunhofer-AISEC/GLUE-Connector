@@ -54,7 +54,7 @@
           "odrl:leftOperand": "http://www.w3.org/ns/odrl/2/dateTime",
           "odrl:operator": "http://www.w3.org/ns/odrl/2/lteq",
           "odrl:rightOperand": {
-            "@value": "2025-12-21",
+            "@value": "3000-12-21",
             "@type": "http://www.w3.org/2001/XMLSchema#date"
           }
         }
