@@ -34,7 +34,6 @@ class ContainerInterfaceController(
     private val odrlParser: OdrlParser,
     private val remotePipelineManager: RemotePipelineManager,
 ) : Controller {
-
     override fun Route.registerRoutes() {
         // Just IP-Address seems like it *could* be enough here (containers cannot really fake that as they cannot
         // That said, we could easily enough just inject a token for the container to authenticate with.

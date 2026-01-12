@@ -13,7 +13,7 @@ class AtlsConfig(rawConfig: ApplicationConfig) : Config(rawConfig) {
 
     val proxyHash by withDefault(
         stringProp(),
-        "sha256:bdd2cb41467018c5a2431c3c8910a06b20cf9b43b867d3d7ab0da7bad9d63669",
+        "sha256:26e52ffc123abefe919289feaaa046f2afd702d62d82006d17b9d2c1e1431782",
     )
 
     val cmcAddress by withDefault(

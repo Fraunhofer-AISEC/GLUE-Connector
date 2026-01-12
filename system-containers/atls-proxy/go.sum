@@ -1,5 +1,5 @@
-github.com/Fraunhofer-AISEC/cmc v0.9.4 h1:qPvWc/Z8O9GvgVobatG/KDGu7L29GstIQbJroDQxoPo=
-github.com/Fraunhofer-AISEC/cmc v0.9.4/go.mod h1:BPzOceXTeK4qFR0uMGgmw81seExXOnX3Qt04SadcopI=
+github.com/Fraunhofer-AISEC/cmc v0.9.5 h1:y+ilgRsYNnVFwym+8BrXoRt/6u/zusUCLMZqqD2LsKM=
+github.com/Fraunhofer-AISEC/cmc v0.9.5/go.mod h1:eW6DJBL94bHcJVyp+bkNPOxKMmU4SKG+t5EJaWzTc5E=
 github.com/Fraunhofer-AISEC/go-attestation v0.5.2-0.20241227162048-d0a5b66c0bb6 h1:iQrMNQbdg8L6WfpazWhTAuQOODTRVS6ppzhO3kt3uaE=
 github.com/Fraunhofer-AISEC/go-attestation v0.5.2-0.20241227162048-d0a5b66c0bb6/go.mod h1:aupPS5aOJwVmuVfHzn5cp+CnFSsjTRFn8NbdNWYaIv4=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=

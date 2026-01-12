@@ -17,6 +17,17 @@
         "width"
       ]
     },
+    "CPUAffinity": {
+      "properties": {
+        "initial": {
+          "type": "string"
+        },
+        "final": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
     "CtrData": {
       "properties": {
         "configSha256": {
@@ -42,6 +53,15 @@
         },
         "subtype": {
           "type": "string"
+        },
+        "function": {
+          "type": "integer"
+        },
+        "device": {
+          "type": "integer"
+        },
+        "functionnumber": {
+          "type": "integer"
         },
         "memorytype": {
           "type": "integer"
@@ -118,8 +138,7 @@
       },
       "type": "object",
       "required": [
-        "type",
-        "subtype"
+        "type"
       ]
     },
     "EFILoadOption": {
@@ -172,6 +191,125 @@
         },
         "rawdata": {
           "$ref": "#/$defs/HexByte"
+        }
+      },
+      "type": "object"
+    },
+    "FreeBSD": {
+      "properties": {
+        "devices": {
+          "items": {
+            "$ref": "#/$defs/FreeBSDDevice"
+          },
+          "type": "array"
+        },
+        "jail": {
+          "$ref": "#/$defs/FreeBSDJail"
+        }
+      },
+      "type": "object"
+    },
+    "FreeBSDDevice": {
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "mode": {
+          "type": "integer"
+        }
+      },
+      "type": "object",
+      "required": [
+        "path"
+      ]
+    },
+    "FreeBSDJail": {
+      "properties": {
+        "parent": {
+          "type": "string"
+        },
+        "host": {
+          "type": "string"
+        },
+        "ip4": {
+          "type": "string"
+        },
+        "ip4Addr": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "ip6": {
+          "type": "string"
+        },
+        "ip6Addr": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "vnet": {
+          "type": "string"
+        },
+        "interface": {
+          "type": "string"
+        },
+        "vnetInterfaces": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "sysvmsg": {
+          "type": "string"
+        },
+        "sysvsem": {
+          "type": "string"
+        },
+        "sysvshm": {
+          "type": "string"
+        },
+        "enforceStatfs": {
+          "type": "integer"
+        },
+        "allow": {
+          "$ref": "#/$defs/FreeBSDJailAllow"
+        }
+      },
+      "type": "object"
+    },
+    "FreeBSDJailAllow": {
+      "properties": {
+        "setHostname": {
+          "type": "boolean"
+        },
+        "rawSockets": {
+          "type": "boolean"
+        },
+        "chflags": {
+          "type": "boolean"
+        },
+        "mount": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "quotas": {
+          "type": "boolean"
+        },
+        "socketAf": {
+          "type": "boolean"
+        },
+        "mlock": {
+          "type": "boolean"
+        },
+        "reservedPorts": {
+          "type": "boolean"
+        },
+        "suser": {
+          "type": "boolean"
         }
       },
       "type": "object"
@@ -248,6 +386,38 @@
         },
         "partitionname": {
           "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "HWConfig": {
+      "properties": {
+        "deviceTree": {
+          "type": "string"
+        },
+        "vcpus": {
+          "type": "integer"
+        },
+        "memory": {
+          "type": "integer"
+        },
+        "dtdevs": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "iomems": {
+          "items": {
+            "$ref": "#/$defs/IOMems"
+          },
+          "type": "array"
+        },
+        "irqs": {
+          "items": {
+            "type": "integer"
+          },
+          "type": "array"
         }
       },
       "type": "object"
@@ -336,6 +506,24 @@
         }
       },
       "type": "object"
+    },
+    "IOMems": {
+      "properties": {
+        "firstGFN": {
+          "type": "integer"
+        },
+        "firstMFN": {
+          "type": "integer"
+        },
+        "nrMFNs": {
+          "type": "integer"
+        }
+      },
+      "type": "object",
+      "required": [
+        "firstMFN",
+        "nrMFNs"
+      ]
     },
     "ImageLoadEvent": {
       "properties": {
@@ -457,6 +645,12 @@
           },
           "type": "array"
         },
+        "netDevices": {
+          "additionalProperties": {
+            "$ref": "#/$defs/LinuxNetDevice"
+          },
+          "type": "object"
+        },
         "seccomp": {
           "$ref": "#/$defs/LinuxSeccomp"
         },
@@ -480,6 +674,9 @@
         },
         "intelRdt": {
           "$ref": "#/$defs/LinuxIntelRdt"
+        },
+        "memoryPolicy": {
+          "$ref": "#/$defs/LinuxMemoryPolicy"
         },
         "personality": {
           "$ref": "#/$defs/LinuxPersonality"
@@ -710,16 +907,19 @@
         "closID": {
           "type": "string"
         },
+        "schemata": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "l3CacheSchema": {
           "type": "string"
         },
         "memBwSchema": {
           "type": "string"
         },
-        "enableCMT": {
-          "type": "boolean"
-        },
-        "enableMBM": {
+        "enableMonitoring": {
           "type": "boolean"
         }
       },
@@ -772,6 +972,27 @@
       },
       "type": "object"
     },
+    "LinuxMemoryPolicy": {
+      "properties": {
+        "mode": {
+          "type": "string"
+        },
+        "nodes": {
+          "type": "string"
+        },
+        "flags": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object",
+      "required": [
+        "mode",
+        "nodes"
+      ]
+    },
     "LinuxNamespace": {
       "properties": {
         "type": {
@@ -785,6 +1006,14 @@
       "required": [
         "type"
       ]
+    },
+    "LinuxNetDevice": {
+      "properties": {
+        "name": {
+          "type": "string"
+        }
+      },
+      "type": "object"
     },
     "LinuxNetwork": {
       "properties": {
@@ -823,10 +1052,7 @@
           "type": "integer"
         }
       },
-      "type": "object",
-      "required": [
-        "limit"
-      ]
+      "type": "object"
     },
     "LinuxRdma": {
       "properties": {
@@ -1209,6 +1435,9 @@
         },
         "ioPriority": {
           "$ref": "#/$defs/LinuxIOPriority"
+        },
+        "execCPUAffinity": {
+          "$ref": "#/$defs/CPUAffinity"
         }
       },
       "type": "object",
@@ -1403,6 +1632,9 @@
         },
         "zos": {
           "$ref": "#/$defs/ZOS"
+        },
+        "freebsd": {
+          "$ref": "#/$defs/FreeBSD"
         }
       },
       "type": "object",
@@ -1559,6 +1791,9 @@
         },
         "image": {
           "$ref": "#/$defs/VMImage"
+        },
+        "hwconfig": {
+          "$ref": "#/$defs/HWConfig"
         }
       },
       "type": "object",
@@ -1669,6 +1904,17 @@
         "layerFolders"
       ]
     },
+    "WindowsCPUGroupAffinity": {
+      "properties": {
+        "mask": {
+          "type": "integer"
+        },
+        "group": {
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
     "WindowsCPUResources": {
       "properties": {
         "count": {
@@ -1679,6 +1925,12 @@
         },
         "maximum": {
           "type": "integer"
+        },
+        "affinity": {
+          "items": {
+            "$ref": "#/$defs/WindowsCPUGroupAffinity"
+          },
+          "type": "array"
         }
       },
       "type": "object"
@@ -1932,45 +2184,27 @@
     },
     "ZOS": {
       "properties": {
-        "devices": {
+        "namespaces": {
           "items": {
-            "$ref": "#/$defs/ZOSDevice"
+            "$ref": "#/$defs/ZOSNamespace"
           },
           "type": "array"
         }
       },
       "type": "object"
     },
-    "ZOSDevice": {
+    "ZOSNamespace": {
       "properties": {
-        "path": {
-          "type": "string"
-        },
         "type": {
           "type": "string"
         },
-        "major": {
-          "type": "integer"
-        },
-        "minor": {
-          "type": "integer"
-        },
-        "fileMode": {
-          "type": "integer"
-        },
-        "uid": {
-          "type": "integer"
-        },
-        "gid": {
-          "type": "integer"
+        "path": {
+          "type": "string"
         }
       },
       "type": "object",
       "required": [
-        "path",
-        "type",
-        "major",
-        "minor"
+        "type"
       ]
     }
   }

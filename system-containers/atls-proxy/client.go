@@ -121,15 +121,26 @@ func (cp *ClientProxy) handleConnection(clientConn net.Conn) {
 		attestedtls.WithCmcApi(attestedtls.CmcApi_Socket),
 		attestedtls.WithMtls(true),
 		attestedtls.WithApiSerializer(attestationreport.JsonSerializer{}),
+		attestedtls.WithResultCb(func(result *attestationreport.VerificationResult) {
+			switch result.Summary.Status {
+			case attestationreport.StatusSuccess:
+				slog.Info("SUCCESS: Verification for Prover %v (%v)", result.Prover, result.Created)
+			case attestationreport.StatusWarn:
+				slog.Warn("WARN: Verification for Prover %v (%v)", result.Prover, result.Created)
+			default:
+				slog.Warn("FAILED: Verification for Prover %v (%v)", result.Prover, result.Created)
+				result.PrintErr()
+			}
+		}),
 	)
 	if err != nil {
 		slog.Error("Could not open connection to the peer", "error", err)
 		return
 	}
 
-    // Disable timeouts, the data apps should ensure that connections are cleaned up
-    clientConn.SetDeadline(time.Time{})
-    atlsConn.SetDeadline(time.Time{})
+	// Disable timeouts, the data apps should ensure that connections are cleaned up
+	clientConn.SetDeadline(time.Time{})
+	atlsConn.SetDeadline(time.Time{})
 
 	proxy(cp.ctx, clientConn, atlsConn)
 }
