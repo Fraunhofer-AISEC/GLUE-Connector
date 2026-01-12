@@ -24,7 +24,7 @@ func proxy(conn net.Conn, proxyAddress string) {
 	}
 	defer closeSilent(peer)
 
-	deadline := 3 * time.Minute
+	deadline := 6 * time.Minute
 	forward := func(from net.Conn, to net.Conn, errCh chan<- error) {
 		var buffer [10 * 1024]byte
 		for {
