@@ -67,6 +67,10 @@ func (sp *ServerProxy) handleConnection(clientConn net.Conn) {
 		return
 	}
 
+    // Disable timeouts, the data apps should decide when to close connections.
+    clientConn.SetDeadline(0)
+    serverConn.SetDeadline(0)
+
 	proxy(sp.ctx, clientConn, serverConn)
 }
 

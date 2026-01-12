@@ -126,6 +126,10 @@ func (cp *ClientProxy) handleConnection(clientConn net.Conn) {
 		return
 	}
 
+    // Disable timeouts, the data apps should ensure that connections are cleaned up
+    clientConn.SetDeadline(0)
+    atlsConn.SetDeadline(0)
+
 	proxy(cp.ctx, clientConn, atlsConn)
 }
 
