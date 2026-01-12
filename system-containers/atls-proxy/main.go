@@ -71,31 +71,6 @@ func parseConfig() (config, atlsProxyConfig, error) {
 	return config{}, atlsProxyConfig{}, fmt.Errorf("atls proxy parameter is missing")
 }
 
-func copyWithTimeout(from, to net.Conn, deadline time.Duration) error {
-    var buffer [10 * 1024]byte
-    for {
-        rn, err := from.Read(buffer[:])
-        // Write before error handling in case we have somehow read some data before the error
-        if rn > 0 {
-            wn, err := to.Write(buffer[:rn])
-            if err != nil {
-                return fmt.Errorf("write error: %w", err)
-            }
-            if wn != rn {
-                return fmt.Errorf("could not write all data to destination socket")
-            }
-        }
-        if err != nil {
-            if err != io.EOF {
-                return fmt.Errorf("read error: %w", err)
-            }
-            return nil
-        }
-        _ = from.SetReadDeadline(time.Now().Add(deadline))
-        _ = to.SetWriteDeadline(time.Now().Add(deadline))
-    }
-}
-
 func proxy(ctx context.Context, conn1, conn2 net.Conn) {
 	localCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -111,7 +86,7 @@ func proxy(ctx context.Context, conn1, conn2 net.Conn) {
 	}()
 
 	forward := func(from, to net.Conn) {
-		err := copyWithTimeout(from, to, 6 * time.Minute)
+		_, err := io.Copy(to, from)
 		if errors.Is(err, os.ErrDeadlineExceeded) && ctxCancelled.Load() {
 			// This error is due to the context being cancelled, ignore
 		} else {
