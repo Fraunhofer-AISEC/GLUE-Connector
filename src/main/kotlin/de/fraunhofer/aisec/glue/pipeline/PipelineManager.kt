@@ -43,7 +43,7 @@ class PipelineManager(
                                 }
                             },
                         caCertificate = File(pipelineConfig.caCertPath).readText(),
-                        proxyEndpoint = proxyConfig.proxyEndpoint
+                        proxyEndpoint = proxyConfig.proxyEndpoint,
                     ),
                 ),
             ),
@@ -134,9 +134,8 @@ class PipelineManager(
 
     suspend fun getPipelineStatus(id: String): Boolean =
         pipelineMutex.withLock {
-            val pipeline = pipelines[id] ?: return false
             // TODO: Check the integrity of the running containers (using healthchecks if available)
-            return true
+            pipelines.containsKey(id)
         }
 
     suspend fun getPipelineById(id: String): ContainerPipeline? = pipelineMutex.withLock { pipelines[id] }

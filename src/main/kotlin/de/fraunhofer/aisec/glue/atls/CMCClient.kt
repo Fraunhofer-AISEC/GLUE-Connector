@@ -118,7 +118,7 @@ class CMCClient(
         }
     }
 
-    suspend fun fetchPeerCache(cacheKey: String): List<String>? {
+    suspend fun fetchPeerCache(cacheKey: String): List<String> {
         val req = PeerCacheRequest(VERSION, cacheKey)
         when (val resp = sendCmcRequest(req)) {
             is PeerCacheResponse -> return resp.cache

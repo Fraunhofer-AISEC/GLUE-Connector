@@ -71,7 +71,7 @@ class AtlsHandshake(
                         payload =
                             mapOf(
                                 "cacheKey" to cacheKey,
-                                "cacheSize" to (result?.size ?: 0),
+                                "cacheSize" to result.size,
                             )
                     }
                 }

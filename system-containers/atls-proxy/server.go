@@ -67,9 +67,9 @@ func (sp *ServerProxy) handleConnection(clientConn net.Conn) {
 		return
 	}
 
-    // Disable timeouts, the data apps should decide when to close connections.
-    clientConn.SetDeadline(time.Time{})
-    serverConn.SetDeadline(time.Time{})
+	// Disable timeouts, the data apps should decide when to close connections.
+	clientConn.SetDeadline(time.Time{})
+	serverConn.SetDeadline(time.Time{})
 
 	proxy(sp.ctx, clientConn, serverConn)
 }
@@ -85,6 +85,17 @@ func (sp *ServerProxy) listen() error {
 		attestedtls.WithCmcApi(attestedtls.CmcApi_Socket),
 		attestedtls.WithMtls(true),
 		attestedtls.WithApiSerializer(attestationreport.JsonSerializer{}),
+		attestedtls.WithResultCb(func(result *attestationreport.VerificationResult) {
+			switch result.Summary.Status {
+			case attestationreport.StatusSuccess:
+				slog.Info("SUCCESS: Verification for Prover %v (%v)", result.Prover, result.Created)
+			case attestationreport.StatusWarn:
+				slog.Warn("WARN: Verification for Prover %v (%v)", result.Prover, result.Created)
+			default:
+				slog.Warn("FAILED: Verification for Prover %v (%v)", result.Prover, result.Created)
+				result.PrintErr()
+			}
+		}),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to listen for ATLS connections on %s: %w", serverListenAddr, err)
