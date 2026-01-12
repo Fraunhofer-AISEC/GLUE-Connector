@@ -46,7 +46,7 @@ func proxy(conn net.Conn, proxyAddress string) {
 				}
 				return
 			}
-			_ = from.SetReadADeadline(time.Now().Add(deadline))
+			_ = from.SetReadDeadline(time.Now().Add(deadline))
 			_ = to.SetWriteDeadline(time.Now().Add(deadline))
 		}
 	}
