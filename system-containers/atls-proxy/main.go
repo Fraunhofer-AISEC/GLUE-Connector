@@ -111,7 +111,7 @@ func proxy(ctx context.Context, conn1, conn2 net.Conn) {
 	}()
 
 	forward := func(from, to net.Conn) {
-		err := copyWithTimeout(from, to, 3 * time.Minute)
+		err := copyWithTimeout(from, to, 6 * time.Minute)
 		if errors.Is(err, os.ErrDeadlineExceeded) && ctxCancelled.Load() {
 			// This error is due to the context being cancelled, ignore
 		} else {
