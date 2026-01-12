@@ -2,6 +2,7 @@ package de.fraunhofer.aisec.glue.atls
 
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ktor.network.selector.*
 import io.ktor.network.sockets.*
 import io.ktor.utils.io.*
@@ -11,7 +12,6 @@ import java.nio.ByteBuffer
 import java.security.PEMDecoder
 import java.security.cert.X509Certificate
 import kotlin.io.encoding.Base64
-import kotlin.reflect.KClass
 
 class CMCClient(
     private val cmcAddress: SocketAddress,
@@ -27,21 +27,31 @@ class CMCClient(
             configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
         }
 
-    private suspend inline fun <reified T> sendCmcRequest(payload: T): Any {
-        val serializedPayload = objectMapper.writeValueAsBytes(payload)
-        val payloadLength = serializedPayload.size
+    private suspend inline fun <reified T> sendCmcRequest(request: T): Any {
+        val serializedRequest = objectMapper.writeValueAsBytes(request)
+        val requestSize = serializedRequest.size
+
+        LOG.atDebug {
+            message = "Sending CMC request"
+            payload = mapOf(
+                "requestType" to T::class.simpleName,
+                "cmcAddress" to cmcAddress,
+            )
+        }
 
         // Despite this method signature indicating support for TCP sockets only, unix sockets also work.
         // I suppose what the authors mean to say is that the socket is stream-oriented.
-        return aSocket(selectorManager).tcp().connect(cmcAddress).use { socket ->
+        aSocket(selectorManager).tcp().connect(cmcAddress).use { socket ->
             val output = socket.openWriteChannel(autoFlush = false)
+            val messageType =
+                CMC_REQUEST_LOOKUP[T::class] ?: throw IllegalArgumentException(
+                    "Unknown payload type ${T::class.qualifiedName}",
+                )
 
-            output.writeInt(payloadLength)
-            output.writeInt(
-                CMC_REQUEST_LOOKUP[T::class] ?: throw IllegalArgumentException("Unknown payload type ${T::class.qualifiedName}"),
-            )
+            output.writeInt(requestSize)
+            output.writeInt(messageType)
 
-            output.writeByteArray(serializedPayload)
+            output.writeByteArray(serializedRequest)
             output.flush()
 
             // Wait for a reply
@@ -52,10 +62,21 @@ class CMCClient(
             val replyPayload = ByteBuffer.allocate(replyLength)
             input.readFully(replyPayload)
 
-            objectMapper.readValue(
+            val response = objectMapper.readValue(
                 replyPayload.array(),
                 CMC_RESPONSE_LOOKUP[replyType]?.java ?: throw ProtocolException("Unknown reply type $replyType"),
             )
+
+            LOG.atDebug {
+                message = "Received CMC response"
+                payload = mapOf(
+                    "requestType" to T::class.simpleName,
+                    "replyType" to replyType,
+                    "cmcAddress" to cmcAddress,
+                )
+            }
+
+            return response
         }
     }
 
@@ -69,8 +90,7 @@ class CMCClient(
     ): CMCReport {
         val encodedNonce = Base64.encode(nonce)
         val req = AttestationRequest(VERSION, encodedNonce, cached)
-        val resp = sendCmcRequest(req)
-        when (resp) {
+        when (val resp = sendCmcRequest(req)) {
             is AttestationResponse -> return CMCReport(resp.report, resp.metadata, resp.cacheMisses)
             is SocketError -> throw IllegalStateException("Received error from CMC: ${resp.msg}")
             else -> throw IllegalStateException("Unexpected response type ${resp::class.qualifiedName}")
@@ -90,8 +110,7 @@ class CMCClient(
         // TODO: Other fields?
         val encodedNonce = Base64.encode(nonce)
         val req = VerificationRequest(VERSION, encodedNonce, report, metadata, cacheKey, cacheMisses)
-        val resp = sendCmcRequest(req)
-        when (resp) {
+        when (val resp = sendCmcRequest(req)) {
             // TODO: Either return full report or define and document when we accept the verification result
             is VerificationResponse -> return resp.result.summary.status == "success"
             is SocketError -> throw IllegalStateException("Received error from CMC: ${resp.msg}")
@@ -101,8 +120,7 @@ class CMCClient(
 
     suspend fun fetchPeerCache(cacheKey: String): List<String>? {
         val req = PeerCacheRequest(VERSION, cacheKey)
-        val resp = sendCmcRequest(req)
-        when (resp) {
+        when (val resp = sendCmcRequest(req)) {
             is PeerCacheResponse -> return resp.cache
             is SocketError -> throw IllegalStateException("Received error from CMC: ${resp.msg}")
             else -> throw IllegalStateException("Unexpected response type ${resp::class.qualifiedName}")
@@ -111,8 +129,7 @@ class CMCClient(
 
     suspend fun tlsCerts(): List<X509Certificate> {
         val req = TLSCertRequest(VERSION)
-        val resp = sendCmcRequest(req)
-        when (resp) {
+        when (val resp = sendCmcRequest(req)) {
             is TLSCertResponse -> {
                 val decoder = PEMDecoder.of()
                 return resp.certificate.map(Base64::decode).map { pem ->
@@ -135,8 +152,7 @@ class CMCClient(
                 hashType.ordinal.toLong(),
                 TLSSignRequest.PssOpts(0),
             )
-        val resp = sendCmcRequest(req)
-        when (resp) {
+        when (val resp = sendCmcRequest(req)) {
             is TLSSignResponse -> return Base64.decode(resp.signedContent)
             is SocketError -> throw IllegalStateException("Received error from CMC: ${resp.msg}")
             else -> throw IllegalStateException("Unexpected response type ${resp::class.qualifiedName}")
@@ -170,7 +186,7 @@ class CMCClient(
         private const val VERSION = "1.2.0"
 
         private val CMC_REQUEST_LOOKUP =
-            mapOf<KClass<*>, Int>(
+            mapOf(
                 AttestationRequest::class to 1,
                 VerificationRequest::class to 2,
                 TLSSignRequest::class to 3,
@@ -180,7 +196,7 @@ class CMCClient(
             )
 
         private val CMC_RESPONSE_LOOKUP =
-            mapOf<Int, KClass<*>>(
+            mapOf(
                 0 to SocketError::class,
                 1 to AttestationResponse::class,
                 2 to VerificationResponse::class,
@@ -189,5 +205,7 @@ class CMCClient(
                 5 to PeerCacheResponse::class,
                 6 to MeasureResponse::class,
             )
+
+        private val LOG = KotlinLogging.logger {}
     }
 }
