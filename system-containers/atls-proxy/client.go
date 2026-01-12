@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/Fraunhofer-AISEC/cmc/attestationreport"
 	"github.com/Fraunhofer-AISEC/cmc/attestedtls"
@@ -127,8 +128,8 @@ func (cp *ClientProxy) handleConnection(clientConn net.Conn) {
 	}
 
     // Disable timeouts, the data apps should ensure that connections are cleaned up
-    clientConn.SetDeadline(0)
-    atlsConn.SetDeadline(0)
+    clientConn.SetDeadline(time.Time{})
+    atlsConn.SetDeadline(time.Time{})
 
 	proxy(cp.ctx, clientConn, atlsConn)
 }
