@@ -7,6 +7,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"time"
 )
 
 func closeSilent(closeable io.Closer) {
@@ -23,9 +24,31 @@ func proxy(conn net.Conn, proxyAddress string) {
 	}
 	defer closeSilent(peer)
 
+	deadline := 3 * time.Minute
 	forward := func(from net.Conn, to net.Conn, errCh chan<- error) {
-		_, err := io.Copy(to, from)
-		errCh <- err
+		var buffer [10 * 1024]byte
+		for {
+			rn, err := from.Read(buffer[:])
+			// Write before error handling in case we have somehow read some data before the error
+			if rn > 0 {
+				wn, err := to.Write(buffer[:rn])
+				if err != nil {
+					errCh <- fmt.Errorf("write error: %w", err)
+				}
+				if wn != rn {
+					errCh <- fmt.Errorf("could not write all data to destination socket")
+					return
+				}
+			}
+			if err != nil {
+				if err != io.EOF {
+					errCh <- fmt.Errorf("read error: %w", err)
+				}
+				return
+			}
+			_ = from.SetReadADeadline(time.Now().Add(deadline))
+			_ = to.SetWriteDeadline(time.Now().Add(deadline))
+		}
 	}
 
 	errCh := make(chan error)
