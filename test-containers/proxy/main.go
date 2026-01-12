@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"log"
@@ -29,6 +30,7 @@ func proxy(conn net.Conn, proxyAddress string) {
 		var buffer [10 * 1024]byte
 		for {
 			rn, err := from.Read(buffer[:])
+			log.Printf("Read packet from %s: %s", from.RemoteAddr(), hex.Dump(buffer[:rn]))
 			// Write before error handling in case we have somehow read some data before the error
 			if rn > 0 {
 				wn, err := to.Write(buffer[:rn])
