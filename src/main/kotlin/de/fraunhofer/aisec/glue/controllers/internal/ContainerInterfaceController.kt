@@ -223,9 +223,7 @@ class ContainerInterfaceController(
                             followingContract.uid.toString(),
                             callingPipeline.targetId,
                         )
-                    if (!callingPipeline.remotePipelines().contains(remotePipeline)) {
-                        callingPipeline.addRemotePipeline(remotePipeline)
-                    }
+                    callingPipeline.addRemotePipeline(remotePipeline)
 
                     call.respond(remotePipeline.ports.map { p -> mapOf("endpoint" to p.hostAddress, "protocol" to p.protocol.uppercase()) })
                 }

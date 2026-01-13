@@ -73,6 +73,8 @@ dependencies {
     implementation(libs.kotlinLogging.jvm)
     implementation(libs.ktor.server.cors)
     implementation(libs.ktor.server.callLogging)
+    implementation(libs.flyway.core)
+    implementation(libs.flyway.database.duckdb)
     // For running example with gradle
     runtimeOnly(libs.slf4j.jdk14)
 

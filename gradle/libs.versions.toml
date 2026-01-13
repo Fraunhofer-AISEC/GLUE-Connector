@@ -17,6 +17,8 @@ dbcp2 = "2.13.0"
 kotlinLogging = "7.0.3"
 jsonKotlinSchemaCodegen = "0.121"
 shadow = "9.2.2"
+flyway = "11.20.0"
+flyway-duckdb = "10.24.0"
 
 [libraries]
 slf4j-api = { group = "org.slf4j", name = "slf4j-api", version.ref = "slf4j" }
@@ -53,6 +55,8 @@ ktorm-jackson = { group = "org.ktorm", name = "ktorm-jackson", version.ref = "kt
 dbcp = { group = "org.apache.commons", name = "commons-dbcp2", version.ref = "dbcp2" }
 kotlinLogging-jvm = { group = "io.github.oshai", name = "kotlin-logging-jvm", version.ref = "kotlinLogging" }
 jsonKotlinSchemaCodegen = { group = "net.pwall.json", name = "json-kotlin-gradle", version.ref = "jsonKotlinSchemaCodegen" }
+flyway-core = { group = "org.flywaydb", name = "flyway-core", version.ref = "flyway" }
+flyway-database-duckdb = { group = "org.flywaydb", name = "flyway-database-duckdb", version.ref = "flyway-duckdb" }
 
 [plugins]
 kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

@@ -156,10 +156,11 @@ class RemotePipelineManager(val httpClient: HttpClient, val objectMapper: Object
                 val stopSuccessful = it.stop()
                 LOG.atDebug {
                     message = "Remote pipeline removed successfully"
-                    payload = mapOf(
-                        "stopSuccessful" to stopSuccessful,
-                        "pipelineId" to pipelineId
-                    )
+                    payload =
+                        mapOf(
+                            "stopSuccessful" to stopSuccessful,
+                            "pipelineId" to pipelineId,
+                        )
                 }
             } ?: return@withLock false
             true
