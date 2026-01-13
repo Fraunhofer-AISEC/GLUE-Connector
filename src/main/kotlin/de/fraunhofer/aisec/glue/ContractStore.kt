@@ -8,6 +8,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.withContext
 import org.apache.commons.dbcp2.BasicDataSource
+import org.flywaydb.core.Flyway
 import org.ktorm.database.Database
 import org.ktorm.dsl.batchInsert
 import org.ktorm.dsl.eq
@@ -24,7 +25,7 @@ import kotlin.io.path.createTempDirectory
 class ContractStore(
     objectMapper: ObjectMapper,
 ) {
-    // Currently this is just backed by an in-memory DB
+    // Currently, this is just backed by an in-memory DB
     private val dataSource by lazy {
         // Make sure we end up with a unique db every time.
         // Note: On linux, the TMP dir is usually cleaned on reboot. On windows, this could lead to a bunch of junk
@@ -36,6 +37,14 @@ class ContractStore(
         }
     }
 
+    // Let Flyway handle the database setup/migrations
+    init {
+        Flyway.configure()
+            .dataSource(dataSource)
+            .load()
+            .migrate()
+    }
+
     private val connection: Database
         get() = Database.connect(dataSource)
 
@@ -43,33 +52,6 @@ class ContractStore(
     val Database.contracts get() = this.sequenceOf(contractsTable)
     val lookupsTable = Lookups(contractsTable)
     val Database.lookups get() = this.sequenceOf(lookupsTable)
-
-    init {
-        // TODO: Once we use a real store, this part should be in some migrations
-        connection.useConnection {
-            val initStmt = it.createStatement()
-            initStmt.addBatch(
-                """
-                CREATE TABLE contracts(
-                    id VARCHAR PRIMARY KEY,
-                    contract JSON,
-                )
-                """.trimIndent(),
-            )
-            initStmt.addBatch(
-                """
-                CREATE TABLE lookup(
-                    target VARCHAR,
-                    action VARCHAR,
-                    contract VARCHAR,
-                    PRIMARY KEY (target, action, contract),
-                    FOREIGN KEY (contract) REFERENCES contracts(id),
-                )
-                """.trimIndent(),
-            )
-            initStmt.executeBatch()
-        }
-    }
 
     suspend fun addContract(contract: OdrlPolicy): Unit =
         ioAsync {

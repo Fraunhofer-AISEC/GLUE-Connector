@@ -33,10 +33,11 @@ class CMCClient(
 
         LOG.atDebug {
             message = "Sending CMC request"
-            payload = mapOf(
-                "requestType" to T::class.simpleName,
-                "cmcAddress" to cmcAddress,
-            )
+            payload =
+                mapOf(
+                    "requestType" to T::class.simpleName,
+                    "cmcAddress" to cmcAddress,
+                )
         }
 
         // Despite this method signature indicating support for TCP sockets only, unix sockets also work.
@@ -62,18 +63,20 @@ class CMCClient(
             val replyPayload = ByteBuffer.allocate(replyLength)
             input.readFully(replyPayload)
 
-            val response = objectMapper.readValue(
-                replyPayload.array(),
-                CMC_RESPONSE_LOOKUP[replyType]?.java ?: throw ProtocolException("Unknown reply type $replyType"),
-            )
+            val response =
+                objectMapper.readValue(
+                    replyPayload.array(),
+                    CMC_RESPONSE_LOOKUP[replyType]?.java ?: throw ProtocolException("Unknown reply type $replyType"),
+                )
 
             LOG.atDebug {
                 message = "Received CMC response"
-                payload = mapOf(
-                    "requestType" to T::class.simpleName,
-                    "replyType" to replyType,
-                    "cmcAddress" to cmcAddress,
-                )
+                payload =
+                    mapOf(
+                        "requestType" to T::class.simpleName,
+                        "replyType" to replyType,
+                        "cmcAddress" to cmcAddress,
+                    )
             }
 
             return response

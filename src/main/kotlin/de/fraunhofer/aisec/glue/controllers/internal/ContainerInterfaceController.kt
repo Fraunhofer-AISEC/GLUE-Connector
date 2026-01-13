@@ -236,9 +236,7 @@ class ContainerInterfaceController(
                             followingContract.uid.toString(),
                             callingPipeline.targetId,
                         )
-                    if (!callingPipeline.remotePipelines().contains(remotePipeline)) {
-                        callingPipeline.addRemotePipeline(remotePipeline)
-                    }
+                    callingPipeline.addRemotePipeline(remotePipeline)
 
                     // TODO: Unify format with the normal pipeline API (needs to be rewritten in forwarder)
                     // TODO: How is this information ever reaching the caller if pipeline was already active or `startPipeline` was "false"?
