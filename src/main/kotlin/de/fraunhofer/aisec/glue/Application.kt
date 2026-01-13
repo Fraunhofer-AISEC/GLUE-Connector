@@ -91,14 +91,14 @@ fun main(args: Array<String>) {
                             }
                         return if (record.sourceClassName.startsWith(record.loggerName)) {
                             "$timestamp [${record.level}] [${record.loggerName}]" +
-                                    "${record.sourceClassName.substring(
-                                        record.loggerName.length
-                                    )}.${record.sourceMethodName} - " +
-                                    "$message$throwable\n"
+                                "${record.sourceClassName.substring(
+                                    record.loggerName.length,
+                                )}.${record.sourceMethodName} - " +
+                                "$message$throwable\n"
                         } else {
                             "$timestamp [${record.level}] [${record.loggerName}] " +
-                                    "${record.sourceClassName}.${record.sourceMethodName} - " +
-                                    "$message$throwable\n"
+                                "${record.sourceClassName}.${record.sourceMethodName} - " +
+                                "$message$throwable\n"
                         }
                     }
                 }
