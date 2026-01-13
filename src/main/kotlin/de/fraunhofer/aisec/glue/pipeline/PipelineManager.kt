@@ -122,6 +122,10 @@ class PipelineManager(
     suspend fun deletePipeline(pipelineName: String): Boolean =
         pipelineMutex.withLock {
             return pipelines.remove(pipelineName)?.also { pipeline ->
+                LOG.atDebug {
+                    message = "Removing pipeline locally"
+                    payload = mapOf("pipelineName" to pipelineName)
+                }
                 // TODO: Allow for a timeout on stop before removing and consider errors
                 pipeline.stop()
                 pipeline.remove()

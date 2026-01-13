@@ -7,16 +7,10 @@ import de.fraunhofer.aisec.glue.models.pipeline.PipelineCreateRequest
 import de.fraunhofer.aisec.glue.models.pipeline.PipelineCreateResponse
 import de.fraunhofer.iosb.odrl.OdrlIdentifiers
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.ktor.client.HttpClient
-import io.ktor.client.call.body
-import io.ktor.client.request.post
-import io.ktor.client.request.setBody
-import io.ktor.http.ContentType
-import io.ktor.http.URLBuilder
-import io.ktor.http.Url
-import io.ktor.http.appendPathSegments
-import io.ktor.http.contentType
-import io.ktor.http.isSuccess
+import io.ktor.client.*
+import io.ktor.client.call.*
+import io.ktor.client.request.*
+import io.ktor.http.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlin.random.Random
@@ -157,9 +151,21 @@ class RemotePipelineManager(val httpClient: HttpClient, val objectMapper: Object
 
     suspend fun delete(pipelineId: String): Boolean =
         pipelinesMutex.withLock {
-            val pipeline = remotePipelines.remove(pipelineId) ?: return@withLock false
-            lookupByContract.remove(Triple(pipeline.contractId, pipeline.targetId, pipeline.actionId))
-            pipeline.stop()
+            LOG.atDebug {
+                message = "Removing remote pipeline"
+                payload = mapOf("pipelineId" to pipelineId)
+            }
+            remotePipelines.remove(pipelineId)?.let {
+                lookupByContract.remove(Triple(it.contractId, it.targetId, it.actionId))
+                val stopSuccessful = it.stop()
+                LOG.atDebug {
+                    message = "Remote pipeline removed successfully"
+                    payload = mapOf(
+                        "stopSuccessful" to stopSuccessful,
+                        "pipelineId" to pipelineId
+                    )
+                }
+            } ?: return@withLock false
             true
         }
 
