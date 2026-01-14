@@ -23,7 +23,19 @@ class AtlsHandshake(
     private val handshakeScope = CoroutineScope(dispatcher)
 
     var state: State = State.Initial
-        private set
+        private set(value) {
+            LOG.atTrace {
+                message = "ATLS handshake state transition"
+                payload =
+                    mapOf(
+                        "attestationType" to attestationType.name,
+                        "isClient" to isClient,
+                        "oldState" to field.name,
+                        "newState" to value.name,
+                    )
+            }
+            field = value
+        }
 
     var failure: Throwable? = null
         private set
@@ -318,7 +330,14 @@ class AtlsHandshake(
                 true
             }
 
-        state = State.AwaitingComplete
+        // We fail the handshake if the verification failed, but don't throw as we still need to send out the completion packet
+        // As a well-behaved caller must check the state, the handshake will still fail.
+        if (verificationResult) {
+            state = State.AwaitingComplete
+        } else {
+            state = State.Failed
+            failure = IllegalStateException("Peer attestation verification failed")
+        }
         val completePacket = objectMapper.writeValueAsBytes(AtlsHandshakeComplete(VERSION, verificationResult))
 
         LOG.atDebug {

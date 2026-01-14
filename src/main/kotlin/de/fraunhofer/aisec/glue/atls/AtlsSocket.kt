@@ -4,9 +4,9 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.CoroutineDispatcher
 import java.io.DataInputStream
-import java.io.DataOutputStream
 import java.io.InputStream
 import java.io.OutputStream
+import java.nio.ByteBuffer
 import java.security.MessageDigest
 import javax.net.ssl.ExtendedSSLSession
 import javax.net.ssl.HandshakeCompletedListener
@@ -85,7 +85,7 @@ class AtlsSocket(
                     objectMapper,
                     channelBinding,
                     cmcClient,
-                    AtlsHandshake.AttestationType.SERVER,
+                    AtlsHandshake.AttestationType.MUTUAL,
                     true,
                     cacheKey,
                     dispatcher,
@@ -101,8 +101,8 @@ class AtlsSocket(
                     )
             }
 
-            val input = DataInputStream(inner.getInputStream().buffered())
-            val output = DataOutputStream(inner.getOutputStream().buffered())
+            val input = DataInputStream(inner.getInputStream())
+            val output = inner.getOutputStream()
 
             val initialPacket = atlsHandshake.start()
 
@@ -115,9 +115,12 @@ class AtlsSocket(
                     )
             }
 
-            output.writeInt(initialPacket.size)
-            output.write(initialPacket)
-            output.flush()
+            ByteBuffer.allocate(4 + initialPacket.size).let { buffer ->
+                buffer.putInt(initialPacket.size)
+                buffer.put(initialPacket)
+                output.write(buffer.array())
+                output.flush()
+            }
 
             while (atlsHandshake.isRunning) {
                 val readLength = input.readInt()
@@ -151,8 +154,11 @@ class AtlsSocket(
                                 "responseSize" to writePacket.size,
                             )
                     }
-                    output.writeInt(writePacket.size)
-                    output.write(writePacket)
+
+                    val buffer = ByteBuffer.allocate(4 + writePacket.size)
+                    buffer.putInt(writePacket.size)
+                    buffer.put(writePacket)
+                    output.write(buffer.array())
                     output.flush()
                 } else {
                     LOG.atDebug {
