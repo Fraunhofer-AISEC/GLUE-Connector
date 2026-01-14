@@ -107,7 +107,7 @@ class NettyAtlsHandshakeHandler(
                     objectMapper,
                     channelBinding,
                     cmcClient,
-                    AtlsHandshake.AttestationType.SERVER,
+                    AtlsHandshake.AttestationType.MUTUAL,
                     false,
                     cacheKey,
                     dispatcher,
@@ -309,6 +309,8 @@ class NettyAtlsHandshakeHandler(
                         // Try to read the next packet
                         packet = readPacketIfAvailable()
                     }
+                    // No more handshake packets, re-issue read call so that more data arrives to complete any partial packets.
+                    ctx.read()
                 } catch (e: Exception) {
                     LOG.atWarn {
                         message = "Error processing ATLS packet"
