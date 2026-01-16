@@ -184,7 +184,7 @@ class CMCClient(
     }
 
     companion object {
-        private const val VERSION = "1.2.0"
+        private const val VERSION = "1.2.1"
 
         private val CMC_REQUEST_LOOKUP =
             mapOf(
