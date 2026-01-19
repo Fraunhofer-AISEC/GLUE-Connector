@@ -64,7 +64,6 @@ dependencies {
     implementation(libs.jackson.module.kotlin)
     implementation(libs.jackson.datatype.jsr310)
     implementation(libs.titaniumJsonLd)
-    implementation(libs.jakarta.json)
     implementation("fhg.glue.odrl:odrl-parser:1.1-SNAPSHOT")
     implementation(libs.duckdb)
     implementation(libs.ktorm.core)
@@ -75,6 +74,8 @@ dependencies {
     implementation(libs.ktor.server.callLogging)
     implementation(libs.flyway.core)
     implementation(libs.flyway.database.duckdb)
+    // Parsson is the default implementation for jakarta.json-api 2.1.3
+    runtimeOnly(libs.parsson)
     // For running example with gradle
     runtimeOnly(libs.slf4j.jdk14)
 
@@ -147,8 +148,10 @@ configure<JSONSchemaCodegen> {
 
 tasks {
     shadowJar {
-        duplicatesStrategy = DuplicatesStrategy.INCLUDE
         mergeServiceFiles()
+        filesMatching("META-INF/services/**") {
+            duplicatesStrategy = DuplicatesStrategy.INCLUDE
+        }
     }
 }
 

@@ -9,7 +9,7 @@ mockk = "1.14.7"
 bytebuddy = "1.18.2"
 jackson = "2.17.0"
 titaniumJsonLd = "1.4.0"
-jakarta-json = "2.0.1"
+parsson = "1.1.7"
 jib = "3.4.5"
 duckdb = "1.1.1"
 ktorm = "4.1.1"
@@ -48,7 +48,7 @@ jackson-module-kotlin = { group = "com.fasterxml.jackson.module", name = "jackso
 jackson-datatype-jsonp = { group = "com.fasterxml.jackson.datatype", name = "jackson-datatype-jakarta-jsonp", version.ref = "jackson" }
 jackson-datatype-jsr310 = { group = "com.fasterxml.jackson.datatype", name = "jackson-datatype-jsr310", version.ref = "jackson" }
 titaniumJsonLd = { group = "com.apicatalog", name = "titanium-json-ld", version.ref = "titaniumJsonLd" }
-jakarta-json = { group = "org.glassfish", name = "jakarta.json", version.ref = "jakarta-json" }
+parsson = { group = "org.eclipse.parsson", name = "parsson", version.ref = "parsson" }
 duckdb = { group = "org.duckdb", name = "duckdb_jdbc", version.ref = "duckdb" }
 ktorm-core = { group = "org.ktorm", name = "ktorm-core", version.ref = "ktorm" }
 ktorm-jackson = { group = "org.ktorm", name = "ktorm-jackson", version.ref = "ktorm" }
