@@ -145,6 +145,13 @@ configure<JSONSchemaCodegen> {
     }
 }
 
+tasks {
+    shadowJar {
+        duplicatesStrategy = DuplicatesStrategy.INCLUDE
+        mergeServiceFiles()
+    }
+}
+
 spotless {
     kotlin {
         target("src/*/kotlin/**/*.kt")
