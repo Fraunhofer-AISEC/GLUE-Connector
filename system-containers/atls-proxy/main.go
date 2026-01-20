@@ -84,16 +84,16 @@ func proxy(ctx context.Context, conn1, conn2 net.Conn) {
 		conn2.SetReadDeadline(deadline)
 	}()
 
+	var wg sync.WaitGroup
 	forward := func(from, to net.Conn) {
+		defer wg.Done()
 		_, err := io.Copy(to, from)
 		if errors.Is(err, os.ErrDeadlineExceeded) && ctxCancelled.Load() {
-			// This error is due to the context being cancelled, ignore
+			// This error is due to the context being canceled, ignore
 		} else {
 			slog.Error("Error forwarding data", "from", from.RemoteAddr(), "to", to.RemoteAddr(), "error", err)
 		}
 	}
-
-	var wg sync.WaitGroup
 	wg.Add(2)
 	go forward(conn1, conn2)
 	go forward(conn2, conn1)
