@@ -138,7 +138,7 @@ func (cp *ClientProxy) handleConnection(clientConn net.Conn) {
 		return
 	}
 
-	// Disable timeouts, the data apps should ensure that connections are cleaned up
+	// Disable timeouts; the data apps should ensure that connections are cleaned up
 	clientConn.SetDeadline(time.Time{})
 	atlsConn.SetDeadline(time.Time{})
 
