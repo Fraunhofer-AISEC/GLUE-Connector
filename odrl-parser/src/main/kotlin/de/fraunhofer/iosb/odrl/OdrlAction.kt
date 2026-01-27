@@ -1,6 +1,14 @@
 package de.fraunhofer.iosb.odrl
 
 import com.fasterxml.jackson.annotation.*
+import com.fasterxml.jackson.core.JsonParser
+import com.fasterxml.jackson.databind.DeserializationContext
+import com.fasterxml.jackson.databind.JsonDeserializer
+import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize
+import com.fasterxml.jackson.databind.exc.MismatchedInputException
+import com.fasterxml.jackson.databind.type.CollectionType
 import de.fraunhofer.iosb.odrl.glue.GlueIdentifiers
 import de.fraunhofer.iosb.odrl.parser.JsonLd
 import de.fraunhofer.iosb.odrl.parser.JsonLdBeanValidator
@@ -10,9 +18,9 @@ import io.konform.validation.ValidationError
 @JsonLd(GlueIdentifiers.CONTEXT)
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type", defaultImpl = OdrlAction::class)
 @JsonTypeName(OdrlIdentifiers.ACTION)
+@JsonDeserialize(using = OdrlActionDeserializer::class)
 data class OdrlAction(
     // According to the ODRL information model, an action must be identified by a rdf:value when using refinements
-    @param:JsonAlias("@id")
     @param:JsonProperty(RdfIdentifiers.VALUE)
     val value: RdfValue,
 
@@ -83,4 +91,52 @@ val validateOdrlAction = Validation {
 
 private fun validateRecursively(action: OdrlAction): Boolean {
     return validateOdrlAction.validate(action).isValid
+}
+
+class OdrlActionDeserializer : JsonDeserializer<OdrlAction>() {
+    override fun deserialize(p: JsonParser, ctxt: DeserializationContext): OdrlAction {
+        val node: JsonNode = p.codec.readTree(p)
+
+        // Handle the simple string case: "action": "use"
+        if (node.isTextual) {
+            return OdrlAction(node.asText())
+        }
+
+        // Handle object case with rdf:value or @id
+        val valueNode = node.get(RdfIdentifiers.VALUE) ?: node.get("@id")
+            ?: throw MismatchedInputException.from(p, OdrlAction::class.java, "Missing '${RdfIdentifiers.VALUE}' or '@id' property")
+
+        val mapper = p.codec as ObjectMapper
+
+        val value = if (valueNode.isTextual) {
+            RdfValue(valueNode.asText())
+        } else if (valueNode.isObject && valueNode.has("@id")) {
+            mapper.treeToValue(valueNode, RdfValue::class.java)
+        } else {
+            throw MismatchedInputException.from(p, RdfValue::class.java, "Invalid value format: $valueNode")
+        }
+
+        // Deserialize other properties
+        val refinement: List<OdrlConstraintRepresentation> = node.get(OdrlIdentifiers.REFINEMENT)?.let { refinementNode ->
+            val listType: CollectionType = mapper.typeFactory.constructCollectionType(
+                List::class.java,
+                OdrlConstraintRepresentation::class.java
+            )
+            mapper.treeToValue(refinementNode, listType)
+        } ?: listOf()
+
+        val includedIn: OdrlAction? = node.get(OdrlIdentifiers.INCLUDED_IN)?.let {
+            mapper.treeToValue(it, OdrlAction::class.java)
+        }
+
+        val implies: List<OdrlAction> = node.get(OdrlIdentifiers.IMPLIES)?.let { impliesNode ->
+            val listType: CollectionType = mapper.typeFactory.constructCollectionType(
+                List::class.java,
+                OdrlAction::class.java
+            )
+            mapper.treeToValue(impliesNode, listType)
+        } ?: listOf()
+
+        return OdrlAction(value, refinement, includedIn, implies)
+    }
 }
