@@ -32,11 +32,11 @@ class NegotiationController(private val negotiationManager: BuiltinNegotiationMa
 
     private fun Route.registerRoutes20241() {
         post("/request") {
-            val principal = call.principal<UserIdPrincipal>()!!
+            val principal = call.principal<UserIdPrincipal>()
             val req = call.receive<ContractRequestMessage>()
             val originUrl = Utils.baseUrlForOrigin(call.request.origin, 1)
 
-            val negotiation = negotiationManager.createFromRequest(req, originUrl, principal.name)
+            val negotiation = negotiationManager.createFromRequest(req, originUrl, principal?.name)
             if (negotiation == null) {
                 call.respond(HttpStatusCode.NotFound)
                 return@post

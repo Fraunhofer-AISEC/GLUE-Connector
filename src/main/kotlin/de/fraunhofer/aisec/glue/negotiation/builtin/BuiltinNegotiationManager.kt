@@ -213,7 +213,7 @@ class BuiltinNegotiationManager(
     suspend fun createFromRequest(
         request: ContractRequestMessage,
         originUrl: Url,
-        peerIdent: String,
+        peerIdent: String?,
     ): BuiltinNegotiation? {
         val logParams = mutableMapOf("consumerPid" to request.consumerPid, "peerIdentity" to peerIdent)
 
@@ -321,9 +321,9 @@ class BuiltinNegotiationManager(
     fun getAsProvider(
         providerPid: String,
         consumerPid: String?,
-        peerIdent: String,
+        peerIdent: String?,
     ): BuiltinNegotiation? {
-        val logParams = mutableMapOf<String, Any>()
+        val logParams = mutableMapOf<String, Any?>()
         val negotiation = providerNegotiations[providerPid] ?: return null
 
         logParams["providerPid"] to providerPid
@@ -345,7 +345,7 @@ class BuiltinNegotiationManager(
         }
 
         // We check if the identity of the negotiation partner is set correctly
-        if (negotiation.peerIdentity != null && negotiation.peerIdentity != peerIdent) {
+        if (negotiation.peerIdentity != peerIdent) {
             LOG.atDebug {
                 message = "Cannot get negotiation as provider as the peer identity does not match"
                 payload =

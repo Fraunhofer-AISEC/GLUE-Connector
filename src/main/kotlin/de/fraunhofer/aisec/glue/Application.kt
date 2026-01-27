@@ -20,11 +20,13 @@ import de.fraunhofer.aisec.glue.negotiation.builtin.DummyNegotiator
 import de.fraunhofer.aisec.glue.pipeline.Backend
 import de.fraunhofer.aisec.glue.pipeline.PipelineManager
 import de.fraunhofer.aisec.glue.pipeline.RemotePipelineManager
+import de.fraunhofer.aisec.glue.pipeline.atls.AtlsConfig
 import de.fraunhofer.aisec.glue.pipeline.atls.AtlsParameter
 import de.fraunhofer.aisec.glue.pipeline.docker.DockerBackend
 import de.fraunhofer.aisec.glue.plugins.configureAuthentication
 import de.fraunhofer.aisec.glue.policy.PolicyEngine
 import de.fraunhofer.iosb.odrl.parser.OdrlParser
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ktor.client.*
 import io.ktor.client.engine.okhttp.*
 import io.ktor.client.plugins.*
@@ -55,6 +57,9 @@ import io.ktor.server.plugins.contentnegotiation.ContentNegotiation as ServerCon
 
 typealias NettyServer = EmbeddedServer<NettyApplicationEngine, NettyApplicationEngine.Configuration>
 
+@Suppress("unused")
+private val LOG = KotlinLogging.logger {}
+
 fun main(args: Array<String>) {
     val filteredLoggerPrefixes = listOf("sun.rmi", "javax.management")
     val filteredMethods =
@@ -68,6 +73,7 @@ fun main(args: Array<String>) {
             Pair("io.netty.channel.kqueue.KQueue", "<clinit>"),
             Pair("io.netty.bootstrap.ChannelInitializerExtensions", "getExtensions"),
             Pair("io.netty.util.internal.PlatformDependent\$Mpsc", "<clinit>"),
+            Pair("io.netty.channel.epoll.Epoll", "<clinit>"),
         )
     Logger.getLogger("").apply {
         level = Level.ALL
@@ -116,6 +122,7 @@ fun main(args: Array<String>) {
 val defaultDependencies by DI.Module {
     bind<HttpClient>() with
         singleton {
+            val atlsConfig = instance<ConfigManager>().getConfig(::AtlsConfig)
             HttpClient(OkHttp) {
                 install(ClientContentNegotiation) {
                     register(ContentType.Application.Json, instance())
@@ -133,10 +140,12 @@ val defaultDependencies by DI.Module {
                     // pipeline request
                     socketTimeoutMillis = 180000
                 }
-                engine {
-                    config {
-                        val atlsManager = instance<AtlsManager>()
-                        sslSocketFactory(atlsManager.socketFactory, atlsManager.trustManager)
+                if (atlsConfig.atlsEnabled) {
+                    engine {
+                        config {
+                            val atlsManager = instance<AtlsManager>()
+                            sslSocketFactory(atlsManager.socketFactory, atlsManager.trustManager)
+                        }
                     }
                 }
             }
@@ -174,7 +183,7 @@ val defaultDependencies by DI.Module {
     bind<AtlsManager>() with singleton { AtlsManager(instance(), instance(), instance()) }
     bind<NettyServer>() with
         singleton {
-            val atlsManager = instance<AtlsManager>()
+            val atlsConfig = instance<ConfigManager>().getConfig(::AtlsConfig)
             embeddedServer(
                 Netty,
                 environment =
@@ -183,9 +192,11 @@ val defaultDependencies by DI.Module {
                     },
                 module = {
                     configureAuthentication()
+
                     install(ServerContentNegotiation) {
                         register(ContentType.Application.Json, instance())
                     }
+
                     routing {
                         allInstances<AtlsController>().forEach { it.apply { registerRoutes() } }
                     }
@@ -196,32 +207,35 @@ val defaultDependencies by DI.Module {
                         port = 8444
                     }
                     channelPipelineConfig = {
-                        // Build SSL context with CMC backing
-                        val handler =
-                            JdkSslContext(
-                                atlsManager.sslContext,
-                                false,
-                                null,
-                                io.netty.handler.ssl.IdentityCipherSuiteFilter.INSTANCE,
-                                null,
-                                ClientAuth.REQUIRE,
-                                null,
-                                false,
-                            ).newHandler(channel().alloc())
+                        if (atlsConfig.atlsEnabled) {
+                            val atlsManager = instance<AtlsManager>()
+                            // Build SSL context with CMC backing
+                            val handler =
+                                JdkSslContext(
+                                    atlsManager.sslContext,
+                                    false,
+                                    null,
+                                    io.netty.handler.ssl.IdentityCipherSuiteFilter.INSTANCE,
+                                    null,
+                                    ClientAuth.REQUIRE,
+                                    null,
+                                    false,
+                                ).newHandler(channel().alloc())
 
-                        // codec is the first handler guaranteed to be registered by the ktor HTTP 1.1 pipeline.
-                        // We don't make use of the TLS implementation supplied by ktor as it expects a more traditional
-                        // keystore/truststore setup than we use.
-                        addBefore("codec", "ssl", handler)
-                        addAfter(
-                            "ssl",
-                            "atls-handshake",
-                            NettyAtlsHandshakeHandler(
-                                instance(),
-                                atlsManager.cmcClient,
-                                instance(),
-                            ),
-                        )
+                            // codec is the first handler guaranteed to be registered by the ktor HTTP 1.1 pipeline.
+                            // We don't make use of the TLS implementation supplied by ktor as it expects a more traditional
+                            // keystore/truststore setup than we use.
+                            addBefore("codec", "ssl", handler)
+                            addAfter(
+                                "ssl",
+                                "atls-handshake",
+                                NettyAtlsHandshakeHandler(
+                                    instance(),
+                                    atlsManager.cmcClient,
+                                    instance(),
+                                ),
+                            )
+                        }
                     }
                 },
             ).start(wait = false)
