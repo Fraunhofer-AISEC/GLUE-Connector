@@ -7,6 +7,7 @@ fun Application.configureAuthentication() {
     install(Authentication) {
         basic {
             realm = "Test auth todo replace"
+            skipWhen { true } // Skip authentication entirely
             validate { creds ->
                 if (creds.name == "user" && creds.password == "password") {
                     UserIdPrincipal(creds.name)

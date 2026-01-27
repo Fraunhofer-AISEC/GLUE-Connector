@@ -11,3 +11,4 @@ connector:
     url: "http://localhost:29193"
 atls:
   cmcAddress: "tcp://172.25.0.1:9955"
+  atlsEnabled: false
