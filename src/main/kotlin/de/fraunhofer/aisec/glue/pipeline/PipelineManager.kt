@@ -22,27 +22,27 @@ class PipelineManager(
 ) {
     private val pipelines = mutableMapOf<String, ContainerPipeline>()
     private val pipelineMutex = Mutex()
-    private val pipelineConfig = config.getConfig(::AtlsConfig)
+    private val atlsConfig = config.getConfig(::AtlsConfig)
 
     private fun createPipelineName(): String = generateSequence { Random.nextBytes(8).hexEncode() }.first { n -> !pipelines.contains(n) }
 
     private fun createAtlsContainer(proxyConfig: GlueAtlsProxyConfiguration): AugmentedGlueContainer {
         return AugmentedGlueContainer(
             GlueContainer(
-                pipelineConfig.proxyContainer,
-                pipelineConfig.proxyHash,
+                atlsConfig.proxyContainer,
+                atlsConfig.proxyHash,
                 true,
                 listOf(
                     AtlsParameter(
                         mode = proxyConfig.proxyMode,
                         cmcAddress =
-                            pipelineConfig.cmcAddress.let {
+                            atlsConfig.cmcAddress.let {
                                 when (val addr = it.toJavaAddress()) {
                                     is InetSocketAddress -> "${addr.hostString}:${addr.port}"
                                     else -> addr.toString()
                                 }
                             },
-                        caCertificate = File(pipelineConfig.caCertPath).readText(),
+                        caCertificate = File(atlsConfig.caCertPath).readText(),
                         proxyEndpoint = proxyConfig.proxyEndpoint,
                     ),
                 ),
@@ -50,8 +50,8 @@ class PipelineManager(
             buildMap {
                 // If the CMC is made available via a unix socket, we need to mount it into the container
                 //  possible nodes, which is reasonable but should be documented.
-                if (pipelineConfig.cmcAddress is UnixSocketAddress) {
-                    val path = (pipelineConfig.cmcAddress as UnixSocketAddress).path
+                if (atlsConfig.cmcAddress is UnixSocketAddress) {
+                    val path = (atlsConfig.cmcAddress as UnixSocketAddress).path
                     put(path, path)
                 }
             },
@@ -63,20 +63,24 @@ class PipelineManager(
      */
     private fun augmentPipelineSpec(originalSpec: GlueContainerPipeline): List<AugmentedGlueContainer> {
         val augmentedSpec = mutableListOf<AugmentedGlueContainer>()
-        originalSpec.atlsProxyIn?.let {
-            LOG.atDebug {
-                message = "Adding ATLS input proxy container"
-                payload = mapOf("atlsProxyIn" to it)
+        if (atlsConfig.atlsEnabled) {
+            originalSpec.atlsProxyIn?.let {
+                LOG.atDebug {
+                    message = "Adding ATLS input proxy container"
+                    payload = mapOf("atlsProxyIn" to it)
+                }
+                augmentedSpec += createAtlsContainer(it)
             }
-            augmentedSpec += createAtlsContainer(it)
         }
         originalSpec.container.forEach { augmentedSpec += AugmentedGlueContainer(it, emptyMap()) }
-        originalSpec.atlsProxyOut?.let {
-            LOG.atDebug {
-                message = "Adding ATLS output proxy container"
-                payload = mapOf("atlsProxyOut" to it)
+        if (atlsConfig.atlsEnabled) {
+            originalSpec.atlsProxyOut?.let {
+                LOG.atDebug {
+                    message = "Adding ATLS output proxy container"
+                    payload = mapOf("atlsProxyOut" to it)
+                }
+                augmentedSpec += createAtlsContainer(it)
             }
-            augmentedSpec += createAtlsContainer(it)
         }
         return augmentedSpec
     }
