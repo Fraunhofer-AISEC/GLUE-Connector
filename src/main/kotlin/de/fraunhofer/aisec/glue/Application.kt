@@ -15,6 +15,7 @@ import de.fraunhofer.aisec.glue.controllers.api.PipelineApiController
 import de.fraunhofer.aisec.glue.controllers.api.RemotePipelineApiController
 import de.fraunhofer.aisec.glue.controllers.internal.ContainerInterfaceController
 import de.fraunhofer.aisec.glue.docker.DockerClient
+import de.fraunhofer.aisec.glue.logging.LogbackObjectMapperInjector
 import de.fraunhofer.aisec.glue.negotiation.builtin.BuiltinNegotiationManager
 import de.fraunhofer.aisec.glue.negotiation.builtin.DummyNegotiator
 import de.fraunhofer.aisec.glue.pipeline.Backend
@@ -26,7 +27,6 @@ import de.fraunhofer.aisec.glue.pipeline.docker.DockerBackend
 import de.fraunhofer.aisec.glue.plugins.configureAuthentication
 import de.fraunhofer.aisec.glue.policy.PolicyEngine
 import de.fraunhofer.iosb.odrl.parser.OdrlParser
-import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ktor.client.*
 import io.ktor.client.engine.okhttp.*
 import io.ktor.client.plugins.*
@@ -48,74 +48,12 @@ import io.netty.handler.ssl.JdkSslContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import org.kodein.di.*
-import java.time.ZoneId
-import java.time.ZonedDateTime
-import java.time.format.DateTimeFormatter
-import java.util.logging.*
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation as ClientContentNegotiation
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation as ServerContentNegotiation
 
 typealias NettyServer = EmbeddedServer<NettyApplicationEngine, NettyApplicationEngine.Configuration>
 
-@Suppress("unused")
-private val LOG = KotlinLogging.logger {}
-
 fun main(args: Array<String>) {
-    val filteredLoggerPrefixes = listOf("sun.rmi", "javax.management")
-    val filteredMethods =
-        hashSetOf(
-            Pair("java.io.ObjectInputFilter\$Config", "traceFilter"),
-            Pair("java.io.ObjectInputStream", "filterCheck"),
-            Pair("jdk.internal.event.EventHelper", "logX509CertificateEvent"),
-            // Annoying netty debug output
-            Pair("io.netty.channel.nio.NioIoHandler", "openSelector"),
-            Pair("io.netty.channel.nio.NioIoHandler", "<clinit>"),
-            Pair("io.netty.channel.kqueue.KQueue", "<clinit>"),
-            Pair("io.netty.bootstrap.ChannelInitializerExtensions", "getExtensions"),
-            Pair("io.netty.util.internal.PlatformDependent\$Mpsc", "<clinit>"),
-            Pair("io.netty.channel.epoll.Epoll", "<clinit>"),
-        )
-    Logger.getLogger("").apply {
-        level = Level.ALL
-        handlers.forEach { handler ->
-            handler.level = Level.ALL
-            // Configure the timestamp format with microseconds in ISO-8601 format with local timezone
-            handler.formatter =
-                object : SimpleFormatter() {
-                    private val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSSSSXXX")
-
-                    override fun format(record: LogRecord): String {
-                        val timestamp = ZonedDateTime.now(ZoneId.systemDefault()).format(dateFormatter)
-                        val message = formatMessage(record)
-                        val throwable =
-                            if (record.thrown != null) {
-                                val sw = java.io.StringWriter()
-                                record.thrown.printStackTrace(java.io.PrintWriter(sw))
-                                "\n$sw"
-                            } else {
-                                ""
-                            }
-                        return if (record.sourceClassName.startsWith(record.loggerName)) {
-                            "$timestamp [${record.level}] [${record.loggerName}]" +
-                                "${record.sourceClassName.substring(
-                                    record.loggerName.length,
-                                )}.${record.sourceMethodName} - " +
-                                "$message$throwable\n"
-                        } else {
-                            "$timestamp [${record.level}] [${record.loggerName}] " +
-                                "${record.sourceClassName}.${record.sourceMethodName} - " +
-                                "$message$throwable\n"
-                        }
-                    }
-                }
-            // Filter background noise
-            handler.filter =
-                Filter { record ->
-                    filteredLoggerPrefixes.none { record.loggerName.startsWith(it) } &&
-                        Pair(record.sourceClassName, record.sourceMethodName) !in filteredMethods
-                }
-        }
-    }
     EngineMain.main(args)
 }
 
@@ -256,6 +194,8 @@ fun Application.module() =
     )
 
 fun Application.moduleWithDeps(dependencies: DirectDI) {
+    LogbackObjectMapperInjector.register(dependencies.instance())
+
     configureAuthentication()
 
     install(CORS) {
