@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- Register the custom converter for collapsed class names -->
+    <conversionRule conversionWord="collapsedClass" class="de.fraunhofer.aisec.glue.logging.CollapsedClassConverter" />
+    <conversionRule conversionWord="levelHighlight" class="de.fraunhofer.aisec.glue.logging.LevelHighlightingCompositeConverter" />
+    <conversionRule conversionWord="kvp" class="de.fraunhofer.aisec.glue.logging.KeyValuePairConverter" />
+
+    <!-- Console appender with custom formatting -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <!-- Pattern matching JUL formatter:
+                 timestamp [LEVEL] [logger]className.methodName - message kvp
+                 %date{HH:mm:ss.SSS}%micros - timestamp with microseconds
+                 %levelHighlight([%level]){...} - colored log level with custom mapping
+                 [%logger] - logger name
+                 %collapsedClass.%method - shows collapsed className.methodName (custom converter)
+                 %msg - the actual log message
+                 %kvp - key-value pairs on separate lines after the message
+            -->
+            <pattern>%date{HH:mm:ss.SSS}%micros %levelHighlight([%level] [%logger]%collapsedClass.%method - %msg%kvp) %n</pattern>
+        </encoder>
+
+        <!-- Method-level filter (matching JUL config filter on class.method pairs) -->
+        <filter class="de.fraunhofer.aisec.glue.logging.MethodLevelFilter">
+            <methods>
+                java.io.ObjectInputFilter$Config.traceFilter
+                java.io.ObjectInputStream.filterCheck
+                jdk.internal.event.EventHelper.logX509CertificateEvent
+                io.netty.channel.nio.NioIoHandler.openSelector
+                io.netty.channel.nio.NioIoHandler.&lt;clinit&gt;
+                io.netty.channel.kqueue.KQueue.&lt;clinit&gt;
+                io.netty.bootstrap.ChannelInitializerExtensions.getExtensions
+                io.netty.util.internal.PlatformDependent$Mpsc.&lt;clinit&gt;
+                io.netty.channel.epoll.Epoll.&lt;clinit&gt;
+                io.netty.util.internal.CleanerJava9.&lt;clinit&gt;
+            </methods>
+        </filter>
+    </appender>
+
+    <!-- Filtered loggers for noisy package prefixes (matching JUL config) -->
+    <logger name="sun.rmi" level="OFF"/>
+    <logger name="javax.management" level="OFF"/>
+
+    <!-- Root logger set to ALL (as in JUL config) -->
+    <root level="ALL">
+        <appender-ref ref="CONSOLE" />
+    </root>
+</configuration>

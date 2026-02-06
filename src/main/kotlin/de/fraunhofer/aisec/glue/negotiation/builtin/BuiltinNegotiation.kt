@@ -13,6 +13,7 @@ import de.fraunhofer.iosb.odrl.OdrlPolicy
 import de.fraunhofer.iosb.odrl.parser.OdrlParser
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ktor.client.*
+import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
@@ -89,6 +90,14 @@ class BuiltinNegotiation(
         endpoint: String,
         message: T,
     ): HttpResponse {
+        LOG.atDebug {
+            this.message = "Sending message via POST request"
+            payload =
+                mapOf(
+                    "endpoint" to endpoint,
+                    "message" to message,
+                )
+        }
         val url = URLBuilder(peerEndpoint).appendEncodedPathSegments(endpoint).build()
         return httpClient.post(url) {
             contentType(ContentType.Application.Json)
@@ -98,6 +107,15 @@ class BuiltinNegotiation(
 
     private suspend fun terminateOnError(resp: HttpResponse): Boolean {
         if (!resp.status.isSuccess()) {
+            val bodyText = resp.body<Map<String, Any>>()
+            LOG.atDebug {
+                message = "Received an error response from the peer"
+                payload = mapOf(
+                    "statusCode" to resp.status.value,
+                    "reasonPhrase" to resp.status.description,
+                    "body" to bodyText,
+                )
+            }
             terminateNegotiation("errInvalidResponse", "Received an invalid response")
             return false
         }

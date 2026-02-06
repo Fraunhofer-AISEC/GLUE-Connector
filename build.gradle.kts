@@ -1,5 +1,6 @@
 import net.pwall.json.kotlin.codegen.gradle.JSONSchemaCodegen
 import net.pwall.json.kotlin.codegen.gradle.JSONSchemaCodegenPlugin
+import net.pwall.json.kotlin.codegen.gradle.JSONSchemaCodegenTask
 import net.pwall.json.kotlin.codegen.gradle.mapping.ClassMappingByURI
 import java.net.URI
 
@@ -47,6 +48,9 @@ java {
 
 dependencies {
     implementation(libs.slf4j.api)
+    // Logback for SLF4J implementation
+    implementation(libs.logback.classic)
+    implementation(libs.logback.core)
     implementation(libs.ktor.client.core)
     implementation(libs.ktor.client.cio)
     implementation(libs.ktor.client.okhttp)
@@ -76,10 +80,7 @@ dependencies {
     implementation(libs.flyway.database.duckdb)
     // Parsson is the default implementation for jakarta.json-api 2.1.3
     runtimeOnly(libs.parsson)
-    // For running example with gradle
-    runtimeOnly(libs.slf4j.jdk14)
 
-    testImplementation(libs.slf4j.jdk14)
     testImplementation(libs.kotlin.test)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.ktor.server.test.host)
@@ -145,6 +146,16 @@ configure<JSONSchemaCodegen> {
         makeMetadataMapAlias("AttestationResponse")
         makeMetadataMapAlias("VerificationRequest")
     }
+}
+
+tasks.withType<JSONSchemaCodegenTask>().configureEach {
+    val schemaFiles = fileTree("src/main/resources/schema") {
+        include("**/*.json")
+    }
+    inputs.files(schemaFiles)
+        .withPropertyName("schemaFiles")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+    outputs.dir(layout.buildDirectory.dir("generated-sources/kotlin"))
 }
 
 tasks {
