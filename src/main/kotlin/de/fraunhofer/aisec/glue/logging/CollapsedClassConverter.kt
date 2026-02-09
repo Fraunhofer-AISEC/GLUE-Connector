@@ -9,11 +9,12 @@ import ch.qos.logback.classic.spi.ILoggingEvent
  */
 class CollapsedClassConverter : ClassicConverter() {
     override fun convert(event: ILoggingEvent): String {
-        val className = try {
-            event.callerData[0].className
-        } catch (_: Throwable) {
-            return "?"
-        }
+        val className =
+            try {
+                event.callerData[0].className
+            } catch (_: Throwable) {
+                return "?"
+            }
         val loggerName: String = event.loggerName
         return if (className.startsWith(loggerName)) {
             className.substring(loggerName.length)

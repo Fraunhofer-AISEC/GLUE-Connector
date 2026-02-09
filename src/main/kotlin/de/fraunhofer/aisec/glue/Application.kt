@@ -107,11 +107,12 @@ val defaultDependencies by DI.Module {
                             .coerceAtMost(30000)
                     LOG.atWarn {
                         message = "Retrying HTTP request"
-                        payload = mapOf(
-                            "url" to event.request.url.toString(),
-                            "retryCount" to event.retryCount,
-                            "nextDelayMs" to nextDelay
-                        )
+                        payload =
+                            mapOf(
+                                "url" to event.request.url.toString(),
+                                "retryCount" to event.retryCount,
+                                "nextDelayMs" to nextDelay,
+                            )
                     }
                 }
             }
@@ -133,16 +134,16 @@ val defaultDependencies by DI.Module {
     bind<PolicyEngine>() with singleton { PolicyEngine(instance()) }
     bind<ContractStore>() with singleton { ContractStore(instance()) }
     bind<BuiltinNegotiationManager>() with
-            singleton {
-                BuiltinNegotiationManager(
-                    instance(),
-                    instance(),
-                    DummyNegotiator(),
-                    instance(),
-                    instance(),
-                    instance()
-                )
-            }
+        singleton {
+            BuiltinNegotiationManager(
+                instance(),
+                instance(),
+                DummyNegotiator(),
+                instance(),
+                instance(),
+                instance(),
+            )
+        }
     bind<NegotiationController>() with singleton { NegotiationController(instance()) }
     bind<PipelineController>() with singleton { PipelineController(instance(), instance(), instance()) }
     bind<NegotiationApiController>() with singleton { NegotiationApiController(instance(), instance()) }
@@ -159,7 +160,7 @@ val defaultDependencies by DI.Module {
                 instance(),
                 instance(),
                 instance(),
-                instance<AtlsConfig>().atlsEnabled
+                instance<AtlsConfig>().atlsEnabled,
             )
         }
     bind<CoroutineDispatcher>() with singleton { Dispatchers.IO }

@@ -11,19 +11,13 @@ import ch.qos.logback.core.spi.FilterReply
 class MethodLevelFilter : Filter<ILoggingEvent>() {
     private val filteredMethods = hashSetOf<Pair<String, String>>()
 
+    @Suppress("unused")
     fun setMethods(methods: String?) {
         if (methods.isNullOrBlank()) {
             return
         }
         filteredMethods.clear()
         addMethodsFrom(methods)
-    }
-
-    fun addMethod(method: String?) {
-        if (method.isNullOrBlank()) {
-            return
-        }
-        addMethodsFrom(method)
     }
 
     override fun decide(event: ILoggingEvent): FilterReply {

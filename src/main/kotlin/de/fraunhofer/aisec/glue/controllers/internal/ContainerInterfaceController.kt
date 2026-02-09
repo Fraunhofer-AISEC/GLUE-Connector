@@ -121,11 +121,12 @@ class ContainerInterfaceController(
 
                 // Split the destination address into usable parts
                 val destinationURI = URI(destination)
-                val destinationHost = if (destinationURI.port == -1) {
-                    "${destinationURI.host}:8444"
-                } else {
-                    "${destinationURI.host}:${destinationURI.port}"
-                }
+                val destinationHost =
+                    if (destinationURI.port == -1) {
+                        "${destinationURI.host}:8444"
+                    } else {
+                        "${destinationURI.host}:${destinationURI.port}"
+                    }
 
                 // Check if we already have a follow-up contract that matches this target
                 val contractCandidates =
