@@ -34,20 +34,6 @@ jib_container_pipeline_build:
   tags:
     - munich-glue-local
 
-buildroot_overlay:
-  stage: build
-  script:
-    - ./gradlew shadowJar
-    - mkdir -p build/overlay
-    - cp -r buildroot/* build/overlay/
-    - mkdir -p build/overlay/usr/lib/glue-container-manager/
-    - cp build/libs/*-all.jar build/overlay/usr/lib/glue-container-manager/glue-container-manager.jar
-  artifacts:
-    paths:
-      - build/overlay
-  tags:
-    - munich-glue-local
-
 .podman-build:
   stage: build
   image: quay.io/podman/stable:v5.5.0

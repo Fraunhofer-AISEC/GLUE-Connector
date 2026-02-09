@@ -1,2 +1,0 @@
-#!/bin/sh
-exec java -jar /usr/lib/glue-container-manager/glue-container-manager.jar "$@"
