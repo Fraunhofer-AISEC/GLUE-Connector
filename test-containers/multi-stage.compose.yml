@@ -11,6 +11,7 @@ x-common-connector-env: &common-connector-env
 x-common-docker-env: &common-docker-env
   DOCKER_TLS_CERTDIR: ""
   TZ: "Europe/Berlin"
+  TINI_SUBREAPER: "1"
 
 x-dind-service: &dind-service
   image: docker:29-dind

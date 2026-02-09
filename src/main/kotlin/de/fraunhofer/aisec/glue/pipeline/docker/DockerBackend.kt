@@ -97,12 +97,13 @@ class DockerBackend(
             if (expectedHash == idHash || repoDigests?.any { expectedHash == it } == true) {
                 LOG.atTrace {
                     message = "Container hash check passed"
-                    payload = mapOf(
-                        "image" to glueContainer.image,
-                        "expectedHash" to expectedHash,
-                        "idHash" to idHash,
-                        "repoDigests" to repoDigests?.joinToString(", "),
-                    )
+                    payload =
+                        mapOf(
+                            "image" to glueContainer.image,
+                            "expectedHash" to expectedHash,
+                            "idHash" to idHash,
+                            "repoDigests" to repoDigests?.joinToString(", "),
+                        )
                 }
                 continue
             }
@@ -151,9 +152,10 @@ class DockerBackend(
                 // TODO: Instead of arena allocating subnets, make sure to also reissue released subnets if available
                 val subnet = subnets.next()
                 val subnetCidr = "${subnet.hostAddress}/$subnetLen"
-                val gateway = withContext(Dispatchers.IO) {
-                    Inet4Address.getByAddress(subnet.address.also { a -> a[3] = a[3] or 1 })
-                }.hostAddress
+                val gateway =
+                    withContext(Dispatchers.IO) {
+                        Inet4Address.getByAddress(subnet.address.also { a -> a[3] = a[3] or 1 })
+                    }.hostAddress
                 val network =
                     dockerClient.networks.create(
                         NetworkCreateRequest(

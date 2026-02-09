@@ -110,11 +110,12 @@ class BuiltinNegotiation(
             val bodyText = resp.body<Map<String, Any>>()
             LOG.atDebug {
                 message = "Received an error response from the peer"
-                payload = mapOf(
-                    "statusCode" to resp.status.value,
-                    "reasonPhrase" to resp.status.description,
-                    "body" to bodyText,
-                )
+                payload =
+                    mapOf(
+                        "statusCode" to resp.status.value,
+                        "reasonPhrase" to resp.status.description,
+                        "body" to bodyText,
+                    )
             }
             terminateNegotiation("errInvalidResponse", "Received an invalid response")
             return false

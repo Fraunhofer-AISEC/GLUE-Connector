@@ -2,7 +2,6 @@ package de.fraunhofer.aisec.glue.docker
 
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.DeserializationFeature
-import de.fraunhofer.aisec.glue.docker.DockerClient.Companion.fromEnv
 import de.fraunhofer.aisec.glue.docker.model.*
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ktor.client.*
@@ -21,7 +20,6 @@ import kotlin.math.pow
 import de.fraunhofer.aisec.glue.docker.model.Network as NetworkInspectResponse
 
 class DockerClient(internal val httpClient: HttpClient, private val baseUrl: Url) : Closeable {
-
     init {
         // Monitor retry events for logging
         httpClient.monitor.subscribe(HttpRequestRetryEvent) { event ->
@@ -33,21 +31,6 @@ class DockerClient(internal val httpClient: HttpClient, private val baseUrl: Url
             }
         }
     }
-
-    /**
-     * Docker constructor for backward compatibility only.
-     * Please prefer [fromEnv] to ensure that different environments are picked up correctly.
-     */
-    constructor(dockerSocket: String = "/var/lib/docker.sock") :
-        this(
-            HttpClient(CIO) {
-                defaultConfig()
-                defaultRequest {
-                    unixSocket(dockerSocket)
-                }
-            },
-            UNIX_BASE_URL,
-        )
 
     /**
      * Convert a relative URL path to an absolute URL suitable for this docker client.
