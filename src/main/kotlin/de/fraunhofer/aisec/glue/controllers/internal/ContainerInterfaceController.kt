@@ -33,7 +33,10 @@ class ContainerInterfaceController(
     private val httpClient: HttpClient,
     private val odrlParser: OdrlParser,
     private val remotePipelineManager: RemotePipelineManager,
+    atlsEnabled: Boolean,
 ) : Controller {
+    private val remotePeerProtocol = if (atlsEnabled) "https" else "http"
+
     override fun Route.registerRoutes() {
         // Just IP-Address seems like it *could* be enough here (containers cannot really fake that as they cannot
         // That said, we could easily enough just inject a token for the container to authenticate with.
@@ -118,7 +121,11 @@ class ContainerInterfaceController(
 
                 // Split the destination address into usable parts
                 val destinationURI = URI(destination)
-                val destinationHost = "${destinationURI.host}:${destinationURI.port}"
+                val destinationHost = if (destinationURI.port == -1) {
+                    "${destinationURI.host}:8444"
+                } else {
+                    "${destinationURI.host}:${destinationURI.port}"
+                }
 
                 // Check if we already have a follow-up contract that matches this target
                 val contractCandidates =
@@ -183,7 +190,7 @@ class ContainerInterfaceController(
 
                         val negotiation =
                             negotiationManager.startNegotiation(
-                                "https://$destinationHost/negotiations",
+                                "$remotePeerProtocol://$destinationHost/negotiations",
                                 convertedNextPolicy,
                             )
 
@@ -219,7 +226,7 @@ class ContainerInterfaceController(
                 if (startPipeline) {
                     val remotePipeline =
                         remotePipelineManager.getOrCreate(
-                            Url("https://$destinationHost"),
+                            Url("$remotePeerProtocol://$destinationHost"),
                             followingContract.uid.toString(),
                             callingPipeline.targetId,
                         )

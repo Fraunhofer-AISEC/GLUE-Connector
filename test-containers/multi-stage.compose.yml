@@ -35,7 +35,7 @@ services:
       <<: *common-connector-env
       # The subnet used by this container's pipelines
       DOCKER_SUBNET: "10.1.0.0"
-      PUBLIC_URL: "https://connector0:8444"
+      PUBLIC_URL: "${PUBLIC_URL_PROTO:-https}://connector0:8444"
     volumes:
       - /var/ca.pem:/var/ca.pem
     networks:
@@ -54,7 +54,7 @@ services:
       <<: *common-connector-env
       # The subnet used by this container's pipelines
       DOCKER_SUBNET: "10.1.1.0"
-      PUBLIC_URL: "https://connector1:8444"
+      PUBLIC_URL: "${PUBLIC_URL_PROTO:-https}://connector1:8444"
     volumes:
       - /var/ca.pem:/var/ca.pem
     networks:
@@ -73,7 +73,7 @@ services:
       <<: *common-connector-env
       # The subnet used by this container's pipelines
       DOCKER_SUBNET: "10.1.2.0"
-      PUBLIC_URL: "https://connector2:8444"
+      PUBLIC_URL: "${PUBLIC_URL_PROTO:-https}://connector2:8444"
     volumes:
       - /var/ca.pem:/var/ca.pem
     networks:

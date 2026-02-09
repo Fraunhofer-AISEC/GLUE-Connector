@@ -14,6 +14,7 @@ import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.serialization.jackson.*
 import java.io.Closeable
+import java.net.ConnectException
 import java.net.URI
 import java.nio.file.Path
 import de.fraunhofer.aisec.glue.docker.model.Network as NetworkInspectResponse
@@ -216,6 +217,19 @@ class DockerClient(internal val httpClient: HttpClient, private val baseUrl: Url
                 // The docker daemon will wait for some time before killing a container if it refuses to stop
                 // If 30s is too long, the application will need to enforce its own timeout
                 socketTimeoutMillis = 30000
+            }
+            install(HttpRequestRetry) {
+                maxRetries = 10
+                retryOnExceptionIf { _, cause ->
+                    cause is ConnectException
+                }
+                exponentialDelay(base = 1.5, maxDelayMs = 30000)
+                modifyRequest { request ->
+                    LOG.atDebug {
+                        message = "Retrying Docker request"
+                        payload = mapOf("url" to request.url.toString(), "attempt" to request.executionContext)
+                    }
+                }
             }
         }
 

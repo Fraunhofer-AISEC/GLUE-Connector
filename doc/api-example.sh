@@ -44,13 +44,15 @@ pull_and_get_hash() {
     local image_path="${REGISTRY}/${image_name}:latest"
     # shellcheck disable=SC2155
     local image=$(docker pull -q "$image_path")
+
+    # Get the canonical digest from the registry (manifest list)
     # shellcheck disable=SC2155
-    local image_hash=$(docker images --no-trunc --quiet "$image_path")
+    local image_digest=$(docker inspect --format='{{index .RepoDigests 0}}' "$image_path" | cut -d'@' -f2)
 
-    # Export the hash with the provided variable name
-    export "$var_name"="$image_hash"
+    # Export the digest with the provided variable name
+    export "$var_name"="$image_digest"
 
-    printf "Found hash of %s:\n%s\n" "$image" "$image_hash"
+    printf "Found digest of %s:\n%s\n" "$image" "$image_digest"
 }
 
 # Pull images and get their hashes
@@ -83,7 +85,7 @@ fi
 policy_content="$(envsubst < "$policy")"
 
 echo "Starting the contract negotiation..."
-negotiation_req="$(jo peer="https://$remote_connector:8444" contractRequest="$policy_content")"
+negotiation_req="$(jo peer="http://$remote_connector:8444" contractRequest="$policy_content")"
 curl -v -X POST "${common_curl_opts[@]}" -d "$negotiation_req" "http://$local_connector:8080/api/v1.0/negotiations"
 
 echo "Requesting negotiated contracts..."
@@ -99,7 +101,7 @@ contract_target="$(jq -r '.["odrl:permission"][0]["odrl:target"]' <<< "$policy_c
 contract_action="$(jq -r '.["odrl:permission"][0]["odrl:action"]' <<< "$policy_content")"
 
 echo "Starting remote pipeline..."
-pipeline_start_req="$(jo peer="https://$remote_connector:8444" request="$(jo target="$contract_target" action="$contract_action" contractId="$contract_id")")"
+pipeline_start_req="$(jo peer="http://$remote_connector:8444" request="$(jo target="$contract_target" action="$contract_action" contractId="$contract_id")")"
 pipeline_start_resp="$(curl -X POST "${common_curl_opts[@]}" -d "$pipeline_start_req" "http://$local_connector:8080/api/v1.0/remote-pipelines")"
 
 pipeline_id="$(jq -r '.localId' <<< "$pipeline_start_resp")"
