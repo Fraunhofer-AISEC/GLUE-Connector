@@ -17,9 +17,23 @@ import java.io.Closeable
 import java.net.ConnectException
 import java.net.URI
 import java.nio.file.Path
+import kotlin.math.pow
 import de.fraunhofer.aisec.glue.docker.model.Network as NetworkInspectResponse
 
 class DockerClient(internal val httpClient: HttpClient, private val baseUrl: Url) : Closeable {
+
+    init {
+        // Monitor retry events for logging
+        httpClient.monitor.subscribe(HttpRequestRetryEvent) { event ->
+            val delayBase = 1.5
+            val nextDelay = (delayBase * 1000 * delayBase.pow(event.retryCount.toDouble() - 1)).toLong().coerceAtMost(30000)
+            LOG.atWarn {
+                message = "Retrying Docker request"
+                payload = mapOf("url" to event.request.url.toString(), "retryCount" to event.retryCount, "nextDelayMs" to nextDelay)
+            }
+        }
+    }
+
     /**
      * Docker constructor for backward compatibility only.
      * Please prefer [fromEnv] to ensure that different environments are picked up correctly.
@@ -224,12 +238,6 @@ class DockerClient(internal val httpClient: HttpClient, private val baseUrl: Url
                     cause is ConnectException
                 }
                 exponentialDelay(base = 1.5, maxDelayMs = 30000)
-                modifyRequest { request ->
-                    LOG.atDebug {
-                        message = "Retrying Docker request"
-                        payload = mapOf("url" to request.url.toString(), "attempt" to request.executionContext)
-                    }
-                }
             }
         }
 
