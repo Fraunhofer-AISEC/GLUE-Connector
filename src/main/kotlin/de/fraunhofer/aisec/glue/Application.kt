@@ -27,6 +27,7 @@ import de.fraunhofer.aisec.glue.pipeline.docker.DockerBackend
 import de.fraunhofer.aisec.glue.plugins.configureAuthentication
 import de.fraunhofer.aisec.glue.policy.PolicyEngine
 import de.fraunhofer.iosb.odrl.parser.OdrlParser
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ktor.client.*
 import io.ktor.client.engine.okhttp.*
 import io.ktor.client.plugins.*
@@ -48,6 +49,7 @@ import io.netty.handler.ssl.JdkSslContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import org.kodein.di.*
+import java.net.ConnectException
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation as ClientContentNegotiation
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation as ServerContentNegotiation
 
@@ -56,6 +58,8 @@ typealias NettyServer = EmbeddedServer<NettyApplicationEngine, NettyApplicationE
 fun main(args: Array<String>) {
     EngineMain.main(args)
 }
+
+val LOG = KotlinLogging.logger {}
 
 val defaultDependencies by DI.Module {
     bind<HttpClient>() with
@@ -77,6 +81,19 @@ val defaultDependencies by DI.Module {
                     // Required as we need to wait for a remote container to fetch the atls-proxy image in the start
                     // pipeline request
                     socketTimeoutMillis = 180000
+                }
+                install(HttpRequestRetry) {
+                    maxRetries = 10
+                    retryOnExceptionIf { _, cause ->
+                        cause is ConnectException
+                    }
+                    exponentialDelay(base = 1.5, maxDelayMs = 30000)
+                    modifyRequest { request ->
+                        LOG.atDebug {
+                            message = "Retrying HTTP request"
+                            payload = mapOf("url" to request.url.toString(), "attempt" to request.executionContext)
+                        }
+                    }
                 }
                 if (atlsConfig.atlsEnabled) {
                     engine {
@@ -105,23 +122,40 @@ val defaultDependencies by DI.Module {
     bind<PolicyEngine>() with singleton { PolicyEngine(instance()) }
     bind<ContractStore>() with singleton { ContractStore(instance()) }
     bind<BuiltinNegotiationManager>() with
-        singleton {
-            BuiltinNegotiationManager(instance(), instance(), DummyNegotiator(), instance(), instance(), instance())
-        }
+            singleton {
+                BuiltinNegotiationManager(
+                    instance(),
+                    instance(),
+                    DummyNegotiator(),
+                    instance(),
+                    instance(),
+                    instance()
+                )
+            }
     bind<NegotiationController>() with singleton { NegotiationController(instance()) }
     bind<PipelineController>() with singleton { PipelineController(instance(), instance(), instance()) }
     bind<NegotiationApiController>() with singleton { NegotiationApiController(instance(), instance()) }
     bind<PipelineApiController>() with singleton { PipelineApiController(instance()) }
     bind<RemotePipelineApiController>() with singleton { RemotePipelineApiController(instance(), instance()) }
+    bind<AtlsConfig>() with singleton { instance<ConfigManager>().getConfig(::AtlsConfig) }
     bind<ContainerInterfaceController>() with
         singleton {
-            ContainerInterfaceController(instance(), instance(), instance(), instance(), instance(), instance(), instance())
+            ContainerInterfaceController(
+                instance(),
+                instance(),
+                instance(),
+                instance(),
+                instance(),
+                instance(),
+                instance(),
+                instance<AtlsConfig>().atlsEnabled
+            )
         }
     bind<CoroutineDispatcher>() with singleton { Dispatchers.IO }
     bind<AtlsManager>() with singleton { AtlsManager(instance(), instance(), instance()) }
     bind<NettyServer>() with
         singleton {
-            val atlsConfig = instance<ConfigManager>().getConfig(::AtlsConfig)
+            val atlsConfig = instance<AtlsConfig>()
             embeddedServer(
                 Netty,
                 environment =

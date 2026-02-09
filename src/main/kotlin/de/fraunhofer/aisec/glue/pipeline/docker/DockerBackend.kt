@@ -12,9 +12,10 @@ import de.fraunhofer.aisec.glue.pipeline.AugmentedGlueContainer
 import de.fraunhofer.aisec.glue.pipeline.Backend
 import de.fraunhofer.aisec.glue.pipeline.ContainerInfo
 import de.fraunhofer.aisec.glue.pipeline.ContainerPipeline
-import de.fraunhofer.aisec.glue.pipeline.atls.AtlsConfig
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ktor.server.config.*
-import org.slf4j.LoggerFactory
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.net.Inet4Address
 import java.net.InetAddress
 import kotlin.experimental.or
@@ -30,7 +31,6 @@ class DockerBackend(
         InetUtil.getSubnets(InetUtil.parseInet4Address(dockerSubnet), 16, subnetLen)
             .iterator()
     private val config = configManager.getConfig(::DockerConfig)
-    private val atlsConfig = configManager.getConfig(::AtlsConfig)
 
     // Note: This is an implementation detail of docker that should not be relied upon.
     // Unfortunately, we don't have much of a choice.
@@ -85,26 +85,34 @@ class DockerBackend(
     }
 
     // Hash check adapted from https://github.com/Fraunhofer-AISEC/trusted-connector/blob/16fb97953c89e796d80c52cacc7a4445c1dda019/ids-dataflow-control/src/main/kotlin/de/fhg/aisec/ids/dataflowcontrol/usagecontrol/DockerImageConstraint.kt#L104
-    private suspend fun checkHashes(pipelineDef: List<AugmentedGlueContainer>): Boolean {
-        for (glueContainer in pipelineDef) {
-            val expectedHash = glueContainer.base.hash.split(":").last()
-            val imageToCheck = dockerClient.images.get(glueContainer.base.image)
+    private suspend fun checkHashes(pipelineDef: List<AugmentedGlueContainer>) {
+        for (augmentedGlueContainer in pipelineDef) {
+            val glueContainer = augmentedGlueContainer.base
+            val expectedHash = glueContainer.hash
+            val imageToCheck = dockerClient.images.createByPull(glueContainer.image)
             val inspectResponse = imageToCheck.inspect()
-            val idHash = inspectResponse.id?.split(":")?.last()
+            val idHash = inspectResponse.id
+            val repoDigests = inspectResponse.repoDigests?.map { it.split("@").last() }
 
-            if (expectedHash == idHash ||
-                inspectResponse.repoDigests?.any { expectedHash == it.split(":").last() } == true
-            ) {
+            if (expectedHash == idHash || repoDigests?.any { expectedHash == it } == true) {
+                LOG.atTrace {
+                    message = "Container hash check passed"
+                    payload = mapOf(
+                        "image" to glueContainer.image,
+                        "expectedHash" to expectedHash,
+                        "idHash" to idHash,
+                        "repoDigests" to repoDigests?.joinToString(", "),
+                    )
+                }
                 continue
             }
 
             throw Exception(
-                "The hash check for container ${glueContainer.base.image} failed. " +
+                "The hash check for container ${glueContainer.image} failed. " +
                     "Expected $expectedHash, found candidates:\nID Hash: $idHash, " +
-                    "Repo Digests: ${inspectResponse.repoDigests?.joinToString(", ")}",
+                    "Repo Digests: ${repoDigests?.joinToString(", ") ?: "none"}",
             )
         }
-        return true
     }
 
     private suspend fun createContainers(
@@ -143,7 +151,9 @@ class DockerBackend(
                 // TODO: Instead of arena allocating subnets, make sure to also reissue released subnets if available
                 val subnet = subnets.next()
                 val subnetCidr = "${subnet.hostAddress}/$subnetLen"
-                val gateway = Inet4Address.getByAddress(subnet.address.also { a -> a[3] = a[3] or 1 }).hostAddress
+                val gateway = withContext(Dispatchers.IO) {
+                    Inet4Address.getByAddress(subnet.address.also { a -> a[3] = a[3] or 1 })
+                }.hostAddress
                 val network =
                     dockerClient.networks.create(
                         NetworkCreateRequest(
@@ -268,10 +278,10 @@ class DockerBackend(
     }
 
     class DockerConfig(inner: ApplicationConfig) : Config(inner) {
-        val publicHostname by withDefault(stringProp(), InetAddress.getLocalHost().hostAddress)
+        val publicHostname: String by withDefault(stringProp(), InetAddress.getLocalHost().hostAddress)
     }
 
     companion object {
-        private val LOG = LoggerFactory.getLogger(DockerBackend::class.java)
+        private val LOG = KotlinLogging.logger {}
     }
 }
