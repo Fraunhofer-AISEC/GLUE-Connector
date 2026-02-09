@@ -50,6 +50,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import org.kodein.di.*
 import java.net.ConnectException
+import kotlin.math.pow
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation as ClientContentNegotiation
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation as ServerContentNegotiation
 
@@ -88,12 +89,6 @@ val defaultDependencies by DI.Module {
                         cause is ConnectException
                     }
                     exponentialDelay(base = 1.5, maxDelayMs = 30000)
-                    modifyRequest { request ->
-                        LOG.atDebug {
-                            message = "Retrying HTTP request"
-                            payload = mapOf("url" to request.url.toString(), "attempt" to request.executionContext)
-                        }
-                    }
                 }
                 if (atlsConfig.atlsEnabled) {
                     engine {
@@ -101,6 +96,22 @@ val defaultDependencies by DI.Module {
                             val atlsManager = instance<AtlsManager>()
                             sslSocketFactory(atlsManager.socketFactory, atlsManager.trustManager)
                         }
+                    }
+                }
+            }.also { client ->
+                // Monitor retry events for logging
+                client.monitor.subscribe(HttpRequestRetryEvent) { event ->
+                    val delayBase = 1.5
+                    val nextDelay =
+                        (delayBase * 1000 * delayBase.pow(event.retryCount.toDouble() - 1)).toLong()
+                            .coerceAtMost(30000)
+                    LOG.atWarn {
+                        message = "Retrying HTTP request"
+                        payload = mapOf(
+                            "url" to event.request.url.toString(),
+                            "retryCount" to event.retryCount,
+                            "nextDelayMs" to nextDelay
+                        )
                     }
                 }
             }
