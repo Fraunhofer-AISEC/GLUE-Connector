@@ -12,6 +12,8 @@ import java.net.URI
 data class ContractNegotiation(
     @param:JsonProperty("@id")
     val uid: URI,
+    @param:JsonProperty("${Namespaces.EDC}/assetId")
+    val assetId: String,
     // The correct type is currently not mapped to any object
     @param:JsonProperty("${Namespaces.EDC}/callbackAddresses")
     val callbackAddresses: List<Any>,

@@ -7,8 +7,9 @@ ktor:
 connector:
   identity: "https://glue-connector.local"
   publicUrl: "${?PUBLIC_URL}"
-  edc:
+  edcMode: compat
+  edc-negotiation:
     url: "http://localhost:29193"
 atls:
   cmcAddress: "tcp://172.25.0.1:9955"
-  atlsEnabled: false
+  enabled: false

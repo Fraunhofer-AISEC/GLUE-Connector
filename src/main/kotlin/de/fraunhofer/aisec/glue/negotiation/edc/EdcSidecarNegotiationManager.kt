@@ -8,6 +8,7 @@ import de.fraunhofer.aisec.glue.models.edc.ContractNegotiation
 import de.fraunhofer.aisec.glue.models.edc.ContractRequest
 import de.fraunhofer.aisec.glue.models.edc.ContractRequestResponse
 import de.fraunhofer.aisec.glue.models.edc.QuerySpec
+import de.fraunhofer.aisec.glue.negotiation.Negotiation
 import de.fraunhofer.aisec.glue.negotiation.NegotiationException
 import de.fraunhofer.aisec.glue.negotiation.NegotiationManager
 import de.fraunhofer.iosb.odrl.OdrlAgreement
@@ -27,7 +28,7 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.time.Duration.Companion.seconds
 
-class EdcNegotiationManager(
+class EdcSidecarNegotiationManager(
     private val httpClient: HttpClient,
     private val odrlParser: OdrlParser,
     configManager: ConfigManager,
@@ -36,6 +37,7 @@ class EdcNegotiationManager(
     private val edcConfig = configManager.getConfig(::EdcNegotiationConfig)
 
     // Some kind of cron-like scheduler would be nice
+    @Suppress("unused")
     private val pollStateJob: Job =
         CoroutineScope(Dispatchers.Default).launch {
             while (true) {
@@ -89,7 +91,7 @@ class EdcNegotiationManager(
         }
     }
 
-    override suspend fun getNegotiations(): Collection<EdcNegotiation> = negotiations.values
+    override suspend fun getNegotiations(): Collection<Negotiation> = negotiations.values
 
     private suspend fun makeHttpException(
         resp: HttpResponse,
@@ -168,7 +170,8 @@ class EdcNegotiationManager(
         // Some hacks to convert the compact serialization to the format required by the edc
         EdcQuirks.pushDownAction(compactedOffer)
         EdcQuirks.unwrapRdfValue(compactedOffer)
-        EdcQuirks.rewriteTypeFields(compactedOffer)
+        // Marked for deletion, assuming not required anymore?
+//        EdcQuirks.rewriteTypeFields(compactedOffer)
         EdcQuirks.stringifyGlueKeys(odrlParser.mapper, compactedOffer)
         // This one is even worse, but the URI type in the model does not allow the value required by the edc
         if (newId != null) {
@@ -213,7 +216,7 @@ class EdcNegotiationManager(
         private val LOG = KotlinLogging.logger {}
     }
 
-    @BasePath("connector.edc")
+    @BasePath("connector.edc-negotiation")
     class EdcNegotiationConfig(applicationConfig: ApplicationConfig) : Config(applicationConfig) {
         val url by withDefault(convert(stringProp(), ::Url), Url("http://localhost:19193"))
     }

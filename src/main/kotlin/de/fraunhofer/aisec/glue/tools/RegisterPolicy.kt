@@ -3,7 +3,8 @@ package de.fraunhofer.aisec.glue.tools
 import com.fasterxml.jackson.module.kotlin.readValue
 import de.fraunhofer.aisec.glue.ContractStore
 import de.fraunhofer.aisec.glue.config.ConfigManager
-import de.fraunhofer.aisec.glue.controllers.NegotiationController
+import de.fraunhofer.aisec.glue.config.ConnectorConfig
+import de.fraunhofer.aisec.glue.controllers.BuiltinNegotiationController
 import de.fraunhofer.aisec.glue.negotiation.builtin.BuiltinNegotiationManager
 import de.fraunhofer.aisec.glue.negotiation.builtin.DummyNegotiator
 import de.fraunhofer.aisec.glue.plugins.configureAuthentication
@@ -91,8 +92,8 @@ fun main(args: Array<String>) {
                     }
                 }
             }
-        val connectorConfig = MapApplicationConfig("connector.identity" to "https://contract-registry-tool.local")
-        val configManager = ConfigManager(connectorConfig)
+        val appConfig = MapApplicationConfig("connector.identity" to "https://contract-registry-tool.local")
+        val connectorConfig = ConfigManager(appConfig).getConfig(::ConnectorConfig)
         val negotiationManager =
             BuiltinNegotiationManager(
                 httpClient,
@@ -100,7 +101,7 @@ fun main(args: Array<String>) {
                 DummyNegotiator(true),
                 ContractStore(objectMapper),
                 OdrlParser(),
-                configManager,
+                connectorConfig,
             )
 
         val closeChan = Channel<Unit>()
@@ -126,7 +127,7 @@ fun main(args: Array<String>) {
                             register(ContentType.Application.Json, JacksonConverter(objectMapper))
                         }
                         routing {
-                            NegotiationController(negotiationManager).apply { registerRoutes() }
+                            BuiltinNegotiationController(negotiationManager).apply { registerRoutes() }
                         }
                     },
                 ).start(wait = false)

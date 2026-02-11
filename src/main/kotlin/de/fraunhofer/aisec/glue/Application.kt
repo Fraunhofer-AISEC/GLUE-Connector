@@ -6,18 +6,18 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import de.fraunhofer.aisec.glue.atls.AtlsManager
 import de.fraunhofer.aisec.glue.atls.NettyAtlsHandshakeHandler
 import de.fraunhofer.aisec.glue.config.ConfigManager
-import de.fraunhofer.aisec.glue.controllers.AtlsController
-import de.fraunhofer.aisec.glue.controllers.Controller
-import de.fraunhofer.aisec.glue.controllers.NegotiationController
-import de.fraunhofer.aisec.glue.controllers.PipelineController
+import de.fraunhofer.aisec.glue.config.ConnectorConfig
+import de.fraunhofer.aisec.glue.controllers.*
 import de.fraunhofer.aisec.glue.controllers.api.NegotiationApiController
 import de.fraunhofer.aisec.glue.controllers.api.PipelineApiController
 import de.fraunhofer.aisec.glue.controllers.api.RemotePipelineApiController
 import de.fraunhofer.aisec.glue.controllers.internal.ContainerInterfaceController
 import de.fraunhofer.aisec.glue.docker.DockerClient
 import de.fraunhofer.aisec.glue.logging.LogbackObjectMapperInjector
+import de.fraunhofer.aisec.glue.negotiation.NegotiationManager
 import de.fraunhofer.aisec.glue.negotiation.builtin.BuiltinNegotiationManager
 import de.fraunhofer.aisec.glue.negotiation.builtin.DummyNegotiator
+import de.fraunhofer.aisec.glue.negotiation.edc.EdcSidecarNegotiationManager
 import de.fraunhofer.aisec.glue.pipeline.Backend
 import de.fraunhofer.aisec.glue.pipeline.PipelineManager
 import de.fraunhofer.aisec.glue.pipeline.RemotePipelineManager
@@ -90,7 +90,7 @@ val defaultDependencies by DI.Module {
                     }
                     exponentialDelay(base = 1.5, maxDelayMs = 30000)
                 }
-                if (atlsConfig.atlsEnabled) {
+                if (atlsConfig.enabled) {
                     engine {
                         config {
                             val atlsManager = instance<AtlsManager>()
@@ -133,18 +133,33 @@ val defaultDependencies by DI.Module {
     bind<PipelineManager>() with singleton { PipelineManager(instance(), instance(), instance()) }
     bind<PolicyEngine>() with singleton { PolicyEngine(instance()) }
     bind<ContractStore>() with singleton { ContractStore(instance()) }
-    bind<BuiltinNegotiationManager>() with
+    bind<ConnectorConfig>() with singleton { instance<ConfigManager>().getConfig(::ConnectorConfig) }
+    bind<NegotiationManager>() with
         singleton {
-            BuiltinNegotiationManager(
-                instance(),
-                instance(),
-                DummyNegotiator(),
-                instance(),
-                instance(),
-                instance(),
-            )
+            when (instance<ConnectorConfig>().edcMode) {
+                ConnectorConfig.EdcMode.SIDECAR -> EdcSidecarNegotiationManager(
+                    instance(),
+                    instance(),
+                    instance(),
+                )
+                else -> BuiltinNegotiationManager(
+                    instance(),
+                    instance(),
+                    DummyNegotiator(),
+                    instance(),
+                    instance(),
+                    instance(),
+                )
+            }
         }
-    bind<NegotiationController>() with singleton { NegotiationController(instance()) }
+    bind<NegotiationController>() with
+        singleton {
+            when (instance<ConnectorConfig>().edcMode) {
+                ConnectorConfig.EdcMode.SIDECAR -> object : NegotiationController {}
+                ConnectorConfig.EdcMode.COMPAT -> EdcCompatNegotiationController(instance())
+                ConnectorConfig.EdcMode.NONE -> BuiltinNegotiationController(instance())
+            }
+        }
     bind<PipelineController>() with singleton { PipelineController(instance(), instance(), instance()) }
     bind<NegotiationApiController>() with singleton { NegotiationApiController(instance(), instance()) }
     bind<PipelineApiController>() with singleton { PipelineApiController(instance()) }
@@ -160,7 +175,7 @@ val defaultDependencies by DI.Module {
                 instance(),
                 instance(),
                 instance(),
-                instance<AtlsConfig>().atlsEnabled,
+                instance<AtlsConfig>().enabled,
             )
         }
     bind<CoroutineDispatcher>() with singleton { Dispatchers.IO }
@@ -191,7 +206,7 @@ val defaultDependencies by DI.Module {
                         port = 8444
                     }
                     channelPipelineConfig = {
-                        if (atlsConfig.atlsEnabled) {
+                        if (atlsConfig.enabled) {
                             val atlsManager = instance<AtlsManager>()
                             // Build SSL context with CMC backing
                             val handler =
