@@ -64,7 +64,7 @@ class PipelineManager(
      */
     private fun augmentPipelineSpec(originalSpec: GlueContainerPipeline): List<AugmentedGlueContainer> {
         val augmentedSpec = mutableListOf<AugmentedGlueContainer>()
-        if (atlsConfig.atlsEnabled) {
+        if (atlsConfig.enabled) {
             originalSpec.atlsProxyIn?.let {
                 LOG.atDebug {
                     message = "Adding ATLS input proxy container"
@@ -74,7 +74,7 @@ class PipelineManager(
             }
         }
         originalSpec.container.forEach { augmentedSpec += AugmentedGlueContainer(it, emptyMap()) }
-        if (atlsConfig.atlsEnabled) {
+        if (atlsConfig.enabled) {
             originalSpec.atlsProxyOut?.let {
                 LOG.atDebug {
                     message = "Adding ATLS output proxy container"

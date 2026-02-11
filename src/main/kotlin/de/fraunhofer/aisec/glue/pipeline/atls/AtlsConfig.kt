@@ -6,7 +6,7 @@ import io.ktor.server.config.*
 import java.net.URI
 
 class AtlsConfig(rawConfig: ApplicationConfig) : Config(rawConfig) {
-    val atlsEnabled by withDefault(boolProp(), true)
+    val enabled by withDefault(boolProp(), true)
 
     // TODO: This value MUST NOT be configurable externally in a production environment!
     val proxyContainer by withDefault(

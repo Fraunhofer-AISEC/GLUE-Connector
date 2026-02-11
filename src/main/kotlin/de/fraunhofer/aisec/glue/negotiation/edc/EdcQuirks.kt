@@ -61,7 +61,7 @@ object EdcQuirks {
     }
 
     /**
-     * For some reason, the jsonld compaction makes `@type` to `type` in the [EdcNegotiationManager]'s call to
+     * For some reason, the jsonld compaction makes `@type` to `type` in the [EdcSidecarNegotiationManager]'s call to
      * [ObjectMapper.writeValueAsString].
      * While this gets somehow remedied before we send out our requests it is an issue when we stringify values for the
      * EDC.

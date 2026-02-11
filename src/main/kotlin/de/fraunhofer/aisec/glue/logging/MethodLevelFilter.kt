@@ -38,8 +38,10 @@ class MethodLevelFilter : Filter<ILoggingEvent>() {
             }
             val pair = parseEntry(trimmed)
             if (pair == null) {
-                addWarn("Ignoring malformed method filter entry '$trimmed'. " +
-                        "Use \"fully.qualified.ClassName.methodName\"!")
+                addWarn(
+                    "Ignoring malformed method filter entry '$trimmed'. " +
+                        "Use \"fully.qualified.ClassName.methodName\"!",
+                )
             } else {
                 filteredMethods.add(pair)
             }

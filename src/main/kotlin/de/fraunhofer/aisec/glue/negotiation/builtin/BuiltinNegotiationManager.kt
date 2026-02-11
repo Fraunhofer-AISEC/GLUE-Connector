@@ -36,7 +36,7 @@ import java.util.concurrent.ConcurrentHashMap
  * This class should be used in conjunction with the [NegotiationController] class, which provides the HTTP endpoints
  * required to perform negotiations.
  */
-class BuiltinNegotiationManager(
+open class BuiltinNegotiationManager(
     private val httpClient: HttpClient,
     private val objectMapper: ObjectMapper,
     private val defaultNegotiator: Negotiator,
@@ -44,12 +44,12 @@ class BuiltinNegotiationManager(
     private val odrlParser: OdrlParser,
     configManager: ConfigManager,
 ) : NegotiationManager() {
+    private val connectorConfig = configManager.getConfig(::ConnectorConfig)
     private val pidMutex = Mutex()
     private val assignedIds = synchronizedSet(mutableSetOf<String>())
     private val providerNegotiations = ConcurrentHashMap<String, BuiltinNegotiation>()
     private val consumerNegotiations = ConcurrentHashMap<String, BuiltinNegotiation>()
     private val pendingConsumerNegotiations = ConcurrentHashMap<String, MutableSharedFlow<BuiltinNegotiation?>>()
-    private val connectorConfig = configManager.getConfig(::ConnectorConfig)
 
     /**
      * Start a negotiation by sending the provided contract request to the provider.
@@ -422,7 +422,7 @@ class BuiltinNegotiationManager(
         return negotiation
     }
 
-    override suspend fun getNegotiations(): Collection<BuiltinNegotiation> {
+    override suspend fun getNegotiations(): Collection<Negotiation> {
         return (consumerNegotiations.values + providerNegotiations.values).toList()
     }
 
