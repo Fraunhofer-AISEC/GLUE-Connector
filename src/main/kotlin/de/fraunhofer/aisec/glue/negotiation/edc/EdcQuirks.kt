@@ -3,15 +3,58 @@ package de.fraunhofer.aisec.glue.negotiation.edc
 import com.apicatalog.jsonld.JsonLd
 import com.apicatalog.jsonld.JsonLdOptions
 import com.apicatalog.jsonld.document.JsonDocument
+import com.fasterxml.jackson.annotation.JsonSubTypes
+import com.fasterxml.jackson.annotation.JsonTypeName
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ArrayNode
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.databind.node.TextNode
+import de.fraunhofer.aisec.glue.models.negotiation.Namespaces
 import de.fraunhofer.iosb.odrl.OdrlIdentifiers
+import de.fraunhofer.iosb.odrl.OdrlPolicy
+import de.fraunhofer.iosb.odrl.glue.GlueIdentifiers
+import io.github.oshai.kotlinlogging.KotlinLogging
 import java.io.ByteArrayInputStream
+import java.net.URI
+import java.net.URISyntaxException
+import kotlin.reflect.full.findAnnotation
+
+// Prefix to make base64-"URI"s of EDC RFC-compliant
+val EDC_URI_COMPAT_SCHEME = "x-edc:"
 
 object EdcQuirks {
+    // Compact JSON-LD identifiers
+    const val ACTION_KEY = "odrl:action"
+    const val LEFT_OPERAND_KEY = "odrl:leftOperand"
+    const val RIGHT_OPERAND_KEY = "odrl:rightOperand"
+
+    // Expanded JSON-LD identifiers
+    const val ACTION_KEY_EXPANDED = OdrlIdentifiers.HAS_ACTION
+
+    // Compact JSON-LD `@type` fields that may need URI fixing
+    val URI_FIX_COMPACT_TYPES by lazy {
+        val types = listOf(OdrlPolicy::class) + OdrlPolicy::class.findAnnotation<JsonSubTypes>()!!.value.map { it.value }
+        types.map { it.findAnnotation<JsonTypeName>()!!.value.replace("${Namespaces.ODRL}/", "odrl:") }
+    }
+
+    // TODO: Do we also need to stringify policy templates?
+    val GLUE_TYPES = listOf(GlueIdentifiers.CONTAINER_PIPELINE)
+
+    val LOG = KotlinLogging.logger {}
+
+    fun JsonNode.walkObjects(action: ObjectNode.() -> Unit) {
+        when (this) {
+            is ObjectNode -> {
+                action(this)
+                this.forEach { node ->
+                    node.walkObjects(action)
+                }
+            }
+            is ArrayNode -> forEach { it.walkObjects(action) }
+        }
+    }
+
     /**
      * While the EDC only seems to accept compact serialization of ODRL policies, it needs the shared action parameter
      * to be pushed down into the individual permissions.
@@ -20,25 +63,24 @@ object EdcQuirks {
      */
     fun pushDownAction(compactSerialization: ObjectNode) {
         // TODO: This really needs to  be done in the parser, so the deterministic OdrlIdentifiers can be used...
-        val actionKey = "odrl:action"
         val permissionKey = "permission"
 
-        if (!compactSerialization.has(actionKey)) {
+        if (!compactSerialization.has(ACTION_KEY)) {
             // Already done or not serialized in compact form
             return
         }
 
-        val action = compactSerialization.remove(actionKey)
+        val action = compactSerialization.remove(ACTION_KEY)
 
         when (val permission = compactSerialization.get(permissionKey)) {
             is ArrayNode ->
                 permission.forEach {
                     (it as? ObjectNode)?.putIfAbsent(
-                        actionKey,
+                        ACTION_KEY,
                         action,
                     ) ?: throw AssertionError("Unexpected type ${it.javaClass.simpleName} for permission")
                 }
-            is ObjectNode -> permission.putIfAbsent(actionKey, action)
+            is ObjectNode -> permission.putIfAbsent(ACTION_KEY, action)
             else -> throw AssertionError("Unexpected type ${permission.javaClass.simpleName} for permission")
         }
     }
@@ -46,14 +88,13 @@ object EdcQuirks {
     /**
      * The ODRL-Parser encodes the id of an action with refinements as an RDF value.
      * The EDC's parser does not understand this and complains that the action has no @id field.
-     * This function unwraps each rdf:value that is found directly beneath an odrl:action object node.
+     * This function unwraps each rdf:value found directly beneath an odrl:action object node.
      */
-    fun unwrapRdfValue(serialization: ObjectNode) {
-        val actionKey = "odrl:action"
+    fun unwrapActionRdfValue(serialization: ObjectNode) {
         val valueKey = "rdf:value"
         val uidKey = "uid"
 
-        serialization.findValues(actionKey).filter { it is ObjectNode && it.has(valueKey) }.forEach {
+        serialization.findValues(ACTION_KEY).filter { it is ObjectNode && it.has(valueKey) }.forEach {
             val node = it as ObjectNode
             val rdfValue = node.remove(valueKey) as? ObjectNode ?: return@forEach
             node.set<JsonNode>("@id", rdfValue.get(uidKey))
@@ -66,24 +107,17 @@ object EdcQuirks {
      * While this gets somehow remedied before we send out our requests it is an issue when we stringify values for the
      * EDC.
      * For this reason, this function recursively replaces all `type` properties with `@type`.
-     * TODO: Delete
      */
+    @Suppress("DEPRECATION")
+    @Deprecated("Should have been fixed upstream")
     fun rewriteTypeFields(node: JsonNode) {
-        when (node) {
-            is ObjectNode -> {
-                if (node.has("type")) {
-                    val type = node.remove("type")
-                    val copy = mutableListOf<Map.Entry<String, JsonNode>>()
-                    node.properties().forEach { copy.add(it) }
-                    node.removeAll()
-                    node.set<JsonNode>("@type", type)
-                    copy.forEach { (k, v) -> node.set<JsonNode>(k, v) }
-                }
-
-                node.elements().forEach(::rewriteTypeFields)
-            }
-            is ArrayNode -> {
-                node.elements().forEach(::rewriteTypeFields)
+        node.walkObjects {
+            remove("type").let { type ->
+                val copy = mutableListOf<Map.Entry<String, JsonNode>>()
+                properties().forEach { copy.add(it) }
+                removeAll()
+                set<JsonNode>("@type", type)
+                copy.forEach { (k, v) -> set<JsonNode>(k, v) }
             }
         }
     }
@@ -100,21 +134,19 @@ object EdcQuirks {
         objectMapper: ObjectMapper,
         serialization: ObjectNode,
     ) {
-        // TODO: Do we also need to stringify policy templates?
-        val glueTypes = listOf("http://fhg.de/glue/ContainerPipeline")
-
         // This function returns true if the currently processed node should be replaced.
         fun shouldStringify(node: JsonNode): Boolean {
             return when {
                 node is ObjectNode -> {
                     // This hard to parse comparison means "node has a type property and its value is in glueTypes"
-                    node.get("@type")?.let { type -> glueTypes.any { type == TextNode(it) } } == true
+                    node.get("@type")?.let { type -> GLUE_TYPES.any { type == TextNode(it) } } == true
                 }
                 else -> false
             }
         }
 
-        // Of course the EDC stores all values in expanded form, so we need to convert to compact JsonLd and then to
+        // The EDC stores its stringified values in expanded representation,
+        // so we need to convert to compact JsonLd and back to expanded representation.
         fun stringifyNode(node: JsonNode): String {
             val compactString = objectMapper.writeValueAsString(node)
             val document = JsonDocument.of(ByteArrayInputStream(compactString.toByteArray()))
@@ -167,69 +199,104 @@ object EdcQuirks {
      */
     fun destringifyOperators(
         objectMapper: ObjectMapper,
-        jsonObject: JsonNode,
+        jsonNode: JsonNode,
     ) {
-        val knownOperations = listOf("http://fhg.de/glue/containerPipeline")
-
         fun shouldDestringify(objectNode: ObjectNode): Boolean {
-            if (!(objectNode.has("odrl:leftOperand") && objectNode.has("odrl:rightOperand"))) {
+            if (!(objectNode.has(LEFT_OPERAND_KEY) && objectNode.has(RIGHT_OPERAND_KEY))) {
                 return false
             }
 
-            val leftOp = objectNode["odrl:leftOperand"]
-            val rightOp = objectNode["odrl:rightOperand"]
+            val leftOp = objectNode[LEFT_OPERAND_KEY]
+            val rightOp = objectNode[RIGHT_OPERAND_KEY]
 
             // Check if the right op is a string and if the left op is known
-            return rightOp.isTextual && leftOp.isTextual && knownOperations.contains(leftOp.asText())
+            return rightOp.isTextual && leftOp.isTextual && GLUE_TYPES.contains(leftOp.asText())
         }
 
-        fun impl(jsonNode: JsonNode) {
-            when (jsonNode) {
-                is ObjectNode -> {
-                    if (shouldDestringify(jsonNode)) {
-                        val rightOp = jsonNode["odrl:rightOperand"].asText()
-                        val destringified = objectMapper.readTree(rightOp)
-                        jsonNode.set<ObjectNode>("odrl:rightOperand", destringified)
-                        // There is hopefully no nested stringification
-                        return
-                    }
-
-                    for (node in jsonNode) {
-                        impl(node)
-                    }
-                }
-                is ArrayNode -> {
-                    for (node in jsonNode) {
-                        impl(node)
-                    }
-                }
+        jsonNode.walkObjects {
+            if (shouldDestringify(this)) {
+                val rightOp = this[RIGHT_OPERAND_KEY].asText()
+                val destringified = objectMapper.readTree(rightOp)
+                set<ObjectNode>(RIGHT_OPERAND_KEY, destringified)
             }
         }
-
-        impl(jsonObject)
     }
 
     /**
      * For some inexplicable reason, the EDC wraps actions with refinements in an additional action tag.
-     * The developers of the EDC apparently think that this is correct behavior so we need to transform it into
+     * The developers of the EDC apparently think that this is correct behavior, so we need to transform it into
      * something that we can use on our end.
      * [Related Issue](https://github.com/eclipse-edc/Connector/issues/4838)
      */
     fun fixDoubleAction(serialization: JsonNode) {
-        val actionKey = OdrlIdentifiers.HAS_ACTION
-
         // TODO: The nested actions problem should not recur, right? If it does, we need a full recursive function here.
-        serialization.findValues(actionKey).filter { it is ObjectNode && it.has(actionKey) }.forEach {
+        serialization.findValues(ACTION_KEY_EXPANDED).filter { it is ObjectNode && it.has(ACTION_KEY_EXPANDED) }.forEach {
             val node = it as ObjectNode
-            // If the child node is not an object then something is wrong here (we could throw to let the user know)
-            val childNode = it[actionKey] as? ObjectNode ?: return@forEach
+            // If the child node is not an object, then something is wrong here (we could throw to let the user know)
+            val childNode = it[ACTION_KEY_EXPANDED] as? ObjectNode ?: return@forEach
             // Another sanity check to catch extra content that should not be there
             if (childNode.size() != 1 || !childNode.has("@id")) {
                 return@forEach
             }
 
-            node.remove(actionKey)
+            node.remove(ACTION_KEY_EXPANDED)
             node.set<ObjectNode>("@id", childNode["@id"])
         }
     }
+
+    fun fixUriFormat(node: JsonNode): Boolean {
+        var fixed = false
+        node.walkObjects {
+            get("@type")?.let { type ->
+                if (type.textValue() in URI_FIX_COMPACT_TYPES) {
+                    val uid = get("@id").textValue()
+                    try {
+                        URI.create(uid)
+                    } catch (e: IllegalArgumentException) {
+                        if (e.cause is URISyntaxException) {
+                            try {
+                                val newUid = uriFromEdcFormat(uid)
+                                set<JsonNode>("@id", TextNode(newUid.toString()))
+                                LOG.atTrace {
+                                    message = "Fixed URI format"
+                                    payload = mapOf("oldUri" to uid, "newUri" to newUid)
+                                }
+                                fixed = true
+                            } catch (e: IllegalArgumentException) {
+                                throw IllegalArgumentException("Failed to create valid URI using compatibility prefix: $uid", e.cause)
+                            }
+                        } else {
+                            throw e
+                        }
+                    }
+                }
+            }
+        }
+        return fixed
+    }
+
+    fun revertUriFormat(node: JsonNode): Boolean {
+        var fixed = false
+        node.walkObjects {
+            get("@type")?.let { type ->
+                if (type.textValue() in URI_FIX_COMPACT_TYPES) {
+                    val uid = URI.create(get("@id").textValue())
+                    if (EDC_URI_COMPAT_SCHEME == uid.scheme) {
+                        val newUid = uid.toEdcFormat()
+                        set<JsonNode>("@id", TextNode(newUid))
+                        LOG.atTrace {
+                            message = "Reverted fixed URI format"
+                            payload = mapOf("oldUri" to uid, "newUri" to newUid)
+                        }
+                        fixed = true
+                    }
+                }
+            }
+        }
+        return fixed
+    }
 }
+
+fun URI.toEdcFormat(): String = toString().substring(EDC_URI_COMPAT_SCHEME.length)
+
+fun uriFromEdcFormat(edcUri: String): URI = URI.create("$EDC_URI_COMPAT_SCHEME:$edcUri")

@@ -25,14 +25,14 @@ class ConnectorConfig(inner: ApplicationConfig) : Config(inner) {
         URLBuilder(host = InetAddress.getLocalHost().hostAddress, port = 8080).build(),
     )
 
-    enum class EdcMode(val value: String) {
-        NONE("none"),
-        COMPAT("compat"),
-        SIDECAR("sidecar"),
+    enum class EdcMode {
+        NONE,
+        COMPAT,
+        SIDECAR,
     }
 
     val edcMode by withDefault(
-        convert(stringProp()) { EdcMode.valueOf(it) },
+        convert(stringProp()) { EdcMode.valueOf(it.uppercase()) },
         EdcMode.NONE,
     )
 }

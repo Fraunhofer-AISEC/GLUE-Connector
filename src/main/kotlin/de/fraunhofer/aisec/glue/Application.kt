@@ -137,27 +137,28 @@ val defaultDependencies by DI.Module {
     bind<NegotiationManager>() with
         singleton {
             when (instance<ConnectorConfig>().edcMode) {
-                ConnectorConfig.EdcMode.SIDECAR -> EdcSidecarNegotiationManager(
-                    instance(),
-                    instance(),
-                    instance(),
-                )
-                else -> BuiltinNegotiationManager(
-                    instance(),
-                    instance(),
-                    DummyNegotiator(),
-                    instance(),
-                    instance(),
-                    instance(),
-                )
+                ConnectorConfig.EdcMode.SIDECAR ->
+                    EdcSidecarNegotiationManager(
+                        instance(),
+                        instance(),
+                        instance(),
+                    )
+                else ->
+                    BuiltinNegotiationManager(
+                        instance(),
+                        instance(),
+                        DummyNegotiator(),
+                        instance(),
+                        instance(),
+                        instance(),
+                    )
             }
         }
     bind<NegotiationController>() with
         singleton {
             when (instance<ConnectorConfig>().edcMode) {
                 ConnectorConfig.EdcMode.SIDECAR -> object : NegotiationController {}
-                ConnectorConfig.EdcMode.COMPAT -> EdcCompatNegotiationController(instance())
-                ConnectorConfig.EdcMode.NONE -> BuiltinNegotiationController(instance())
+                else -> BuiltinNegotiationController(instance(), instance(), instance())
             }
         }
     bind<PipelineController>() with singleton { PipelineController(instance(), instance(), instance()) }
