@@ -1,13 +1,16 @@
 package de.fraunhofer.aisec.glue.controllers
 
-import de.fraunhofer.aisec.glue.Utils
+import com.fasterxml.jackson.databind.ObjectMapper
+import de.fraunhofer.aisec.glue.config.ConnectorConfig
 import de.fraunhofer.aisec.glue.models.negotiation.*
+import de.fraunhofer.aisec.glue.negotiation.NegotiationManager
 import de.fraunhofer.aisec.glue.negotiation.builtin.BuiltinNegotiation
 import de.fraunhofer.aisec.glue.negotiation.builtin.BuiltinNegotiationManager
+import de.fraunhofer.aisec.glue.negotiation.edc.EdcQuirks
+import de.fraunhofer.aisec.glue.plugins.EdcCompatTransformation
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ktor.http.*
 import io.ktor.server.auth.*
-import io.ktor.server.plugins.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -17,7 +20,15 @@ import io.ktor.server.routing.*
  * It currently implements v2024.1.
  * <https://docs.internationaldataspaces.org/ids-knowledgebase/v/dataspace-protocol/contract-negotiation/contract.negotiation.binding.https>
  */
-class BuiltinNegotiationController(private val negotiationManager: BuiltinNegotiationManager) : NegotiationController {
+open class BuiltinNegotiationController(
+    negotiationManager: NegotiationManager,
+    private val connectorConfig: ConnectorConfig,
+    private val objectMapper: ObjectMapper? = null,
+) : NegotiationController {
+    private val negotiationManager: BuiltinNegotiationManager =
+        negotiationManager as? BuiltinNegotiationManager
+            ?: throw IllegalArgumentException("NegotiationManager must be of type BuiltinNegotiationManager")
+
     private fun stateErrorResponse(negotiation: BuiltinNegotiation): ContractNegotiationError {
         // Since this function is only called from response callbacks, the negotiation's lock should be held up the call
         // stack.
@@ -31,12 +42,40 @@ class BuiltinNegotiationController(private val negotiationManager: BuiltinNegoti
     }
 
     private fun Route.registerRoutes20241() {
+        // Install EDC compatibility plugin if required
+        if (connectorConfig.edcMode == ConnectorConfig.EdcMode.COMPAT) {
+            if (objectMapper == null) {
+                throw IllegalArgumentException("ObjectMapper must be set when using EDC compatibility mode!")
+            }
+            install(EdcCompatTransformation) {
+                transformRequest = { json ->
+                    LOG.debug { "Applying EDC request transformations..." }
+                    val node = objectMapper.readTree(json)
+                    // If no fixes made, skip serialization
+                    if (EdcQuirks.fixUriFormat(node)) {
+                        objectMapper.writeValueAsString(node)
+                    } else {
+                        json
+                    }
+                }
+                transformResponse = { json ->
+                    LOG.debug { "Applying EDC response transformations..." }
+                    val node = objectMapper.readTree(json)
+                    // If no fixes made, skip serialization
+                    if (EdcQuirks.revertUriFormat(node)) {
+                        objectMapper.writeValueAsString(node)
+                    } else {
+                        json
+                    }
+                }
+            }
+        }
+
         post("/request") {
             val principal = call.principal<UserIdPrincipal>()
             val req = call.receive<ContractRequestMessage>()
-            val originUrl = Utils.baseUrlForOrigin(call.request.origin, 1)
 
-            val negotiation = negotiationManager.createFromRequest(req, originUrl, principal?.name)
+            val negotiation = negotiationManager.createFromRequest(req, principal?.name)
             if (negotiation == null) {
                 call.respond(HttpStatusCode.NotFound)
                 return@post
@@ -54,9 +93,8 @@ class BuiltinNegotiationController(private val negotiationManager: BuiltinNegoti
         post("/offers") {
             val principal = call.principal<UserIdPrincipal>()!!
             val req = call.receive<ContractOfferMessage>()
-            val originUrl = Utils.baseUrlForOrigin(call.request.origin, 1)
 
-            val negotiation = negotiationManager.createFromOffer(req, originUrl, principal.name)
+            val negotiation = negotiationManager.createFromOffer(req, principal.name)
             if (negotiation == null) {
                 call.respond(HttpStatusCode.NotFound)
                 return@post

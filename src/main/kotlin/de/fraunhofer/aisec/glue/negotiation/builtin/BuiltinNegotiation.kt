@@ -5,6 +5,7 @@ import de.fraunhofer.aisec.glue.models.negotiation.*
 import de.fraunhofer.aisec.glue.negotiation.Negotiation
 import de.fraunhofer.aisec.glue.negotiation.NegotiationCompletionCallback
 import de.fraunhofer.aisec.glue.negotiation.NegotiationException
+import de.fraunhofer.aisec.glue.negotiation.edc.toEdcFormat
 import de.fraunhofer.aisec.glue.negotiation.toAgreement
 import de.fraunhofer.iosb.odrl.OdrlAgreement
 import de.fraunhofer.iosb.odrl.OdrlOffer
@@ -97,7 +98,8 @@ class BuiltinNegotiation(
                     "message" to message,
                 )
         }
-        val url = URLBuilder(peerEndpoint).appendEncodedPathSegments(endpoint).build()
+        val url =
+            URLBuilder(peerEndpoint).appendEncodedPathSegments("negotiations", endpoint).build()
         return httpClient.post(url) {
             contentType(ContentType.Application.Json)
             setBody(message)
@@ -320,6 +322,7 @@ class BuiltinNegotiation(
                     sendMessage(
                         "$peerPid/request",
                         ContractRequestMessage(
+                            uid = newOffer.uid.toEdcFormat(),
                             providerPid = peerPid,
                             consumerPid = id,
                             callbackAddress = ownEndpoint.toString(),

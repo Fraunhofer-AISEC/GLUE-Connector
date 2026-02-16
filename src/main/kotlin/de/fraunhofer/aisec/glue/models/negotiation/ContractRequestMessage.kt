@@ -12,6 +12,8 @@ import de.fraunhofer.iosb.odrl.parser.JsonLd
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type")
 @JsonTypeName("${Namespaces.DSPACE}/ContractRequestMessage")
 data class ContractRequestMessage(
+    @param:JsonProperty("@id")
+    val uid: String,
     @param:JsonProperty("${Namespaces.DSPACE}/providerPid")
     val providerPid: String? = null,
     @param:JsonProperty("${Namespaces.DSPACE}/consumerPid")

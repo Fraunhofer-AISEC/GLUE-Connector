@@ -93,7 +93,8 @@ fun main(args: Array<String>) {
                 }
             }
         val appConfig = MapApplicationConfig("connector.identity" to "https://contract-registry-tool.local")
-        val connectorConfig = ConfigManager(appConfig).getConfig(::ConnectorConfig)
+        val configManager = ConfigManager(appConfig)
+        val connectorConfig = configManager.getConfig(::ConnectorConfig)
         val negotiationManager =
             BuiltinNegotiationManager(
                 httpClient,
@@ -101,7 +102,7 @@ fun main(args: Array<String>) {
                 DummyNegotiator(true),
                 ContractStore(objectMapper),
                 OdrlParser(),
-                connectorConfig,
+                configManager,
             )
 
         val closeChan = Channel<Unit>()
@@ -127,7 +128,7 @@ fun main(args: Array<String>) {
                             register(ContentType.Application.Json, JacksonConverter(objectMapper))
                         }
                         routing {
-                            BuiltinNegotiationController(negotiationManager).apply { registerRoutes() }
+                            BuiltinNegotiationController(negotiationManager, connectorConfig).apply { registerRoutes() }
                         }
                     },
                 ).start(wait = false)

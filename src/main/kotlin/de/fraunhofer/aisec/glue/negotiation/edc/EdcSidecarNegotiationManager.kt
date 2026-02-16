@@ -1,6 +1,7 @@
 package de.fraunhofer.aisec.glue.negotiation.edc
 
 import com.fasterxml.jackson.databind.node.ObjectNode
+import de.fraunhofer.aisec.glue.Utils.makeHttpException
 import de.fraunhofer.aisec.glue.config.BasePath
 import de.fraunhofer.aisec.glue.config.Config
 import de.fraunhofer.aisec.glue.config.ConfigManager
@@ -17,7 +18,6 @@ import de.fraunhofer.iosb.odrl.parser.OdrlParser
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ktor.client.*
 import io.ktor.client.call.*
-import io.ktor.client.plugins.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
@@ -93,21 +93,6 @@ class EdcSidecarNegotiationManager(
 
     override suspend fun getNegotiations(): Collection<Negotiation> = negotiations.values
 
-    private suspend fun makeHttpException(
-        resp: HttpResponse,
-        body: String? = null,
-    ): ResponseException {
-        assert(!resp.status.isSuccess())
-        val ctor =
-            when (resp.status.value) {
-                in 300..399 -> ::RedirectResponseException
-                in 400..499 -> ::ClientRequestException
-                in 500..599 -> ::ServerResponseException
-                else -> ::ResponseException
-            }
-        return ctor(resp, body ?: resp.bodyAsText())
-    }
-
     private fun convertToOffer(policy: OdrlPolicy): Result<Pair<OdrlPolicy, String?>> {
         // The required format is `[contractId]:[target]:[uuid]` with all three parts being base64 encoded.
         // If this format is already there, we do nothing and hope for the best.
@@ -169,7 +154,7 @@ class EdcSidecarNegotiationManager(
         val compactedOffer = odrlParser.mapper.readTree(compactedSerializedOffer) as ObjectNode
         // Some hacks to convert the compact serialization to the format required by the edc
         EdcQuirks.pushDownAction(compactedOffer)
-        EdcQuirks.unwrapRdfValue(compactedOffer)
+        EdcQuirks.unwrapActionRdfValue(compactedOffer)
         // Marked for deletion, assuming not required anymore?
 //        EdcQuirks.rewriteTypeFields(compactedOffer)
         EdcQuirks.stringifyGlueKeys(odrlParser.mapper, compactedOffer)

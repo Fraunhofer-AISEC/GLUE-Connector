@@ -11,6 +11,7 @@ import de.fraunhofer.aisec.glue.models.negotiation.NegotiationState
 import de.fraunhofer.aisec.glue.negotiation.Negotiation
 import de.fraunhofer.aisec.glue.negotiation.NegotiationCompletionCallback
 import de.fraunhofer.aisec.glue.negotiation.NegotiationManager
+import de.fraunhofer.aisec.glue.negotiation.edc.toEdcFormat
 import de.fraunhofer.iosb.odrl.OdrlAgreement
 import de.fraunhofer.iosb.odrl.OdrlOffer
 import de.fraunhofer.iosb.odrl.OdrlParty
@@ -85,10 +86,11 @@ open class BuiltinNegotiationManager(
 
         val contractRequestMessage =
             ContractRequestMessage(
+                uid = odrlRequest.uid.toEdcFormat(),
                 providerPid = null,
                 consumerPid = consumerPid,
-                callbackUrl.toString(),
-                odrlRequest,
+                callbackAddress = callbackUrl.toString(),
+                offer = odrlRequest,
             )
 
         logParams["id"] = consumerPid
@@ -211,7 +213,6 @@ open class BuiltinNegotiationManager(
      */
     suspend fun createFromRequest(
         request: ContractRequestMessage,
-        originUrl: Url,
         peerIdent: String?,
     ): BuiltinNegotiation? {
         val logParams = mutableMapOf("consumerPid" to request.consumerPid, "peerIdentity" to peerIdent)
@@ -250,7 +251,7 @@ open class BuiltinNegotiationManager(
                 peerPid = request.consumerPid,
                 negotiator = defaultNegotiator,
                 httpClient = httpClient,
-                ownEndpoint = originUrl,
+                ownEndpoint = connectorConfig.publicUrl,
                 peerEndpoint = Url(request.callbackAddress),
                 objectMapper = objectMapper,
                 completionCallback =
@@ -266,7 +267,6 @@ open class BuiltinNegotiationManager(
 
     suspend fun createFromOffer(
         request: ContractOfferMessage,
-        originUrl: Url,
         peerIdent: String,
     ): BuiltinNegotiation? {
         val logParams = mutableMapOf("providerPid" to request.providerPid, "peerIdentity" to peerIdent)
@@ -301,7 +301,7 @@ open class BuiltinNegotiationManager(
                 peerPid = request.providerPid,
                 negotiator = defaultNegotiator,
                 httpClient = httpClient,
-                ownEndpoint = originUrl,
+                ownEndpoint = connectorConfig.publicUrl,
                 peerEndpoint = Url(request.callbackAddress),
                 objectMapper = objectMapper,
                 completionCallback =

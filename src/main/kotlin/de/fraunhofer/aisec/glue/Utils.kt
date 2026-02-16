@@ -1,11 +1,7 @@
 package de.fraunhofer.aisec.glue
 
-import io.ktor.client.plugins.ClientRequestException
-import io.ktor.client.plugins.RedirectResponseException
-import io.ktor.client.plugins.ResponseException
-import io.ktor.client.plugins.ServerResponseException
-import io.ktor.client.statement.HttpResponse
-import io.ktor.client.statement.bodyAsText
+import io.ktor.client.plugins.*
+import io.ktor.client.statement.*
 import io.ktor.http.*
 
 object Utils {
@@ -26,6 +22,7 @@ object Utils {
      * This is useful when we want to find out the exact point our API is reachable from, provided all reverse proxies
      * in front of us set the correct forwarding headers.
      */
+    @Deprecated("Origin can easily be spoofed, using connectorConfig.publicUrl instead")
     fun baseUrlForOrigin(
         origin: RequestConnectionPoint,
         backtrack: Int,
@@ -45,8 +42,8 @@ object Utils {
     }
 
     fun getCredentials(): Pair<String, String> {
-        val username = System.getenv("AUTH_USERNAME") ?: throw IllegalStateException("Auth username not set")
-        val password = System.getenv("AUTH_PASSWORD") ?: throw IllegalStateException("Auth password not set")
+        val username = System.getenv("AUTH_USERNAME") ?: "ids"
+        val password = System.getenv("AUTH_PASSWORD") ?: "ids"
         return Pair(username, password)
     }
 

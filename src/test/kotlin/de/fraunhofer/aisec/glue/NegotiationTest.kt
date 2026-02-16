@@ -100,11 +100,12 @@ class NegotiationTest {
                     DummyNegotiator(true),
                     contractStore,
                     OdrlParser(),
-                    configManager.getConfig(::ConnectorConfig),
+                    configManager,
                 )
 
             val contractRequest =
                 ContractRequestMessage(
+                    uid = "urn:uuid:${UUID.randomUUID()}",
                     providerPid = null,
                     consumerPid = consumerPid,
                     callbackAddress = "https://consumer/negotiations",
@@ -114,7 +115,6 @@ class NegotiationTest {
             val negotiation =
                 negotiationManager.createFromRequest(
                     contractRequest,
-                    Url("https://provider/negotiations"),
                     "consumer",
                 )
             assertNotNull(negotiation)
@@ -179,7 +179,7 @@ class NegotiationTest {
                     DummyNegotiator(),
                     contractStore,
                     OdrlParser(),
-                    configManager.getConfig(::ConnectorConfig),
+                    configManager,
                 )
 
             val contractOffer =
@@ -193,7 +193,6 @@ class NegotiationTest {
             val negotiation =
                 negotiationManager.createFromOffer(
                     contractOffer,
-                    Url("https://consumer/negotiations"),
                     "provider",
                 )
             assertNotNull(negotiation)
@@ -299,9 +298,9 @@ class NegotiationTest {
                     DummyNegotiator(),
                     contractStore,
                     OdrlParser(),
-                    configManager.getConfig(::ConnectorConfig),
+                    configManager,
                 )
-            val controller = BuiltinNegotiationController(negotiationManager)
+            val controller = BuiltinNegotiationController(negotiationManager, configManager.getConfig(::ConnectorConfig))
 
             configureTestApp(controller)
             val testClient = testClient()
@@ -312,6 +311,7 @@ class NegotiationTest {
                     contentType(ContentType.Application.Json)
                     setBody(
                         ContractRequestMessage(
+                            uid = "urn:uuid:${UUID.randomUUID()}",
                             providerPid = null,
                             consumerPid = consumerPid,
                             callbackAddress = "https://consumer/negotiations",
@@ -383,9 +383,9 @@ class NegotiationTest {
                     DummyNegotiator(),
                     contractStore,
                     OdrlParser(),
-                    configManager.getConfig(::ConnectorConfig),
+                    configManager,
                 )
-            val controller = BuiltinNegotiationController(negotiationManager)
+            val controller = BuiltinNegotiationController(negotiationManager, configManager.getConfig(::ConnectorConfig))
 
             configureTestApp(controller)
             val testClient = testClient()
@@ -476,6 +476,7 @@ class NegotiationTest {
             coJustRun { providerContractStore.addContract(any()) }
 
             val providerConfig = MapApplicationConfig("connector.identity" to "https://provider-connector.local")
+            val providerConfigManager = ConfigManager(providerConfig)
             val providerNegotiationManager =
                 BuiltinNegotiationManager(
                     testClient,
@@ -483,14 +484,16 @@ class NegotiationTest {
                     DummyNegotiator(),
                     providerContractStore,
                     odrlParser,
-                    ConfigManager(providerConfig).getConfig(::ConnectorConfig),
+                    providerConfigManager,
                 )
-            val providerController = BuiltinNegotiationController(providerNegotiationManager)
+            val providerController =
+                BuiltinNegotiationController(providerNegotiationManager, providerConfigManager.getConfig(::ConnectorConfig))
 
             val consumerContractStore = mockk<ContractStore>()
             coJustRun { consumerContractStore.addContract(any()) }
 
             val consumerConfig = MapApplicationConfig("connector.identity" to "https://consumer-connector.local")
+            val consumerConfigManager = ConfigManager(consumerConfig)
             val consumerNegotiationManager =
                 BuiltinNegotiationManager(
                     testClient,
@@ -498,9 +501,10 @@ class NegotiationTest {
                     DummyNegotiator(),
                     consumerContractStore,
                     odrlParser,
-                    ConfigManager(consumerConfig).getConfig(::ConnectorConfig),
+                    consumerConfigManager,
                 )
-            val consumerController = BuiltinNegotiationController(consumerNegotiationManager)
+            val consumerController =
+                BuiltinNegotiationController(consumerNegotiationManager, consumerConfigManager.getConfig(::ConnectorConfig))
 
             fun testServer(
                 role: String,
