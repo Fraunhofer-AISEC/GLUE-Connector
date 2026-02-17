@@ -21,7 +21,7 @@ import java.net.URISyntaxException
 import kotlin.reflect.full.findAnnotation
 
 // Prefix to make base64-"URI"s of EDC RFC-compliant
-val EDC_URI_COMPAT_SCHEME = "x-edc:"
+val EDC_URI_COMPAT_SCHEME = "x-edc"
 
 object EdcQuirks {
     // Compact JSON-LD identifiers
@@ -297,6 +297,6 @@ object EdcQuirks {
     }
 }
 
-fun URI.toEdcFormat(): String = toString().substring(EDC_URI_COMPAT_SCHEME.length)
+fun URI.toEdcFormat(): String = toString().substring(EDC_URI_COMPAT_SCHEME.length + 1)
 
 fun uriFromEdcFormat(edcUri: String): URI = URI.create("$EDC_URI_COMPAT_SCHEME:$edcUri")

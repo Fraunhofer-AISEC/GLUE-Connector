@@ -20,6 +20,7 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import java.net.URI
 
 class BuiltinNegotiation(
     state: NegotiationState,
@@ -36,6 +37,7 @@ class BuiltinNegotiation(
     val objectMapper: ObjectMapper,
     val completionCallback: NegotiationCompletionCallback,
     private val odrlParser: OdrlParser,
+    val ownIdentity: String,
 ) : Negotiation {
     var internalState: NegotiationState = state
         private set(newState) {
@@ -90,6 +92,7 @@ class BuiltinNegotiation(
     private suspend inline fun <reified T> sendMessage(
         endpoint: String,
         message: T,
+        clientId: String? = null,
     ): HttpResponse {
         LOG.atDebug {
             this.message = "Sending message via POST request"
@@ -101,8 +104,21 @@ class BuiltinNegotiation(
         }
         val url =
             URLBuilder(peerEndpoint).appendEncodedPathSegments("negotiations", endpoint).build()
+
+        // Build a custom Authorization header with JSON structure
+        val authHeader = objectMapper.writeValueAsString(
+            mapOf(
+                "region" to "eu",
+                "audience" to peerEndpoint.toString(),
+                "clientId" to (clientId ?: ownIdentity),
+            )
+        )
+
         return httpClient.post(url) {
             contentType(ContentType.Application.Json)
+            // Override default auth by setting custom Authorization header
+            headers.remove(HttpHeaders.Authorization)
+            header(HttpHeaders.Authorization, authHeader)
             setBody(message)
         }
     }
@@ -258,7 +274,7 @@ class BuiltinNegotiation(
             }
 
             // TODO: Fill in true assignee here
-            val agreement = req.offer.toAgreement(odrlParser, OdrlParty())
+            val agreement = req.offer.toAgreement(odrlParser, OdrlParty(uid = URI.create(peerPid)))
 
             // We have accepted the contract as is, tell the consumer and anyone waiting for this contract negotiation
             if (!terminateOnError(
@@ -270,6 +286,7 @@ class BuiltinNegotiation(
                             agreement = agreement,
                             callbackAddress = ownEndpoint.toString(),
                         ),
+                        id,
                     ),
                 )
             ) {

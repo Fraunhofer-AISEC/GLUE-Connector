@@ -197,6 +197,7 @@ open class BuiltinNegotiationManager(
                         consumerNegotiations.remove(consumerPid)
                     },
                 odrlParser = odrlParser,
+                ownIdentity = connectorConfig.identity,
             )
 
         // This call here is kind of hacky since kotlin coroutines does not have condition variables.
@@ -260,6 +261,7 @@ open class BuiltinNegotiationManager(
                         providerNegotiations.remove(providerPid)
                     },
                 odrlParser = odrlParser,
+                ownIdentity = connectorConfig.identity,
             )
 
         providerNegotiations[providerPid] = negotiation
@@ -312,6 +314,7 @@ open class BuiltinNegotiationManager(
                         }
                     },
                 odrlParser = odrlParser,
+                ownIdentity = connectorConfig.identity,
             )
 
         consumerNegotiations[consumerPid] = negotiation
