@@ -1,0 +1,17 @@
+{
+  "type": "Manifest",
+  "name": "de.example.rtm",
+  "version": "{{ datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ') }}",
+  "validity": {
+    "notBefore": "{{ (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%dT%H:%M:%SZ') }}",
+    "notAfter": "{{ (datetime.now() + timedelta(days=365 * 2)).strftime('%Y-%m-%dT%H:%M:%SZ') }}"
+  },
+  "description": "RTM Manifest",
+  "developerCommonName": "Example",
+  "baseLayers": [
+    "de.example.rtm"
+  ],
+  "certLevel": 3,
+  "caFingerprints": [],
+  "referenceValues": []
+}

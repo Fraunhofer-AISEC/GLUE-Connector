@@ -1,0 +1,7 @@
+{
+  "components": [
+    {"name": "initiator"},
+    {"name": "intermediary"},
+    {"name": "destination"}
+  ]
+}

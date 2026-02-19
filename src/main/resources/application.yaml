@@ -5,11 +5,10 @@ ktor:
     modules:
       - de.fraunhofer.aisec.glue.ApplicationKt.module
 connector:
-  identity: "http://glue-connector.local"
-  publicUrl: ${PUBLIC_URL:http://localhost:8444}
-  edcMode: compat
-  edc-negotiation:
+  identity: "https://glue-connector.local"
+  publicUrl: "${?PUBLIC_URL}"
+  edc:
     url: "http://localhost:29193"
 atls:
-  cmcAddress: "tcp://172.25.0.1:9955"
-  enabled: false
+  cmcAddress: "unix:/tmp/cmcd.sock"
+  caCertPath: "/pki/ca-cert.pem"
