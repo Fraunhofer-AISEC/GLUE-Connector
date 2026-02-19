@@ -1,0 +1,135 @@
+services:
+{% for component in components %}
+  #
+  # Services for the {{ component.name }}
+  #
+
+  {{ component.name }}-connector:
+    image: container-pipeline:1.0-SNAPSHOT
+    hostname: {{ component.name }}
+    volumes:
+      - {{ component.name }}-tmp:/tmp
+      - ./data:/data
+      - ./out/pki:/pki:ro
+    env_file: .env
+    environment:
+      AUTH_USERNAME: "${AUTH_USERNAME}"
+      AUTH_PASSWORD: "${AUTH_PASSWORD}"
+      DOCKER_HOST: "unix:///tmp/docker.sock"
+      JAVA_TOOL_OPTIONS: "-agentlib:jdwp=transport=dt_socket,address=*:5005,server=y,suspend=n"
+      PUBLIC_URL: "https://{{ component.name }}:8444"
+
+  {{ component.name }}-docker:
+    image: docker:29-dind
+    privileged: true
+    volumes:
+      - {{ component.name }}-tmp:/tmp
+      - ./out/images:/images:ro
+    environment:
+      DOCKER_HOST: "unix:///tmp/docker.sock"
+    init: true
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        dockerd-entrypoint.sh &
+        DOCKER_PID=$$!
+
+        while ! docker info >/dev/null 2>&1; do sleep 1; done
+
+        for img in /images/*.tar; do
+          [ -f "$$img" ] && docker load -i "$$img"
+        done
+
+        wait $$DOCKER_PID
+
+  {{ component.name }}-cmc:
+    build:
+      context: .
+      dockerfile: cmc.dockerfile
+    init: true
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        ln -s /tmp/tpm0 /dev/tpm0
+        /opt/cmcd -config /data/cmcd-conf.json
+    depends_on:
+      {{ component.name }}-swtpm:
+        condition: service_healthy
+      estserver:
+        condition: service_healthy
+    volumes:
+      - {{ component.name }}-tmp:/tmp
+      - ./data:/data
+      - ./out/pki:/pki:ro
+      - metadata:/metadata
+      - tpm-sysfs-hack:/sys/class/tpm/tpm0/
+    # The connector and the cmc need to share one hostname in order to allow the connector to use the CMC's certificate
+    network_mode: service:{{ component.name }}-connector
+
+  {{ component.name }}-swtpm:
+    build:
+        context: .
+        dockerfile: swtpm.dockerfile
+    init: true
+    command:
+      - |
+        mkdir /tmp/swtpm-state
+        swtpm_setup --tpm2 --tpmstate /tmp/swtpm-state --create-ek-cert
+        swtpm socket --tpm2 --tpmstate dir=/tmp/swtpm-state --server type=unixio,path=/tmp/tpm0 --flags not-need-init,startup-clear --log level=20
+    healthcheck:
+      test: ["CMD", "[", "-S", "/tmp/tpm0", "]"]
+      interval: 1s
+      timeout: 5s
+      retries: 10
+      start_period: 2s
+    volumes:
+      - {{ component.name }}-tmp:/tmp
+      - ./data:/data
+{% endfor %}
+
+  #
+  # Infrastructure
+  #
+
+  estserver:
+    build:
+      context: .
+      dockerfile: cmc.dockerfile
+    command:
+      - |
+        find /metadata-templates -maxdepth 1 -type f | while read -r path; do
+          out_file="$$(basename "$$path")"
+
+          /opt/metasign -in "$${path}" \
+            -out "/metadata/$${out_file}" \
+            -keys /pki/est-signing-key.pem \
+            -x5cs "/pki/est-signing-cert.pem,/pki/ca-cert.pem"
+        done
+
+        /opt/estserver -config /data/est-conf.json
+    healthcheck:
+      test: ["CMD", "curl", "-k", "https://localhost:9000"]
+      interval: 1s
+      timeout: 5s
+      retries: 10
+      start_period: 2s
+    volumes:
+      - ./data:/data:ro
+      - ./out/pki:/pki:ro
+      - ./out/metadata-templates:/metadata-templates:ro
+      - metadata:/metadata
+
+volumes:
+{% for component in components %}
+  {{ component.name }}-tmp:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+{% endfor %}
+  metadata:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+  tpm-sysfs-hack: {}

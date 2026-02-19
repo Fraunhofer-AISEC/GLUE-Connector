@@ -1,0 +1,70 @@
+#!/usr/bin/env python3
+"""
+Simple jinja2 template renderer as a replacement for the unmaintained j2cli tool.
+"""
+
+import sys
+import os
+import argparse
+import json
+import datetime
+from pathlib import Path
+from jinja2 import Environment, FileSystemLoader, StrictUndefined, select_autoescape
+import jinja2.filters
+
+
+def load_data(data_file):
+    path = Path(data_file)
+    content = path.read_text()
+    return json.loads(content)
+
+
+def main():
+    parser = argparse.ArgumentParser(description='Simple jinja2 template renderer as a replacement for the unmaintained j2cli tool')
+
+    parser.add_argument('template', help='Template file (use - for stdin)')
+    parser.add_argument('data', nargs='?', help='Json file for context values')
+
+    args = parser.parse_args()
+    data = load_data(args.data)
+
+    # Expose some extras to the template renderer
+    data['env'] = dict(os.environ)
+    data['datetime'] = datetime.datetime
+    data['timedelta'] = datetime.timedelta
+
+    # Read template
+    if args.template == '-':
+        template_content = sys.stdin.read()
+        env = Environment(
+            undefined=StrictUndefined,
+            autoescape=select_autoescape()
+        )
+        env.filters.update(jinja2.filters.FILTERS)
+        template = env.from_string(template_content)
+    else:
+        template_path = Path(args.template)
+        if not template_path.exists():
+            print(f"Error: Template file not found: {args.template}", file=sys.stderr)
+            sys.exit(1)
+
+        env = Environment(
+            loader=FileSystemLoader(template_path.parent),
+            undefined=StrictUndefined,
+            autoescape=select_autoescape()
+        )
+        env.filters.update(jinja2.filters.FILTERS)
+        template = env.get_template(template_path.name)
+
+    # Render template
+    try:
+        result = template.render(data)
+    except Exception as e:
+        print(f"Error rendering template: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    print(result, end='')
+
+
+if __name__ == '__main__':
+    main()

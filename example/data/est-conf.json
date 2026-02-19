@@ -1,0 +1,21 @@
+{
+  "estAddr": "0.0.0.0:9000",
+  "estCaKey": "/pki/ca-key.pem",
+  "estCaChain": [
+    "/pki/ca-cert.pem"
+  ],
+  "tlsKey": "/pki/est-server-key.pem",
+  "tlsCaChain": [
+    "/pki/est-server-cert.pem",
+    "/pki/ca-cert.pem"
+  ],
+  "metadataCas": [
+    "/pki/ca-cert.pem"
+  ],
+  "httpFolder": "/metadata",
+  "verifyEkCert": false,
+  "logLevel": "trace",
+  "authMethods": [
+    "attestation"
+  ]
+}
