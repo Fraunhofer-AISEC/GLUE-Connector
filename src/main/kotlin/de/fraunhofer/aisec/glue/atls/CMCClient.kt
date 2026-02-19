@@ -8,6 +8,7 @@ import io.ktor.network.sockets.*
 import io.ktor.utils.io.*
 import kotlinx.coroutines.CoroutineDispatcher
 import java.net.ProtocolException
+import java.net.SocketException
 import java.nio.ByteBuffer
 import java.security.PEMDecoder
 import java.security.cert.X509Certificate
@@ -42,44 +43,58 @@ class CMCClient(
 
         // Despite this method signature indicating support for TCP sockets only, unix sockets also work.
         // I suppose what the authors mean to say is that the socket is stream-oriented.
-        aSocket(selectorManager).tcp().connect(cmcAddress).use { socket ->
-            val output = socket.openWriteChannel(autoFlush = false)
-            val messageType =
-                CMC_REQUEST_LOOKUP[T::class] ?: throw IllegalArgumentException(
-                    "Unknown payload type ${T::class.qualifiedName}",
-                )
-
-            output.writeInt(requestSize)
-            output.writeInt(messageType)
-
-            output.writeByteArray(serializedRequest)
-            output.flush()
-
-            // Wait for a reply
-            val input = socket.openReadChannel()
-            val replyLength = input.readInt()
-            val replyType = input.readInt()
-
-            val replyPayload = ByteBuffer.allocate(replyLength)
-            input.readFully(replyPayload)
-
-            val response =
-                objectMapper.readValue(
-                    replyPayload.array(),
-                    CMC_RESPONSE_LOOKUP[replyType]?.java ?: throw ProtocolException("Unknown reply type $replyType"),
-                )
-
-            LOG.atDebug {
-                message = "Received CMC response"
-                payload =
-                    mapOf(
-                        "requestType" to T::class.simpleName,
-                        "replyType" to replyType,
-                        "cmcAddress" to cmcAddress,
+        try {
+            aSocket(selectorManager).tcp().connect(cmcAddress).use { socket ->
+                val output = socket.openWriteChannel(autoFlush = false)
+                val messageType =
+                    CMC_REQUEST_LOOKUP[T::class] ?: throw IllegalArgumentException(
+                        "Unknown payload type ${T::class.qualifiedName}",
                     )
+
+                output.writeInt(requestSize)
+                output.writeInt(messageType)
+
+                output.writeByteArray(serializedRequest)
+                output.flush()
+
+                // Wait for a reply
+                val input = socket.openReadChannel()
+                val replyLength = input.readInt()
+                val replyType = input.readInt()
+
+                val replyPayload = ByteBuffer.allocate(replyLength)
+                input.readFully(replyPayload)
+
+                val response =
+                    objectMapper.readValue(
+                        replyPayload.array(),
+                        CMC_RESPONSE_LOOKUP[replyType]?.java
+                            ?: throw ProtocolException("Unknown reply type $replyType"),
+                    )
+
+                LOG.atDebug {
+                    message = "Received CMC response"
+                    payload =
+                        mapOf(
+                            "requestType" to T::class.simpleName,
+                            "replyType" to replyType,
+                            "cmcAddress" to cmcAddress,
+                        )
+                }
+
+                return response
+            }
+        } catch (e: SocketException) {
+            LOG.atError {
+                message = "Failed to communicate with the CMC"
+                cause = e
+                payload = mapOf(
+                    "requestType" to T::class.simpleName,
+                    "cmcAddress" to cmcAddress
+                )
             }
 
-            return response
+            throw e
         }
     }
 
@@ -94,7 +109,7 @@ class CMCClient(
         val encodedNonce = Base64.encode(nonce)
         val req = AttestationRequest(VERSION, encodedNonce, cached)
         when (val resp = sendCmcRequest(req)) {
-            is AttestationResponse -> return CMCReport(resp.report, resp.metadata, resp.cacheMisses)
+            is AttestationResponse -> return CMCReport(resp.report, null, null)
             is SocketError -> throw IllegalStateException("Received error from CMC: ${resp.msg}")
             else -> throw IllegalStateException("Unexpected response type ${resp::class.qualifiedName}")
         }
@@ -106,13 +121,11 @@ class CMCClient(
     suspend fun verify(
         nonce: ByteArray,
         report: String,
-        metadata: MetadataMap? = null,
-        cacheKey: String? = null,
-        cacheMisses: List<String>? = null,
+        peer: String? = null,
     ): Boolean {
         // TODO: Other fields?
         val encodedNonce = Base64.encode(nonce)
-        val req = VerificationRequest(VERSION, encodedNonce, report, metadata, cacheKey, cacheMisses)
+        val req = VerificationRequest(VERSION, encodedNonce, report, peer)
         when (val resp = sendCmcRequest(req)) {
             // TODO: Either return full report or define and document when we accept the verification result
             is VerificationResponse -> return resp.result.summary.status == "success"
@@ -152,7 +165,7 @@ class CMCClient(
             TLSSignRequest(
                 VERSION,
                 Base64.encode(content),
-                hashType.ordinal.toLong(),
+                hashType.string,
                 TLSSignRequest.PssOpts(0),
             )
         when (val resp = sendCmcRequest(req)) {
@@ -163,30 +176,30 @@ class CMCClient(
     }
 
     @Suppress("unused")
-    enum class HashType {
-        SHA1,
-        SHA224,
-        SHA256,
-        SHA384,
-        SHA512,
-        MD4,
-        MD5,
-        MD5SHA1,
-        RIPEMD160,
-        SHA3_224,
-        SHA3_256,
-        SHA3_384,
-        SHA3_512,
-        SHA512_224,
-        SHA512_256,
-        BLAKE2S_256,
-        BLAKE2B_256,
-        BLAKE2B_384,
-        BLAKE2B_512,
+    enum class HashType(val string: String) {
+        SHA1("SHA-1"),
+        SHA224("SHA-224"),
+        SHA256("SHA-256"),
+        SHA384("SHA-384"),
+        SHA512("SHA-512"),
+        MD4("MD4"),
+        MD5("MD5"),
+        MD5SHA1("MD5+SHA1"),
+        RIPEMD160("RIPEMD-160"),
+        SHA3_224("SHA3-224"),
+        SHA3_256("SHA3-256"),
+        SHA3_384("SHA3-384"),
+        SHA3_512("SHA3-512"),
+        SHA512_224("SHA-512/224"),
+        SHA512_256("SHA-512/256"),
+        BLAKE2S_256("BLAKE2S-256"),
+        BLAKE2B_256("BLAKE2B-256"),
+        BLAKE2B_384("BLAKE2B-384"),
+        BLAKE2B_512("BLAKE2B-512"),
     }
 
     companion object {
-        private const val VERSION = "1.2.1"
+        private const val VERSION = "1.3.0"
 
         private val CMC_REQUEST_LOOKUP =
             mapOf(
