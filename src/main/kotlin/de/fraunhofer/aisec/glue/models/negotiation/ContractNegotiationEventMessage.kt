@@ -15,4 +15,4 @@ data class ContractNegotiationEventMessage(
     val consumerPid: String,
     @param:JsonProperty("${Namespaces.DSPACE}/eventType")
     val eventType: NegotiationEvent,
-)
+): DspMessage

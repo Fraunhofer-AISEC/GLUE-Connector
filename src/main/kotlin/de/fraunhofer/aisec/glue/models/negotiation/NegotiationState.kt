@@ -3,6 +3,11 @@ package de.fraunhofer.aisec.glue.models.negotiation
 import com.fasterxml.jackson.annotation.JsonProperty
 
 enum class NegotiationState {
+    /**
+     * Note: The INITIAL state may never be sent to a peer
+     */
+    INITIAL,
+
     @JsonProperty("${Namespaces.DSPACE}/REQUESTED")
     REQUESTED,
 
