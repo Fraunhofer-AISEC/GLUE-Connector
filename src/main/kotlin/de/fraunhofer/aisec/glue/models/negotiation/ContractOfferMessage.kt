@@ -18,4 +18,4 @@ data class ContractOfferMessage(
     val callbackAddress: String,
     @param:JsonProperty("${Namespaces.DSPACE}/offer")
     val offer: OdrlOffer,
-)
+): DspMessage
