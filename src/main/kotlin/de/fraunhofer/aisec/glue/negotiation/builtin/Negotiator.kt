@@ -2,6 +2,7 @@ package de.fraunhofer.aisec.glue.negotiation.builtin
 
 import de.fraunhofer.iosb.odrl.OdrlAgreement
 import de.fraunhofer.iosb.odrl.OdrlOffer
+import de.fraunhofer.iosb.odrl.OdrlPolicy
 
 interface Negotiator {
     /**
@@ -32,5 +33,7 @@ interface Negotiator {
     fun verifyAgreement(
         policyOffer: OdrlOffer,
         receivedAgreement: OdrlAgreement,
-    ): Boolean
+    ): Boolean {
+        return (policyOffer as OdrlPolicy) == (receivedAgreement as OdrlPolicy)
+    }
 }
