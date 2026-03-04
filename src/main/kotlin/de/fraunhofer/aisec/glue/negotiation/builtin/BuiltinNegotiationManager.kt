@@ -337,7 +337,7 @@ open class BuiltinNegotiationManager(
             return null
         }
 
-        logParams["providerPid"] to providerPid
+        logParams["providerPid"] = providerPid
         logParams["consumerPid"] = consumerPid ?: "unset"
         logParams["peerIdentity"] = peerIdent
 

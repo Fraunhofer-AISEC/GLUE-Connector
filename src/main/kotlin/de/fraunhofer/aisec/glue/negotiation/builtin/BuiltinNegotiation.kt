@@ -18,6 +18,7 @@ import io.ktor.http.*
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -91,6 +92,9 @@ class BuiltinNegotiation(
             if (internalState in listOf(NegotiationState.FINALIZED, NegotiationState.TERMINATED)) {
                 break
             }
+        }
+        for ((_, result) in messageQueue) {
+            result.cancel("Negotiation has ${if(internalState == NegotiationState.FINALIZED) "completed" else "terminated"}")
         }
         messageQueue.close()
     }
@@ -359,7 +363,7 @@ class BuiltinNegotiation(
 
         if (!ok) {
             if (counter != null) {
-                sendMessage(
+                if(!terminateOnError(sendMessage(
                     "$peerPid/request",
                     ContractRequestMessage(
                         uid = counter.uid.toEdcFormat(),
@@ -368,8 +372,11 @@ class BuiltinNegotiation(
                         callbackAddress = ownEndpoint.toString(),
                         offer = counter,
                     ),
-                )
+                ))) {
+                    return
+                }
                 updateState { it.copy(contract = counter, state = NegotiationState.REQUESTED) }
+                return
             } else {
                 terminateNegotiation("errPolicyFailure", "No counteroffer can be computed for this request")
             }
