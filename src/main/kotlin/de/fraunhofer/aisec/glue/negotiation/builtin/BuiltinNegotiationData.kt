@@ -4,13 +4,14 @@ import de.fraunhofer.aisec.glue.models.negotiation.NegotiationState
 import de.fraunhofer.aisec.glue.negotiation.Negotiation
 import de.fraunhofer.iosb.odrl.OdrlPolicy
 import io.ktor.http.Url
+import java.util.UUID
 import kotlin.time.Instant
 
 /**
  * Represents data for built-in negotiation operations.
  */
 data class BuiltinNegotiationData(
-    val id: String,
+    val id: UUID,
     val role: Negotiation.Role,
     val peer: String?,
     val peerPid: String,

@@ -1,15 +1,16 @@
 package de.fraunhofer.aisec.glue.tables
 
 import de.fraunhofer.aisec.glue.models.negotiation.NegotiationState
-import org.ktorm.entity.Entity
 import de.fraunhofer.aisec.glue.negotiation.Negotiation.Role
 import de.fraunhofer.iosb.odrl.OdrlPolicy
+import org.ktorm.entity.Entity
+import java.util.UUID
 import kotlin.time.Instant
 
 interface Negotiation : Entity<Negotiation> {
     companion object : Entity.Factory<Negotiation>()
 
-    val id: String
+    val id: UUID
     val role: Role
     val peer: String?
     val peerPid: String

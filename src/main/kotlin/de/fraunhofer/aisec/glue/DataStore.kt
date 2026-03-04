@@ -96,57 +96,63 @@ class DataStore(
 
     suspend fun contracts(): List<OdrlPolicy> = ioAsync { connection.contracts.map { it.contract } }
 
-    suspend fun addNegotiation(data: BuiltinNegotiationData) = ioAsync {
-        connection.insert(negotiationsTable) {
-            set(it.id, data.id)
-            set(it.role, data.role)
-            set(it.peer, data.peer)
-            set(it.peerPid, data.peerPid)
-            set(it.startTimestamp, data.startTimestamp)
-            set(it.state, data.state)
-            set(it.callbackUrl, data.callbackUrl.toString())
-            set(it.peerUrl, data.peerUrl.toString())
-            set(it.contract, data.contract)
-            set(it.failureReason, data.failureReason)
+    suspend fun addNegotiation(data: BuiltinNegotiationData) =
+        ioAsync {
+            connection.insert(negotiationsTable) {
+                set(it.id, data.id)
+                set(it.role, data.role)
+                set(it.peer, data.peer)
+                set(it.peerPid, data.peerPid)
+                set(it.startTimestamp, data.startTimestamp)
+                set(it.state, data.state)
+                set(it.callbackUrl, data.callbackUrl.toString())
+                set(it.peerUrl, data.peerUrl.toString())
+                set(it.contract, data.contract)
+                set(it.failureReason, data.failureReason)
+            }
         }
-    }
 
-    suspend fun negotiations(): List<BuiltinNegotiationData> = ioAsync {
-        connection.negotiations.map { BuiltinNegotiationData(
-            it.id,
-            it.role,
-            it.peer,
-            it.peerPid,
-            it.startTimestamp,
-            it.state,
-            Url(it.callbackUrl),
-            Url(it.peerUrl),
-            it.contract,
-            it.failureReason
-        ) }
-    }
-
-    suspend fun updateNegotiation(data: BuiltinNegotiationData) = ioAsync {
-        connection.update(negotiationsTable) {
-            where { it.id eq data.id }
-
-            set(it.role, data.role)
-            set(it.peer, data.peer)
-            set(it.peerPid, data.peerPid)
-            set(it.startTimestamp, data.startTimestamp)
-            set(it.state, data.state)
-            set(it.callbackUrl, data.callbackUrl.toString())
-            set(it.peerUrl, data.peerUrl.toString())
-            set(it.contract, data.contract)
-            set(it.failureReason, data.failureReason)
+    suspend fun negotiations(): List<BuiltinNegotiationData> =
+        ioAsync {
+            connection.negotiations.map {
+                BuiltinNegotiationData(
+                    it.id,
+                    it.role,
+                    it.peer,
+                    it.peerPid,
+                    it.startTimestamp,
+                    it.state,
+                    Url(it.callbackUrl),
+                    Url(it.peerUrl),
+                    it.contract,
+                    it.failureReason,
+                )
+            }
         }
-    }
 
-    suspend fun deleteNegotiation(data: BuiltinNegotiationData) = ioAsync {
-        connection.delete(negotiationsTable) {
-            it.id eq data.id
+    suspend fun updateNegotiation(data: BuiltinNegotiationData) =
+        ioAsync {
+            connection.update(negotiationsTable) {
+                where { it.id eq data.id }
+
+                set(it.role, data.role)
+                set(it.peer, data.peer)
+                set(it.peerPid, data.peerPid)
+                set(it.startTimestamp, data.startTimestamp)
+                set(it.state, data.state)
+                set(it.callbackUrl, data.callbackUrl.toString())
+                set(it.peerUrl, data.peerUrl.toString())
+                set(it.contract, data.contract)
+                set(it.failureReason, data.failureReason)
+            }
         }
-    }
+
+    suspend fun deleteNegotiation(data: BuiltinNegotiationData) =
+        ioAsync {
+            connection.delete(negotiationsTable) {
+                it.id eq data.id
+            }
+        }
 
     suspend inline fun <T> ioAsync(crossinline block: suspend CoroutineScope.() -> T): T = withContext(LOOM_DISPATCHER) { block() }
 

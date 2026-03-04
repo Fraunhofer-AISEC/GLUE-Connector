@@ -47,9 +47,9 @@ open class BuiltinNegotiationManager(
 ) : NegotiationManager() {
     private val connectorConfig = configManager.getConfig(::ConnectorConfig)
     private val pidMutex = Mutex()
-    private val assignedIds = synchronizedSet(mutableSetOf<String>())
-    private val negotiations = ConcurrentHashMap<String, BuiltinNegotiation>()
-    private val pendingConsumerNegotiations = ConcurrentHashMap<String, CompletableDeferred<BuiltinNegotiation?>>()
+    private val assignedIds = synchronizedSet(mutableSetOf<UUID>())
+    private val negotiations = ConcurrentHashMap<UUID, BuiltinNegotiation>()
+    private val pendingConsumerNegotiations = ConcurrentHashMap<UUID, CompletableDeferred<BuiltinNegotiation?>>()
 
     /**
      * Start a negotiation by sending the provided contract request to the provider.
@@ -87,7 +87,7 @@ open class BuiltinNegotiationManager(
                 ContractRequestMessage(
                     uid = odrlRequest.uid.toEdcFormat(),
                     providerPid = null,
-                    consumerPid = consumerPid,
+                    consumerPid = "urn:uuid:$consumerPid",
                     callbackAddress = callbackUrl.toString(),
                     offer = odrlRequest,
                 )
@@ -222,7 +222,7 @@ open class BuiltinNegotiationManager(
         request: ContractRequestMessage,
         peerIdent: String?,
     ): BuiltinNegotiation? {
-        val logParams = mutableMapOf("consumerPid" to request.consumerPid, "peerIdentity" to peerIdent)
+        val logParams = mutableMapOf<String, Any?>("consumerPid" to request.consumerPid, "peerIdentity" to peerIdent)
 
         // We call this function when we receive a new contract request message, which can also happen for a follow-up
         // request in case we reject the initial contract.
@@ -276,7 +276,7 @@ open class BuiltinNegotiationManager(
         request: ContractOfferMessage,
         peerIdent: String,
     ): BuiltinNegotiation? {
-        val logParams = mutableMapOf("providerPid" to request.providerPid, "peerIdentity" to peerIdent)
+        val logParams = mutableMapOf<String, Any?>("providerPid" to request.providerPid, "peerIdentity" to peerIdent)
 
         if (request.consumerPid != null) {
             LOG.atDebug {
@@ -328,7 +328,8 @@ open class BuiltinNegotiationManager(
         peerIdent: String?,
     ): BuiltinNegotiation? {
         val logParams = mutableMapOf<String, Any?>()
-        val negotiation = negotiations[providerPid] ?: return null
+        val parsedId = parsePid(providerPid) ?: return null
+        val negotiation = negotiations[parsedId] ?: return null
         if (negotiation.role != Negotiation.Role.PROVIDER) {
             // The ID is used, but not for a provider negotiation.
             return null
@@ -368,6 +369,11 @@ open class BuiltinNegotiationManager(
         return negotiation
     }
 
+    private fun parsePid(providerPid: String): UUID? {
+        val urnPattern = Regex("urn:uuid:([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})")
+        return urnPattern.find(providerPid)?.groupValues?.get(1)?.let { UUID.fromString(it) }
+    }
+
     suspend fun getAsConsumer(
         consumerPid: String,
         providerPid: String?,
@@ -376,7 +382,8 @@ open class BuiltinNegotiationManager(
         val logParams =
             mutableMapOf("consumerPid" to consumerPid, "providerPid" to (providerPid ?: "unset"), "peerIdentity" to peerIdent)
 
-        val negotiation = negotiations[consumerPid] ?: pendingConsumerNegotiations[consumerPid]?.await() ?: return null
+        val parsedId = parsePid(consumerPid) ?: return null
+        val negotiation = negotiations[parsedId] ?: pendingConsumerNegotiations[parsedId]?.await() ?: return null
         if (negotiation.role != Negotiation.Role.CONSUMER) {
             // The ID is used, but not for a consumer negotiation.
             return null
@@ -413,10 +420,9 @@ open class BuiltinNegotiationManager(
         return negotiations.values.toList()
     }
 
-    private suspend fun newProcessId(): String {
+    private suspend fun newProcessId(): UUID {
         pidMutex.withLock {
             return generateSequence { UUID.randomUUID() }
-                .map { uuid -> "urn:uuid:$uuid" }
                 .first { id -> !assignedIds.contains(id) }
                 .also { assignedIds.add(it) }
         }
@@ -450,7 +456,7 @@ open class BuiltinNegotiationManager(
                 }
             }
         }
-        negotiations[negotiation.id] = negotiation
+        negotiations[negotiation.data.value.id] = negotiation
     }
 
     companion object {
