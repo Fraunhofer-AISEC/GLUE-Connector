@@ -132,7 +132,7 @@ val defaultDependencies by DI.Module {
     bind<Backend>() with singleton { DockerBackend(instance(), instance(), instance()) }
     bind<PipelineManager>() with singleton { PipelineManager(instance(), instance(), instance()) }
     bind<PolicyEngine>() with singleton { PolicyEngine(instance()) }
-    bind<ContractStore>() with singleton { ContractStore(instance()) }
+    bind<DataStore>() with singleton { DataStore(instance()) }
     bind<ConnectorConfig>() with singleton { instance<ConfigManager>().getConfig(::ConnectorConfig) }
     bind<NegotiationManager>() with
         singleton {

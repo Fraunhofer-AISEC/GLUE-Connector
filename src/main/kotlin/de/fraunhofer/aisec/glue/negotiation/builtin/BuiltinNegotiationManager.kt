@@ -1,7 +1,7 @@
 package de.fraunhofer.aisec.glue.negotiation.builtin
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import de.fraunhofer.aisec.glue.ContractStore
+import de.fraunhofer.aisec.glue.DataStore
 import de.fraunhofer.aisec.glue.config.ConfigManager
 import de.fraunhofer.aisec.glue.config.ConnectorConfig
 import de.fraunhofer.aisec.glue.models.negotiation.ContractNegotiation
@@ -40,7 +40,7 @@ open class BuiltinNegotiationManager(
     private val httpClient: HttpClient,
     private val objectMapper: ObjectMapper,
     private val defaultNegotiator: Negotiator,
-    private val contractStore: ContractStore,
+    private val dataStore: DataStore,
     private val odrlParser: OdrlParser,
     configManager: ConfigManager,
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.Default),
@@ -200,7 +200,6 @@ open class BuiltinNegotiationManager(
                     scope = scope,
                 )
             observeNegotiationState(negotiation, policyFuture)
-            negotiations[consumerPid] = negotiation
 
             LOG.atTrace { message = "About to emit negotiation for consumer $consumerPid" }
 
@@ -272,7 +271,6 @@ open class BuiltinNegotiationManager(
             )
 
         observeNegotiationState(negotiation, null)
-        negotiations[providerPid] = negotiation
         return negotiation
     }
 
@@ -323,7 +321,6 @@ open class BuiltinNegotiationManager(
                 scope = scope,
             )
         observeNegotiationState(negotiation, null)
-        negotiations[consumerPid] = negotiation
         return negotiation
     }
 
@@ -431,14 +428,14 @@ open class BuiltinNegotiationManager(
      * Observe updates to the negotiation state and updates and dispatch them accordingly.
      * Optionally accepts a future to receive the final contract when finishing the negotiation.
      */
-    private fun observeNegotiationState(
+    private suspend fun observeNegotiationState(
         negotiation: BuiltinNegotiation,
         future: CompletableDeferred<OdrlAgreement>?,
     ) {
+        dataStore.addNegotiation(negotiation.data.value)
         scope.launch {
             negotiation.data.collect { data ->
-                // TODO: Update the state of the negotiation object in the data store
-                // e.g. negotiationsStore.set(update)
+                dataStore.updateNegotiation(data)
 
                 if (data.state == NegotiationState.FINALIZED || data.state == NegotiationState.TERMINATED) {
                     val removed = negotiations.remove(data.id)
@@ -447,7 +444,7 @@ open class BuiltinNegotiationManager(
                     if (data.state == NegotiationState.FINALIZED) {
                         assert(data.contract != null && data.contract is OdrlAgreement)
 
-                        contractStore.addContract(data.contract as OdrlAgreement)
+                        dataStore.addContract(data.contract as OdrlAgreement)
                         future?.complete(data.contract)
                     } else {
                         future?.completeExceptionally(NegotiationException(data.failureReason ?: "Unknown Error"))
@@ -455,6 +452,7 @@ open class BuiltinNegotiationManager(
                 }
             }
         }
+        negotiations[negotiation.id] = negotiation
     }
 
     companion object {

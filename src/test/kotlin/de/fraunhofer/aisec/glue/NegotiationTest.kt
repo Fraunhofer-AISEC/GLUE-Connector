@@ -97,8 +97,10 @@ class NegotiationTest {
                         }
                     }
                 }
-            val contractStore = mockk<ContractStore>()
-            coJustRun { contractStore.addContract(any()) }
+            val dataStore = mockk<DataStore>()
+            coJustRun { dataStore.addContract(any()) }
+            coJustRun { dataStore.addNegotiation(any()) }
+            coJustRun { dataStore.updateNegotiation(any()) }
 
             val configManager = ConfigManager(MapApplicationConfig("connector.identity" to "https://test-connector.local"))
             val negotiationManager =
@@ -106,7 +108,7 @@ class NegotiationTest {
                     httpClient,
                     objectMapper,
                     DummyNegotiator(true),
-                    contractStore,
+                    dataStore,
                     OdrlParser(),
                     configManager,
                 )
@@ -151,7 +153,7 @@ class NegotiationTest {
             stateMachineObserver.verify()
 
             // Verify that the returned and stored policies are the same
-            coVerify { contractStore.addContract(any()) }
+            coVerify { dataStore.addContract(any()) }
 
             // TODO: Can I structurally compare json nodes?
         }
@@ -182,8 +184,10 @@ class NegotiationTest {
                         }
                     }
                 }
-            val contractStore = mockk<ContractStore>()
-            coJustRun { contractStore.addContract(any()) }
+            val dataStore = mockk<DataStore>()
+            coJustRun { dataStore.addContract(any()) }
+            coJustRun { dataStore.addNegotiation(any()) }
+            coJustRun { dataStore.updateNegotiation(any()) }
 
             val configManager = ConfigManager(MapApplicationConfig("connector.identity" to "https://test-connector.local"))
             val negotiationManager =
@@ -191,7 +195,7 @@ class NegotiationTest {
                     httpClient,
                     objectMapper,
                     DummyNegotiator(),
-                    contractStore,
+                    dataStore,
                     OdrlParser(),
                     configManager,
                 )
@@ -251,7 +255,7 @@ class NegotiationTest {
 
             stateMachineObserver.verify()
 
-            coVerify { contractStore.addContract(any()) }
+            coVerify { dataStore.addContract(any()) }
         }
 
     private fun ApplicationTestBuilder.configureTestApp(controller: AtlsController) {
@@ -308,14 +312,14 @@ class NegotiationTest {
                         }
                     }
                 }
-            val contractStore = ContractStore(objectMapper)
+            val dataStore = DataStore(objectMapper)
             val configManager = ConfigManager(MapApplicationConfig("connector.identity" to "https://test-connector.local"))
             val negotiationManager =
                 BuiltinNegotiationManager(
                     httpClient,
                     objectMapper,
                     DummyNegotiator(),
-                    contractStore,
+                    dataStore,
                     OdrlParser(),
                     configManager,
                 )
@@ -395,15 +399,18 @@ class NegotiationTest {
                         }
                     }
                 }
-            val contractStore = mockk<ContractStore>()
-            coJustRun { contractStore.addContract(any()) }
+            val dataStore = mockk<DataStore>()
+            coJustRun { dataStore.addContract(any()) }
+            coJustRun { dataStore.addNegotiation(any()) }
+            coJustRun { dataStore.updateNegotiation(any()) }
+
             val configManager = ConfigManager(MapApplicationConfig("connector.identity" to "https://test-connector.local"))
             val negotiationManager =
                 BuiltinNegotiationManager(
                     httpClient,
                     objectMapper,
                     DummyNegotiator(),
-                    contractStore,
+                    dataStore,
                     OdrlParser(),
                     configManager,
                 )
@@ -499,8 +506,10 @@ class NegotiationTest {
 
             val odrlParser = OdrlParser()
 
-            val providerContractStore = mockk<ContractStore>()
-            coJustRun { providerContractStore.addContract(any()) }
+            val providerDataStore = mockk<DataStore>()
+            coJustRun { providerDataStore.addContract(any()) }
+            coJustRun { providerDataStore.addNegotiation(any()) }
+            coJustRun { providerDataStore.updateNegotiation(any()) }
 
             val providerConfig = MapApplicationConfig("connector.identity" to "https://provider-connector.local")
             val providerConfigManager = ConfigManager(providerConfig)
@@ -509,15 +518,17 @@ class NegotiationTest {
                     testClient,
                     objectMapper,
                     DummyNegotiator(),
-                    providerContractStore,
+                    providerDataStore,
                     odrlParser,
                     providerConfigManager,
                 )
             val providerController =
                 BuiltinNegotiationController(providerNegotiationManager, providerConfigManager.getConfig(::ConnectorConfig))
 
-            val consumerContractStore = mockk<ContractStore>()
-            coJustRun { consumerContractStore.addContract(any()) }
+            val consumerDataStore = mockk<DataStore>()
+            coJustRun { consumerDataStore.addContract(any()) }
+            coJustRun { consumerDataStore.addNegotiation(any()) }
+            coJustRun { consumerDataStore.updateNegotiation(any()) }
 
             val consumerConfig = MapApplicationConfig("connector.identity" to "https://consumer-connector.local")
             val consumerConfigManager = ConfigManager(consumerConfig)
@@ -526,7 +537,7 @@ class NegotiationTest {
                     testClient,
                     objectMapper,
                     DummyNegotiator(),
-                    consumerContractStore,
+                    consumerDataStore,
                     odrlParser,
                     consumerConfigManager,
                 )
@@ -588,8 +599,8 @@ class NegotiationTest {
                     ).await()
                 }
 
-            coVerify { providerContractStore.addContract(negotiatedPolicy) }
-            coVerify { consumerContractStore.addContract(negotiatedPolicy) }
+            coVerify { providerDataStore.addContract(negotiatedPolicy) }
+            coVerify { consumerDataStore.addContract(negotiatedPolicy) }
         }
 
     // TODO: Add tests that try incorrect or behavior as well

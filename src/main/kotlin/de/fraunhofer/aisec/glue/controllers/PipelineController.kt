@@ -1,6 +1,6 @@
 package de.fraunhofer.aisec.glue.controllers
 
-import de.fraunhofer.aisec.glue.ContractStore
+import de.fraunhofer.aisec.glue.DataStore
 import de.fraunhofer.aisec.glue.models.pipeline.PipelineCreateRequest
 import de.fraunhofer.aisec.glue.models.pipeline.PipelineCreateResponse
 import de.fraunhofer.aisec.glue.pipeline.PipelineManager
@@ -20,7 +20,7 @@ import java.net.URI
  * policies.
  */
 class PipelineController(
-    private val contractStore: ContractStore,
+    private val dataStore: DataStore,
     private val pipelineManager: PipelineManager,
     private val policyEngine: PolicyEngine,
 ) :
@@ -37,7 +37,7 @@ class PipelineController(
                     // TODO: Push this code down to some other class (ContractManager?)
                     // TODO: Make this responsive to sending the same contract again with different content but the same ID, so that the contract in the DB gets updated
                     val contract =
-                        contractStore.getContract(req.contractId)
+                        dataStore.getContract(req.contractId)
 
                     // Responds with `NotFound` if contract missing
                     if (contract == null) {

@@ -1,7 +1,7 @@
 package de.fraunhofer.aisec.glue.tools
 
 import com.fasterxml.jackson.module.kotlin.readValue
-import de.fraunhofer.aisec.glue.ContractStore
+import de.fraunhofer.aisec.glue.DataStore
 import de.fraunhofer.aisec.glue.config.ConfigManager
 import de.fraunhofer.aisec.glue.config.ConnectorConfig
 import de.fraunhofer.aisec.glue.controllers.BuiltinNegotiationController
@@ -101,7 +101,7 @@ fun main(args: Array<String>) {
                 httpClient,
                 objectMapper,
                 DummyNegotiator(true),
-                ContractStore(objectMapper),
+                DataStore(objectMapper),
                 OdrlParser(),
                 configManager,
             )
