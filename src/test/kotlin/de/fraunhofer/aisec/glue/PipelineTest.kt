@@ -129,12 +129,12 @@ class PipelineTest {
             every { mockPipeline.name } answers { capturedName.captured }
 
             val mockRemotePipelineManager = mockk<RemotePipelineManager>()
-            val contractStore = ContractStore(objectMapper)
+            val dataStore = DataStore(objectMapper)
             val pipelineManager = PipelineManager(mockRemotePipelineManager, mockBackend, ConfigManager(MapApplicationConfig()))
             val policyEngine = PolicyEngine(pipelineManager)
-            val pipelineController = PipelineController(contractStore, pipelineManager, policyEngine)
+            val pipelineController = PipelineController(dataStore, pipelineManager, policyEngine)
 
-            contractStore.addContract(testContract)
+            dataStore.addContract(testContract)
 
             environment {
                 // We want to configure the application modules ourselves

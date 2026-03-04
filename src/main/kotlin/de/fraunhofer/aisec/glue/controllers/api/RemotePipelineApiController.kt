@@ -1,6 +1,6 @@
 package de.fraunhofer.aisec.glue.controllers.api
 
-import de.fraunhofer.aisec.glue.ContractStore
+import de.fraunhofer.aisec.glue.DataStore
 import de.fraunhofer.aisec.glue.controllers.Controller
 import de.fraunhofer.aisec.glue.models.api.RemotePipelineCreationRequest
 import de.fraunhofer.aisec.glue.models.api.RemotePipelineStatusResponse
@@ -16,7 +16,7 @@ import io.ktor.server.routing.*
  * This controller provides an overview of the pipelines created by this connector on other connectors.
  */
 class RemotePipelineApiController(
-    @Suppress("unused") private val contractStore: ContractStore,
+    @Suppress("unused") private val dataStore: DataStore,
     private val remotePipelineManager: RemotePipelineManager,
 ) : Controller {
     override fun Route.registerRoutes() {
