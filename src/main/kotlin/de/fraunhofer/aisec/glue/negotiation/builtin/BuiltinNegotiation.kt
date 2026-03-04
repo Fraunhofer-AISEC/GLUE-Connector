@@ -49,7 +49,7 @@ class BuiltinNegotiation(
     }
 
     override val id: String
-        get() = _data.value.id
+        get() = "urn:uuid:${_data.value.id}"
 
     override val role: Negotiation.Role
         get() = _data.value.role
@@ -96,7 +96,7 @@ class BuiltinNegotiation(
             }
         }
         for ((_, result) in messageQueue) {
-            result.cancel("Negotiation has ${if(internalState == NegotiationState.FINALIZED) "completed" else "terminated"}")
+            result.cancel("Negotiation has ${if (internalState == NegotiationState.FINALIZED) "completed" else "terminated"}")
         }
         messageQueue.close()
     }
@@ -367,16 +367,19 @@ class BuiltinNegotiation(
 
         if (!ok) {
             if (counter != null) {
-                if(!terminateOnError(sendMessage(
-                    "$peerPid/request",
-                    ContractRequestMessage(
-                        uid = counter.uid.toEdcFormat(),
-                        providerPid = peerPid,
-                        consumerPid = id,
-                        callbackAddress = ownEndpoint.toString(),
-                        offer = counter,
-                    ),
-                ))) {
+                if (!terminateOnError(
+                        sendMessage(
+                            "$peerPid/request",
+                            ContractRequestMessage(
+                                uid = counter.uid.toEdcFormat(),
+                                providerPid = peerPid,
+                                consumerPid = id,
+                                callbackAddress = ownEndpoint.toString(),
+                                offer = counter,
+                            ),
+                        ),
+                    )
+                ) {
                     return
                 }
                 updateState { it.copy(contract = counter, state = NegotiationState.REQUESTED) }

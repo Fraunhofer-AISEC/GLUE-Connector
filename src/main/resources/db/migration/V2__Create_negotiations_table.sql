@@ -1,5 +1,5 @@
 CREATE TABLE negotiations (
-    id VARCHAR PRIMARY KEY,
+    id UUID PRIMARY KEY,
     role VARCHAR NOT NULL,
     peer VARCHAR,
     peer_pid VARCHAR NOT NULL,
