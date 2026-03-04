@@ -82,132 +82,137 @@ open class BuiltinNegotiationManager(
         val logParams = mutableMapOf<String, Any>()
         val consumerPid = newProcessId()
         pendingConsumerNegotiations[consumerPid] = CompletableDeferred()
+        try {
+            val contractRequestMessage =
+                ContractRequestMessage(
+                    uid = odrlRequest.uid.toEdcFormat(),
+                    providerPid = null,
+                    consumerPid = consumerPid,
+                    callbackAddress = callbackUrl.toString(),
+                    offer = odrlRequest,
+                )
 
-        val contractRequestMessage =
-            ContractRequestMessage(
-                uid = odrlRequest.uid.toEdcFormat(),
-                providerPid = null,
-                consumerPid = consumerPid,
-                callbackAddress = callbackUrl.toString(),
-                offer = odrlRequest,
-            )
-
-        logParams["id"] = consumerPid
-        logParams["peerUrl"] = provider
-        logParams["callbackUrl"] = callbackUrl
-        logParams["contractOffer"] = odrlRequest.uid
-        LOG.atDebug {
-            message = "Creating new negotiation object"
-            payload = logParams
-        }
-
-        val requestUrl = URLBuilder(provider).appendPathSegments("negotiations", "request").build()
-
-        val resp =
-            httpClient.post(requestUrl) {
-                contentType(ContentType.Application.Json)
-                setBody(contractRequestMessage)
-                // Authentication will be handled on (A)TLS layer
+            logParams["id"] = consumerPid
+            logParams["peerUrl"] = provider
+            logParams["callbackUrl"] = callbackUrl
+            logParams["contractOffer"] = odrlRequest.uid
+            LOG.atDebug {
+                message = "Creating new negotiation object"
+                payload = logParams
             }
 
-        if (!resp.status.isSuccess()) {
-            val body = resp.bodyAsText()
-            LOG.atInfo {
-                message = "Starting negotiation failed due to peer returning an error"
+            val requestUrl = URLBuilder(provider).appendPathSegments("negotiations", "request").build()
+
+            val resp =
+                httpClient.post(requestUrl) {
+                    contentType(ContentType.Application.Json)
+                    setBody(contractRequestMessage)
+                    // Authentication will be handled on (A)TLS layer
+                }
+
+            if (!resp.status.isSuccess()) {
+                val body = resp.bodyAsText()
+                LOG.atInfo {
+                    message = "Starting negotiation failed due to peer returning an error"
+                    payload =
+                        buildMap {
+                            putAll(logParams)
+                            put("status", resp.status)
+                            put("description", body)
+                        }
+                }
+                return CompletableDeferred<OdrlAgreement>().apply {
+                    cancel("Initial HTTP request failed with code ${resp.status}: $body")
+                }
+            }
+
+            val deserializedResponse = resp.body<ContractNegotiation>()
+
+            logParams["providerPid"] = deserializedResponse.providerPid
+            LOG.atDebug {
+                message = "Initial negotiation setup successful"
                 payload =
                     buildMap {
                         putAll(logParams)
-                        put("status", resp.status)
-                        put("description", body)
+                        put("state", deserializedResponse.state)
                     }
             }
-            return CompletableDeferred<OdrlAgreement>().apply {
-                cancel("Initial HTTP request failed with code ${resp.status}: $body")
-            }
-        }
 
-        val deserializedResponse = resp.body<ContractNegotiation>()
+            when (deserializedResponse.state) {
+                // The negotiation has started, should get a contract offer soon
+                NegotiationState.REQUESTED -> {}
+                // The provider terminated the negotiation
+                NegotiationState.TERMINATED -> {
+                    LOG.atInfo {
+                        message = "Peer terminated the negotiation after the initial request"
+                        payload = logParams
+                    }
 
-        logParams["providerPid"] = deserializedResponse.providerPid
-        LOG.atDebug {
-            message = "Initial negotiation setup successful"
-            payload =
-                buildMap {
-                    putAll(logParams)
-                    put("state", deserializedResponse.state)
-                }
-        }
-
-        when (deserializedResponse.state) {
-            // The negotiation has started, should get a contract offer soon
-            NegotiationState.REQUESTED -> {}
-            // The provider terminated the negotiation
-            NegotiationState.TERMINATED -> {
-                LOG.atInfo {
-                    message = "Peer terminated the negotiation after the initial request"
-                    payload = logParams
+                    assignedIds.remove(consumerPid)
+                    pendingConsumerNegotiations.remove(consumerPid)!!.complete(null)
+                    return CompletableDeferred<OdrlAgreement>().apply {
+                        cancel("The provider terminated the negotiation")
+                    }
                 }
 
-                assignedIds.remove(consumerPid)
-                pendingConsumerNegotiations.remove(consumerPid)!!.complete(null)
-                return CompletableDeferred<OdrlAgreement>().apply {
-                    cancel("The provider terminated the negotiation")
+                else -> {
+                    LOG.atInfo {
+                        message = "Peer sent response message indicating an invalid state"
+                        payload = logParams
+                    }
+
+                    assignedIds.remove(consumerPid)
+                    pendingConsumerNegotiations.remove(consumerPid)!!.complete(null)
+                    return CompletableDeferred<OdrlAgreement>().apply {
+                        cancel("The provider returned an invalid response")
+                    }
                 }
             }
 
-            else -> {
-                LOG.atInfo {
-                    message = "Peer sent response message indicating an invalid state"
-                    payload = logParams
-                }
+            // We return a future object that we use to notify code of when a negotiation is finished.
+            // Note that this is not good enough for when negotiation takes really long.
+            val policyFuture = CompletableDeferred<OdrlAgreement>()
 
-                assignedIds.remove(consumerPid)
-                pendingConsumerNegotiations.remove(consumerPid)!!.complete(null)
-                return CompletableDeferred<OdrlAgreement>().apply {
-                    cancel("The provider returned an invalid response")
-                }
-            }
+            // Create the final negotiation object now that we have all the information required.
+            // Note that we cannot bind the peer identity yet because we don't have a request with an Authorization header
+            // at this point.
+            val negotiation =
+                BuiltinNegotiation(
+                    initialData =
+                        BuiltinNegotiationData(
+                            id = consumerPid,
+                            role = Negotiation.Role.CONSUMER,
+                            peer = null,
+                            peerPid = deserializedResponse.providerPid,
+                            startTimestamp = Clock.System.now(),
+                            state = NegotiationState.REQUESTED,
+                            callbackUrl = callbackUrl,
+                            peerUrl = provider,
+                            contract = odrlRequest,
+                        ),
+                    httpClient = httpClient,
+                    negotiator = negotiator ?: defaultNegotiator,
+                    objectMapper = objectMapper,
+                    odrlParser = odrlParser,
+                    ownIdentity = connectorConfig.identity,
+                    scope = scope,
+                )
+            observeNegotiationState(negotiation, policyFuture)
+            negotiations[consumerPid] = negotiation
+
+            LOG.atTrace { message = "About to emit negotiation for consumer $consumerPid" }
+
+            // This call here is kind of hacky since kotlin coroutines does not have condition variables.
+            // In case the peer sends a message to our negotiation object before this function returns, we have it wait.
+            // We use this channel to notify any waiting coroutines that this negotiation is usable.
+            pendingConsumerNegotiations.remove(consumerPid)!!.complete(negotiation)
+
+            return policyFuture
+        } catch (e: Exception) {
+            // Make sure we don't have coroutines waiting forever.
+            pendingConsumerNegotiations.remove(consumerPid)?.cancel("Unhandled exception in start negotiation", e)
+            throw e
         }
-
-        // We return a future object that we use to notify code of when a negotiation is finished.
-        // Note that this is not good enough for when negotiation takes really long.
-        val policyFuture = CompletableDeferred<OdrlAgreement>()
-
-        // Create the final negotiation object now that we have all the information required.
-        // Note that we cannot bind the peer identity yet because we don't have a request with an Authorization header
-        // at this point.
-        val negotiation =
-            BuiltinNegotiation(
-                initialData =
-                    BuiltinNegotiationData(
-                        id = consumerPid,
-                        role = Negotiation.Role.CONSUMER,
-                        peer = null,
-                        peerPid = deserializedResponse.providerPid,
-                        startTimestamp = Clock.System.now(),
-                        state = NegotiationState.REQUESTED,
-                        callbackUrl = callbackUrl,
-                        peerUrl = provider,
-                        contract = odrlRequest,
-                    ),
-                httpClient = httpClient,
-                negotiator = negotiator ?: defaultNegotiator,
-                objectMapper = objectMapper,
-                odrlParser = odrlParser,
-                ownIdentity = connectorConfig.identity,
-                scope = scope,
-            )
-        observeNegotiationState(negotiation, policyFuture)
-        negotiations[consumerPid] = negotiation
-
-        LOG.atTrace { message = "About to emit negotiation for consumer $consumerPid" }
-
-        // This call here is kind of hacky since kotlin coroutines does not have condition variables.
-        // In case the peer sends a message to our negotiation object before this function returns, we have it wait.
-        // We use this channel to notify any waiting coroutines that this negotiation is usable.
-        pendingConsumerNegotiations.remove(consumerPid)!!.complete(negotiation)
-
-        return policyFuture
     }
 
     /**
@@ -374,32 +379,7 @@ open class BuiltinNegotiationManager(
         val logParams =
             mutableMapOf("consumerPid" to consumerPid, "providerPid" to (providerPid ?: "unset"), "peerIdentity" to peerIdent)
 
-        // We have to be careful when getting the negotiation object as a consumer since we are the initiator here.
-        // When the peer is implemented in a way that it sends out callbacks before we're ready the negotiation object
-        // may not be in the consumerNegotiations map yet.
-        // To avoid this, we use a channel that this function can block on.
-        // Note that this is not perfect since there is a (theoretical) race condition here when the initial negotiation
-        // resolves at the same time we try to get the channel here.
-        // This is incredibly unlikely, but may cause some requests to fail.
-        val negotiationProducer =
-            if (negotiations.containsKey(consumerPid)) {
-                val negotiation = negotiations[consumerPid]!!
-                LOG.atDebug {
-                    message = "Using existing negotiation object"
-                    payload = logParams
-                }
-                suspend { negotiation }
-            } else if (pendingConsumerNegotiations.containsKey(consumerPid)) {
-                val channel = pendingConsumerNegotiations[consumerPid]!!
-                LOG.atDebug {
-                    message = "Waiting for pending negotiation object"
-                    payload = logParams
-                }
-                suspend { channel.await() }
-            } else {
-                suspend { null }
-            }
-        val negotiation = negotiationProducer() ?: return null
+        val negotiation = negotiations[consumerPid] ?: pendingConsumerNegotiations[consumerPid]?.await() ?: return null
         if (negotiation.role != Negotiation.Role.CONSUMER) {
             // The ID is used, but not for a consumer negotiation.
             return null
