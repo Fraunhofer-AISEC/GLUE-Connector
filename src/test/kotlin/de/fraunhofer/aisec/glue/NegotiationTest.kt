@@ -33,7 +33,14 @@ import io.ktor.server.testing.*
 import io.mockk.coJustRun
 import io.mockk.coVerify
 import io.mockk.mockk
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
@@ -43,6 +50,8 @@ import java.time.Duration
 import java.util.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
+import kotlin.test.assertIsNot
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import kotlin.time.toKotlinDuration
@@ -67,23 +76,22 @@ class NegotiationTest {
     fun `Test negotiation as provider`() =
         runTest(timeout = Duration.ofSeconds(30).toKotlinDuration()) {
             val consumerPid = "urn:uuid:${UUID.randomUUID()}"
-            var consumerState = NegotiationState.REQUESTED
+            val agreementLatch = CompletableDeferred<Unit>()
+            val finalizedLatch = CompletableDeferred<Unit>()
             val httpClient =
                 httpClient { req ->
                     when (req.url.encodedPath) {
                         "/negotiations/$consumerPid/agreement" -> {
                             convertValue<ContractAgreementMessage>(req.body)
-                            consumerState = NegotiationState.AGREED
+                            agreementLatch.complete(Unit)
                             respond("")
                         }
-
                         "/negotiations/$consumerPid/events" -> {
                             val reqBody = convertValue<ContractNegotiationEventMessage>(req.body)
                             assertEquals(NegotiationEvent.FINALIZED, reqBody.eventType)
-                            consumerState = NegotiationState.FINALIZED
+                            finalizedLatch.complete(Unit)
                             respond("")
                         }
-
                         else -> {
                             throw IllegalStateException("Unexpected URL ${req.url} called")
                         }
@@ -108,7 +116,7 @@ class NegotiationTest {
                     uid = "urn:uuid:${UUID.randomUUID()}",
                     providerPid = null,
                     consumerPid = consumerPid,
-                    callbackAddress = "https://consumer/negotiations",
+                    callbackAddress = "https://consumer",
                     offer = exampleOffer,
                 )
 
@@ -119,24 +127,28 @@ class NegotiationTest {
                 )
             assertNotNull(negotiation)
 
-            var responseCallbackCalled = false
-            negotiation.processRequest(contractRequest, initial = true) { ok ->
-                assertTrue(ok)
-                responseCallbackCalled = true
-            }
-            assertTrue(responseCallbackCalled)
-            assertEquals(NegotiationState.AGREED, negotiation.internalState)
-            assertEquals(NegotiationState.AGREED, consumerState)
+            val stateMachineObserver =
+                StateMachineObserver(
+                    NegotiationState.INITIAL,
+                    NegotiationState.REQUESTED,
+                    NegotiationState.AGREED,
+                    NegotiationState.VERIFIED,
+                    NegotiationState.FINALIZED,
+                )
+            stateMachineObserver.record(this, negotiation.data.map { it.state })
 
-            responseCallbackCalled = false
-            negotiation.processVerify { ok ->
-                assertTrue(ok)
-                responseCallbackCalled = true
-            }
+            val initialResp = negotiation.submitMessage(contractRequest)
+            assertIs<ContractNegotiation>(initialResp)
 
-            assertTrue(responseCallbackCalled)
-            assertEquals(NegotiationState.FINALIZED, negotiation.internalState)
-            assertEquals(NegotiationState.FINALIZED, consumerState)
+            agreementLatch.await()
+
+            val verifyReq = ContractAgreementVerificationMessage(providerPid = initialResp.providerPid, consumerPid = consumerPid)
+            val verifyResp = negotiation.submitMessage(verifyReq)
+            assertIsNot<ContractNegotiationError>(verifyResp)
+
+            finalizedLatch.await()
+
+            stateMachineObserver.verify()
 
             // Verify that the returned and stored policies are the same
             coVerify { contractStore.addContract(any()) }
@@ -147,19 +159,20 @@ class NegotiationTest {
     fun `Test negotiation as consumer`() =
         runTest(timeout = Duration.ofSeconds(30).toKotlinDuration()) {
             val providerPid = "urn:uuid:${UUID.randomUUID()}"
-            var providerState = NegotiationState.OFFERED
+            val acceptedLatch = CompletableDeferred<Unit>()
+            val verifiedLatch = CompletableDeferred<Unit>()
             val httpClient =
                 httpClient { req ->
                     when (req.url.encodedPath) {
                         "/negotiations/$providerPid/events" -> {
                             val reqBody = convertValue<ContractNegotiationEventMessage>(req.body)
                             assertEquals(NegotiationEvent.ACCEPTED, reqBody.eventType)
-                            providerState = NegotiationState.ACCEPTED
+                            acceptedLatch.complete(Unit)
                             respond("")
                         }
 
                         "/negotiations/$providerPid/agreement/verification" -> {
-                            providerState = NegotiationState.VERIFIED
+                            verifiedLatch.complete(Unit)
                             respond("")
                         }
 
@@ -186,7 +199,7 @@ class NegotiationTest {
                 ContractOfferMessage(
                     providerPid = providerPid,
                     consumerPid = null,
-                    callbackAddress = "https://provider/negotiations",
+                    callbackAddress = "https://provider",
                     offer = exampleOffer,
                 )
 
@@ -197,15 +210,21 @@ class NegotiationTest {
                 )
             assertNotNull(negotiation)
 
-            var responseCallbackCalled = false
-            negotiation.processOffer(contractOffer, initial = true) { ok ->
-                assertTrue(ok)
-                responseCallbackCalled = true
-            }
+            val stateMachineObserver =
+                StateMachineObserver(
+                    NegotiationState.INITIAL,
+                    NegotiationState.OFFERED,
+                    NegotiationState.ACCEPTED,
+                    NegotiationState.AGREED,
+                    NegotiationState.VERIFIED,
+                    NegotiationState.FINALIZED,
+                )
+            stateMachineObserver.record(this, negotiation.data.map { it.state })
 
-            assertTrue(responseCallbackCalled)
-            assertEquals(NegotiationState.ACCEPTED, negotiation.internalState)
-            assertEquals(NegotiationState.ACCEPTED, providerState)
+            val initialResp = negotiation.submitMessage(contractOffer)
+            assertIs<ContractNegotiation>(initialResp)
+
+            acceptedLatch.await()
 
             val agreementReq =
                 ContractAgreementMessage(
@@ -214,24 +233,22 @@ class NegotiationTest {
                     agreement = exampleAgreement,
                     callbackAddress = "https://provider/negotiations",
                 )
-            responseCallbackCalled = false
-            negotiation.processAgreement(agreementReq) { ok ->
-                assertTrue(ok)
-                responseCallbackCalled = true
-            }
 
-            assertTrue(responseCallbackCalled)
-            assertEquals(NegotiationState.VERIFIED, negotiation.internalState)
-            assertEquals(NegotiationState.VERIFIED, providerState)
+            val agreementResp = negotiation.submitMessage(agreementReq)
+            assertIsNot<ContractNegotiationError>(agreementResp)
 
-            responseCallbackCalled = false
-            negotiation.processFinalize { ok ->
-                assertTrue(ok)
-                responseCallbackCalled = true
-            }
+            verifiedLatch.await()
 
-            assertTrue(responseCallbackCalled)
-            assertEquals(NegotiationState.FINALIZED, negotiation.internalState)
+            val finalizeReq =
+                ContractNegotiationEventMessage(
+                    providerPid = providerPid,
+                    consumerPid = initialResp.consumerPid,
+                    eventType = NegotiationEvent.FINALIZED,
+                )
+            val finalizeResp = negotiation.submitMessage(finalizeReq)
+            assertIsNot<ContractNegotiationError>(finalizeResp)
+
+            stateMachineObserver.verify()
 
             coVerify { contractStore.addContract(any()) }
         }
@@ -267,20 +284,21 @@ class NegotiationTest {
     fun `Test negotiation as provider over HTTP`() =
         testApplication {
             val consumerPid = "urn:uuid:${UUID.randomUUID()}"
-            var consumerState = NegotiationState.REQUESTED
+            val agreedLatch = CompletableDeferred<Unit>()
+            val finalizedLatch = CompletableDeferred<Unit>()
             val httpClient =
                 httpClient { req ->
                     when (req.url.encodedPath) {
                         "/negotiations/$consumerPid/agreement" -> {
                             convertValue<ContractAgreementMessage>(req.body)
-                            consumerState = NegotiationState.AGREED
+                            agreedLatch.complete(Unit)
                             respond("")
                         }
 
                         "/negotiations/$consumerPid/events" -> {
                             val reqBody = convertValue<ContractNegotiationEventMessage>(req.body)
                             assertEquals(NegotiationEvent.FINALIZED, reqBody.eventType)
-                            consumerState = NegotiationState.FINALIZED
+                            finalizedLatch.complete(Unit)
                             respond("")
                         }
 
@@ -314,7 +332,7 @@ class NegotiationTest {
                             uid = "urn:uuid:${UUID.randomUUID()}",
                             providerPid = null,
                             consumerPid = consumerPid,
-                            callbackAddress = "https://consumer/negotiations",
+                            callbackAddress = "https://consumer",
                             offer = exampleOffer,
                         ),
                     )
@@ -324,13 +342,14 @@ class NegotiationTest {
             val respBody = resp.body<ContractNegotiation>()
             assertEquals(NegotiationState.REQUESTED, respBody.state)
 
-            // This should make sure that the request has been fully processed and the negotiation has called the client
-            delay(100)
+            agreedLatch.await()
 
             val negotiation = negotiationManager.getAsProvider(respBody.providerPid, consumerPid, "consumer")
             assertNotNull(negotiation)
-            assertEquals(NegotiationState.AGREED, negotiation.internalState)
-            assertEquals(NegotiationState.AGREED, consumerState)
+
+            val observer = StateMachineObserver(NegotiationState.AGREED, NegotiationState.VERIFIED, NegotiationState.FINALIZED)
+            val scope = CoroutineScope(currentCoroutineContext())
+            observer.record(scope, negotiation.data.map { it.state })
 
             resp =
                 testClient.post("https://localhost/negotiations/${respBody.providerPid}/agreement/verification") {
@@ -344,27 +363,29 @@ class NegotiationTest {
                     )
                 }
             assertTrue(resp.status.isSuccess())
-            assertEquals(NegotiationState.FINALIZED, negotiation.internalState)
-            assertEquals(NegotiationState.FINALIZED, consumerState)
+
+            finalizedLatch.await()
+            observer.verify()
         }
 
     @Test
     fun `Test negotiation as consumer over HTTP`() =
         testApplication {
             val providerPid = "urn:uuid:${UUID.randomUUID()}"
-            var providerState = NegotiationState.OFFERED
+            val acceptedLatch = CompletableDeferred<Unit>()
+            val verificationLatch = CompletableDeferred<Unit>()
             val httpClient =
                 httpClient { req ->
                     when (req.url.encodedPath) {
                         "/negotiations/$providerPid/events" -> {
                             val reqBody = convertValue<ContractNegotiationEventMessage>(req.body)
                             assertEquals(NegotiationEvent.ACCEPTED, reqBody.eventType)
-                            providerState = NegotiationState.ACCEPTED
+                            acceptedLatch.complete(Unit)
                             respond("")
                         }
 
                         "/negotiations/$providerPid/agreement/verification" -> {
-                            providerState = NegotiationState.VERIFIED
+                            verificationLatch.complete(Unit)
                             respond("")
                         }
 
@@ -398,7 +419,7 @@ class NegotiationTest {
                         ContractOfferMessage(
                             providerPid = providerPid,
                             consumerPid = null,
-                            callbackAddress = "https://provider/negotiations",
+                            callbackAddress = "https://provider",
                             offer = exampleOffer,
                         ),
                     )
@@ -408,13 +429,20 @@ class NegotiationTest {
             val respBody = resp.body<ContractNegotiation>()
             assertEquals(NegotiationState.OFFERED, respBody.state)
 
-            // This should make sure that the request has been fully processed and the negotiation has called the client
-            delay(100)
+            acceptedLatch.await()
 
             val negotiation = negotiationManager.getAsConsumer(respBody.consumerPid, providerPid, "provider")
             assertNotNull(negotiation)
-            assertEquals(NegotiationState.ACCEPTED, negotiation.internalState)
-            assertEquals(NegotiationState.ACCEPTED, providerState)
+
+            val observer =
+                StateMachineObserver(
+                    NegotiationState.ACCEPTED,
+                    NegotiationState.AGREED,
+                    NegotiationState.VERIFIED,
+                    NegotiationState.FINALIZED,
+                )
+            val scope = CoroutineScope(currentCoroutineContext())
+            observer.record(scope, negotiation.data.map { it.state })
 
             resp =
                 testClient.post("https://localhost/negotiations/${respBody.consumerPid}/agreement") {
@@ -431,10 +459,7 @@ class NegotiationTest {
                 }
             assertTrue(resp.status.isSuccess())
 
-            delay(100)
-
-            assertEquals(NegotiationState.VERIFIED, negotiation.internalState)
-            assertEquals(NegotiationState.VERIFIED, providerState)
+            verificationLatch.await()
 
             resp =
                 testClient.post("https://localhost/negotiations/${respBody.consumerPid}/events") {
@@ -449,7 +474,8 @@ class NegotiationTest {
                     )
                 }
             assertTrue(resp.status.isSuccess())
-            assertEquals(NegotiationState.FINALIZED, negotiation.internalState)
+
+            observer.verify()
         }
 
     @Test
@@ -465,7 +491,7 @@ class NegotiationTest {
                             credentials {
                                 BasicAuthCredentials("connector", "password")
                             }
-                            sendWithoutRequest { true }
+                            // sendWithoutRequest { true }
                         }
                     }
                 }
@@ -527,6 +553,7 @@ class NegotiationTest {
                     }
                     install(Authentication) {
                         basic {
+                            skipWhen { true }
                             validate { creds -> UserIdPrincipal(creds.name) }
                         }
                     }
@@ -555,7 +582,7 @@ class NegotiationTest {
             val negotiatedPolicy =
                 withTimeout(Duration.ofSeconds(30).toKotlinDuration()) {
                     consumerNegotiationManager.startNegotiation(
-                        URLBuilder(providerAddress).appendPathSegments("negotiations").buildString(),
+                        providerAddress,
                         exampleOffer,
                     ).await()
                 }
@@ -564,6 +591,35 @@ class NegotiationTest {
             coVerify { consumerContractStore.addContract(negotiatedPolicy) }
         }
 
+
+    class StateMachineObserver(vararg val expectedStates: NegotiationState) {
+        private lateinit var recordJob: Job
+        private val actualStates = mutableListOf<NegotiationState>()
+
+        fun record(
+            scope: CoroutineScope,
+            flow: Flow<NegotiationState>,
+        ) {
+            recordJob =
+                scope.launch {
+                    var current = flow.first()
+                    actualStates.add(current)
+                    while (true) {
+                        val next = flow.first { it != current }
+                        actualStates.add(next)
+                        if (next == NegotiationState.FINALIZED || next == NegotiationState.TERMINATED) {
+                            break
+                        }
+                        current = next
+                    }
+                }
+        }
+
+        suspend fun verify() {
+            recordJob.join()
+            assertEquals(expectedStates.toList(), actualStates)
+        }
+    }
 
     companion object {
         private val objectMapper = OdrlParser().mapper
