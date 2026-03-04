@@ -17,4 +17,4 @@ data class ContractNegotiationTerminationMessage(
     val code: String? = null,
     @param:JsonProperty("${Namespaces.DSPACE}/reason")
     val reason: List<Any>? = null,
-): DspMessage
+) : DspMessage

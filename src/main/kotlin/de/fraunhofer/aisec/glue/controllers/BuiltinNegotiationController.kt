@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import de.fraunhofer.aisec.glue.config.ConnectorConfig
 import de.fraunhofer.aisec.glue.models.negotiation.*
 import de.fraunhofer.aisec.glue.negotiation.NegotiationManager
-import de.fraunhofer.aisec.glue.negotiation.builtin.BuiltinNegotiation
 import de.fraunhofer.aisec.glue.negotiation.builtin.BuiltinNegotiationManager
 import de.fraunhofer.aisec.glue.negotiation.edc.EdcQuirks
 import de.fraunhofer.aisec.glue.plugins.EdcCompatTransformation
@@ -28,18 +27,6 @@ open class BuiltinNegotiationController(
     private val negotiationManager: BuiltinNegotiationManager =
         negotiationManager as? BuiltinNegotiationManager
             ?: throw IllegalArgumentException("NegotiationManager must be of type BuiltinNegotiationManager")
-
-    private fun stateErrorResponse(negotiation: BuiltinNegotiation): ContractNegotiationError {
-        // Since this function is only called from response callbacks, the negotiation's lock should be held up the call
-        // stack.
-        val state = negotiation.getStateMessageUnlocked()
-
-        return ContractNegotiationError(
-            providerPid = state.providerPid,
-            consumerPid = state.consumerPid,
-            code = "invalidState",
-        )
-    }
 
     private fun Route.registerRoutes20241() {
         // Install EDC compatibility plugin if required
@@ -81,12 +68,9 @@ open class BuiltinNegotiationController(
                 return@post
             }
 
-            negotiation.processRequest(req, initial = true) { ok ->
-                if (ok) {
-                    call.respond(HttpStatusCode.Created, negotiation.getStateMessageUnlocked())
-                } else {
-                    call.respond(HttpStatusCode.BadRequest, stateErrorResponse(negotiation))
-                }
+            when (val resp = negotiation.submitMessage(req)) {
+                is ContractNegotiationError -> call.respond(HttpStatusCode.BadRequest, resp)
+                is DspMessage -> call.respond(HttpStatusCode.Created, resp)
             }
         }
 
@@ -100,13 +84,9 @@ open class BuiltinNegotiationController(
                 return@post
             }
 
-            // call.respond(HttpStatusCode.Created, negotiation.getStateMessageUnlocked())
-            negotiation.processOffer(req, initial = true) { ok ->
-                if (ok) {
-                    call.respond(HttpStatusCode.Created, negotiation.getStateMessageUnlocked())
-                } else {
-                    call.respond(HttpStatusCode.BadRequest, stateErrorResponse(negotiation))
-                }
+            when (val resp = negotiation.submitMessage(req)) {
+                is ContractNegotiationError -> call.respond(HttpStatusCode.BadRequest, resp)
+                is DspMessage -> call.respond(HttpStatusCode.Created, resp)
             }
         }
 
@@ -123,7 +103,7 @@ open class BuiltinNegotiationController(
                     return@get
                 }
 
-                call.respond(negotiation.getStateMessageUnlocked())
+                call.respond(negotiation.getStateMessage())
             }
 
             post("/request") {
@@ -144,12 +124,9 @@ open class BuiltinNegotiationController(
                     return@post
                 }
 
-                negotiation.processRequest(req) { ok ->
-                    if (ok) {
-                        call.respond(HttpStatusCode.OK)
-                    } else {
-                        call.respond(HttpStatusCode.BadRequest, stateErrorResponse(negotiation))
-                    }
+                when (val resp = negotiation.submitMessage(req)) {
+                    is ContractNegotiationError -> call.respond(HttpStatusCode.BadRequest, resp)
+                    else -> call.respond(HttpStatusCode.OK)
                 }
             }
 
@@ -169,18 +146,14 @@ open class BuiltinNegotiationController(
                     return@post
                 }
 
-                call.respond(HttpStatusCode.OK)
-                negotiation.processOffer(req) { ok ->
-                    if (ok) {
-                        call.respond(HttpStatusCode.OK)
-                    } else {
-                        call.respond(HttpStatusCode.BadRequest, stateErrorResponse(negotiation))
-                    }
+                when (val resp = negotiation.submitMessage(req)) {
+                    is ContractNegotiationError -> call.respond(HttpStatusCode.BadRequest, resp)
+                    else -> call.respond(HttpStatusCode.OK)
                 }
             }
 
             post("/events") {
-                val principal = call.principal<UserIdPrincipal>()!!
+                val principal = call.principal<UserIdPrincipal>()
                 val id = call.parameters["id"] ?: throw IllegalStateException("ID not found")
                 val req = call.receive<ContractNegotiationEventMessage>()
 
@@ -193,21 +166,15 @@ open class BuiltinNegotiationController(
                             return@post
                         }
 
-                        val negotiation = negotiationManager.getAsProvider(id, req.consumerPid, principal.name)
+                        val negotiation = negotiationManager.getAsProvider(id, req.consumerPid, principal?.name)
                         if (negotiation == null) {
                             call.respond(HttpStatusCode.NotFound)
                             return@post
                         }
 
-                        negotiation.processAccept { ok ->
-                            if (ok) {
-                                call.respond(HttpStatusCode.OK)
-                            } else {
-                                call.respond(
-                                    HttpStatusCode.BadRequest,
-                                    stateErrorResponse(negotiation),
-                                )
-                            }
+                        when (val resp = negotiation.submitMessage(req)) {
+                            null -> call.respond(HttpStatusCode.OK)
+                            is ContractNegotiationError -> call.respond(HttpStatusCode.BadRequest, resp)
                         }
                     }
                     NegotiationEvent.FINALIZED -> {
@@ -216,28 +183,22 @@ open class BuiltinNegotiationController(
                             return@post
                         }
 
-                        val negotiation = negotiationManager.getAsConsumer(id, req.providerPid, principal.name)
+                        val negotiation = negotiationManager.getAsConsumer(id, req.providerPid, principal?.name)
                         if (negotiation == null) {
                             call.respond(HttpStatusCode.NotFound)
                             return@post
                         }
 
-                        negotiation.processFinalize { ok ->
-                            if (ok) {
-                                call.respond(HttpStatusCode.OK)
-                            } else {
-                                call.respond(
-                                    HttpStatusCode.BadRequest,
-                                    stateErrorResponse(negotiation),
-                                )
-                            }
+                        when (val resp = negotiation.submitMessage(req)) {
+                            is ContractNegotiationError -> call.respond(HttpStatusCode.BadRequest, resp)
+                            else -> call.respond(HttpStatusCode.OK)
                         }
                     }
                 }
             }
 
             post("/agreement") {
-                val principal = call.principal<UserIdPrincipal>()!!
+                val principal = call.principal<UserIdPrincipal>()
                 val id = call.parameters["id"] ?: throw IllegalStateException("ID not found")
                 val req = call.receive<ContractAgreementMessage>()
 
@@ -246,23 +207,20 @@ open class BuiltinNegotiationController(
                     return@post
                 }
 
-                val negotiation = negotiationManager.getAsConsumer(id, req.providerPid, principal.name)
+                val negotiation = negotiationManager.getAsConsumer(id, req.providerPid, principal?.name)
                 if (negotiation == null) {
                     call.respond(HttpStatusCode.NotFound)
                     return@post
                 }
 
-                negotiation.processAgreement(req) { ok ->
-                    if (ok) {
-                        call.respond(HttpStatusCode.OK)
-                    } else {
-                        call.respond(HttpStatusCode.BadRequest, stateErrorResponse(negotiation))
-                    }
+                when (val resp = negotiation.submitMessage(req)) {
+                    is ContractNegotiationError -> call.respond(HttpStatusCode.BadRequest, resp)
+                    else -> call.respond(HttpStatusCode.OK)
                 }
             }
 
             post("/agreement/verification") {
-                val principal = call.principal<UserIdPrincipal>()!!
+                val principal = call.principal<UserIdPrincipal>()
                 val id = call.parameters["id"] ?: throw IllegalStateException("ID not found")
                 val req = call.receive<ContractAgreementVerificationMessage>()
 
@@ -271,29 +229,27 @@ open class BuiltinNegotiationController(
                     return@post
                 }
 
-                val negotiation = negotiationManager.getAsProvider(id, req.consumerPid, principal.name)
+                val negotiation = negotiationManager.getAsProvider(id, req.consumerPid, principal?.name)
                 if (negotiation == null) {
                     call.respond(HttpStatusCode.NotFound)
                     return@post
                 }
 
-                negotiation.processVerify { ok ->
-                    if (ok) {
-                        call.respond(HttpStatusCode.OK)
-                    } else {
-                        call.respond(HttpStatusCode.BadRequest, stateErrorResponse(negotiation))
-                    }
+                val resp = negotiation.submitMessage(req)
+                when (resp) {
+                    is ContractNegotiationError -> call.respond(HttpStatusCode.BadRequest, resp)
+                    else -> call.respond(HttpStatusCode.OK)
                 }
             }
 
             post("/termination") {
-                val principal = call.principal<UserIdPrincipal>()!!
+                val principal = call.principal<UserIdPrincipal>()
                 val id = call.parameters["id"] ?: throw IllegalStateException("ID not found")
                 val req = call.receive<ContractNegotiationTerminationMessage>()
 
                 // This handler is a bit awkward since termination messages are the same for provider and consumer
                 // We just try both, which is only safe since we make sure that all pids are only assigned once
-                var negotiation = negotiationManager.getAsProvider(id, req.consumerPid, principal.name)
+                var negotiation = negotiationManager.getAsProvider(id, req.consumerPid, principal?.name)
 
                 // As a side effect, we also have to push our correctness checks back
                 if (negotiation != null) {
@@ -302,7 +258,7 @@ open class BuiltinNegotiationController(
                         return@post
                     }
                 } else {
-                    negotiation = negotiationManager.getAsConsumer(id, req.providerPid, principal.name)
+                    negotiation = negotiationManager.getAsConsumer(id, req.providerPid, principal?.name)
                     if (negotiation != null) {
                         if (id != req.consumerPid) {
                             call.respond(HttpStatusCode.BadRequest)
@@ -314,9 +270,8 @@ open class BuiltinNegotiationController(
                     }
                 }
 
-                negotiation.processTermination(req) {
-                    call.respond(HttpStatusCode.OK)
-                }
+                negotiation.submitMessage(req)
+                call.respond(HttpStatusCode.OK)
             }
         }
     }
