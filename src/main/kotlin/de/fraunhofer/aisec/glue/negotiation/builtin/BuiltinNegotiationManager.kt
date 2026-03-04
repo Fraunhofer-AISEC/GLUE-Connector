@@ -9,7 +9,7 @@ import de.fraunhofer.aisec.glue.models.negotiation.ContractOfferMessage
 import de.fraunhofer.aisec.glue.models.negotiation.ContractRequestMessage
 import de.fraunhofer.aisec.glue.models.negotiation.NegotiationState
 import de.fraunhofer.aisec.glue.negotiation.Negotiation
-import de.fraunhofer.aisec.glue.negotiation.NegotiationCompletionCallback
+import de.fraunhofer.aisec.glue.negotiation.NegotiationException
 import de.fraunhofer.aisec.glue.negotiation.NegotiationManager
 import de.fraunhofer.aisec.glue.negotiation.edc.toEdcFormat
 import de.fraunhofer.iosb.odrl.OdrlAgreement
@@ -24,13 +24,12 @@ import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.util.*
 import java.util.Collections.synchronizedSet
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.time.Clock
 
 /**
  * The negotiation manager to use to enable builtin negotiation.
@@ -44,13 +43,13 @@ open class BuiltinNegotiationManager(
     private val contractStore: ContractStore,
     private val odrlParser: OdrlParser,
     configManager: ConfigManager,
+    private val scope: CoroutineScope = CoroutineScope(Dispatchers.Default),
 ) : NegotiationManager() {
     private val connectorConfig = configManager.getConfig(::ConnectorConfig)
     private val pidMutex = Mutex()
     private val assignedIds = synchronizedSet(mutableSetOf<String>())
-    private val providerNegotiations = ConcurrentHashMap<String, BuiltinNegotiation>()
-    private val consumerNegotiations = ConcurrentHashMap<String, BuiltinNegotiation>()
-    private val pendingConsumerNegotiations = ConcurrentHashMap<String, MutableSharedFlow<BuiltinNegotiation?>>()
+    private val negotiations = ConcurrentHashMap<String, BuiltinNegotiation>()
+    private val pendingConsumerNegotiations = ConcurrentHashMap<String, CompletableDeferred<BuiltinNegotiation?>>()
 
     /**
      * Start a negotiation by sending the provided contract request to the provider.
@@ -64,7 +63,7 @@ open class BuiltinNegotiationManager(
     ): Deferred<OdrlAgreement> {
         return startNegotiation(
             Url(peer),
-            URLBuilder(connectorConfig.publicUrl).appendPathSegments("negotiations").build(),
+            connectorConfig.publicUrl,
             odrlParser.convertToOdrlOffer(offer, assigners = listOf(OdrlParty(connectorConfig.identity))),
         )
     }
@@ -82,7 +81,7 @@ open class BuiltinNegotiationManager(
     ): Deferred<OdrlAgreement> {
         val logParams = mutableMapOf<String, Any>()
         val consumerPid = newProcessId()
-        pendingConsumerNegotiations[consumerPid] = MutableSharedFlow()
+        pendingConsumerNegotiations[consumerPid] = CompletableDeferred()
 
         val contractRequestMessage =
             ContractRequestMessage(
@@ -102,7 +101,7 @@ open class BuiltinNegotiationManager(
             payload = logParams
         }
 
-        val requestUrl = URLBuilder(provider).appendPathSegments("request").build()
+        val requestUrl = URLBuilder(provider).appendPathSegments("negotiations", "request").build()
 
         val resp =
             httpClient.post(requestUrl) {
@@ -150,7 +149,7 @@ open class BuiltinNegotiationManager(
                 }
 
                 assignedIds.remove(consumerPid)
-                pendingConsumerNegotiations.remove(consumerPid)!!.tryEmit(null)
+                pendingConsumerNegotiations.remove(consumerPid)!!.complete(null)
                 return CompletableDeferred<OdrlAgreement>().apply {
                     cancel("The provider terminated the negotiation")
                 }
@@ -163,7 +162,7 @@ open class BuiltinNegotiationManager(
                 }
 
                 assignedIds.remove(consumerPid)
-                pendingConsumerNegotiations.remove(consumerPid)!!.tryEmit(null)
+                pendingConsumerNegotiations.remove(consumerPid)!!.complete(null)
                 return CompletableDeferred<OdrlAgreement>().apply {
                     cancel("The provider returned an invalid response")
                 }
@@ -178,33 +177,37 @@ open class BuiltinNegotiationManager(
         // Note that we cannot bind the peer identity yet because we don't have a request with an Authorization header
         // at this point.
         // TODO: When we define the authentication model eventually, revisit this
+        // TODO:
         val negotiation =
             BuiltinNegotiation(
-                state = NegotiationState.REQUESTED,
-                peerIdentity = null,
-                currentPolicy = odrlRequest,
-                role = Negotiation.Role.CONSUMER,
-                id = consumerPid,
-                peerPid = deserializedResponse.providerPid,
-                negotiator = negotiator ?: defaultNegotiator,
+                initialData =
+                    BuiltinNegotiationData(
+                        id = consumerPid,
+                        role = Negotiation.Role.CONSUMER,
+                        peer = null,
+                        peerPid = deserializedResponse.providerPid,
+                        startTimestamp = Clock.System.now(),
+                        state = NegotiationState.REQUESTED,
+                        callbackUrl = callbackUrl,
+                        peerUrl = provider,
+                        contract = odrlRequest,
+                    ),
                 httpClient = httpClient,
-                ownEndpoint = callbackUrl,
-                peerEndpoint = provider,
+                negotiator = negotiator ?: defaultNegotiator,
                 objectMapper = objectMapper,
-                completionCallback =
-                    completionCallback { result ->
-                        policyFuture.completeWith(result.map { it as OdrlAgreement })
-                        consumerNegotiations.remove(consumerPid)
-                    },
                 odrlParser = odrlParser,
                 ownIdentity = connectorConfig.identity,
+                scope = scope,
             )
+        observeNegotiationState(negotiation, policyFuture)
+        negotiations[consumerPid] = negotiation
+
+        LOG.atTrace { message = "About to emit negotiation for consumer $consumerPid" }
 
         // This call here is kind of hacky since kotlin coroutines does not have condition variables.
         // In case the peer sends a message to our negotiation object before this function returns, we have it wait.
         // We use this channel to notify any waiting coroutines that this negotiation is usable.
-        pendingConsumerNegotiations.remove(consumerPid)!!.tryEmit(negotiation)
-        consumerNegotiations[consumerPid] = negotiation
+        pendingConsumerNegotiations.remove(consumerPid)!!.complete(negotiation)
 
         return policyFuture
     }
@@ -244,27 +247,27 @@ open class BuiltinNegotiationManager(
 
         val negotiation =
             BuiltinNegotiation(
-                state = NegotiationState.REQUESTED,
-                peerIdentity = peerIdent,
-                // The policy is actually set after it has been processed by the negotiator
-                currentPolicy = null,
-                role = Negotiation.Role.PROVIDER,
-                id = providerPid,
-                peerPid = request.consumerPid,
-                negotiator = defaultNegotiator,
+                initialData =
+                    BuiltinNegotiationData(
+                        id = providerPid,
+                        role = Negotiation.Role.PROVIDER,
+                        peer = peerIdent,
+                        peerPid = request.consumerPid,
+                        startTimestamp = Clock.System.now(),
+                        state = NegotiationState.INITIAL,
+                        callbackUrl = connectorConfig.publicUrl,
+                        peerUrl = Url(request.callbackAddress),
+                    ),
                 httpClient = httpClient,
-                ownEndpoint = connectorConfig.publicUrl,
-                peerEndpoint = Url(request.callbackAddress),
+                negotiator = defaultNegotiator,
                 objectMapper = objectMapper,
-                completionCallback =
-                    completionCallback {
-                        providerNegotiations.remove(providerPid)
-                    },
                 odrlParser = odrlParser,
                 ownIdentity = connectorConfig.identity,
+                scope = scope,
             )
 
-        providerNegotiations[providerPid] = negotiation
+        observeNegotiationState(negotiation, null)
+        negotiations[providerPid] = negotiation
         return negotiation
     }
 
@@ -296,28 +299,26 @@ open class BuiltinNegotiationManager(
 
         val negotiation =
             BuiltinNegotiation(
-                state = NegotiationState.OFFERED,
-                peerIdentity = peerIdent,
-                currentPolicy = null,
-                role = Negotiation.Role.CONSUMER,
-                id = consumerPid,
-                peerPid = request.providerPid,
-                negotiator = defaultNegotiator,
+                initialData =
+                    BuiltinNegotiationData(
+                        id = consumerPid,
+                        role = Negotiation.Role.CONSUMER,
+                        peer = peerIdent,
+                        peerPid = request.providerPid,
+                        startTimestamp = Clock.System.now(),
+                        state = NegotiationState.INITIAL,
+                        callbackUrl = connectorConfig.publicUrl,
+                        peerUrl = Url(request.callbackAddress),
+                    ),
                 httpClient = httpClient,
-                ownEndpoint = connectorConfig.publicUrl,
-                peerEndpoint = Url(request.callbackAddress),
+                negotiator = defaultNegotiator,
                 objectMapper = objectMapper,
-                completionCallback =
-                    completionCallback {
-                        pidMutex.withLock {
-                            consumerNegotiations.remove(consumerPid)
-                        }
-                    },
                 odrlParser = odrlParser,
                 ownIdentity = connectorConfig.identity,
+                scope = scope,
             )
-
-        consumerNegotiations[consumerPid] = negotiation
+        observeNegotiationState(negotiation, null)
+        negotiations[consumerPid] = negotiation
         return negotiation
     }
 
@@ -327,7 +328,11 @@ open class BuiltinNegotiationManager(
         peerIdent: String?,
     ): BuiltinNegotiation? {
         val logParams = mutableMapOf<String, Any?>()
-        val negotiation = providerNegotiations[providerPid] ?: return null
+        val negotiation = negotiations[providerPid] ?: return null
+        if (negotiation.role != Negotiation.Role.PROVIDER) {
+            // The ID is used, but not for a provider negotiation.
+            return null
+        }
 
         logParams["providerPid"] to providerPid
         logParams["consumerPid"] = consumerPid ?: "unset"
@@ -366,10 +371,10 @@ open class BuiltinNegotiationManager(
     suspend fun getAsConsumer(
         consumerPid: String,
         providerPid: String?,
-        peerIdent: String,
+        peerIdent: String?,
     ): BuiltinNegotiation? {
         val logParams =
-            mutableMapOf<String, Any>("consumerPid" to consumerPid, "providerPid" to (providerPid ?: "unset"), "peerIdentity" to peerIdent)
+            mutableMapOf("consumerPid" to consumerPid, "providerPid" to (providerPid ?: "unset"), "peerIdentity" to peerIdent)
 
         // We have to be careful when getting the negotiation object as a consumer since we are the initiator here.
         // When the peer is implemented in a way that it sends out callbacks before we're ready the negotiation object
@@ -379,8 +384,8 @@ open class BuiltinNegotiationManager(
         // resolves at the same time we try to get the channel here.
         // This is incredibly unlikely, but may cause some requests to fail.
         val negotiationProducer =
-            if (consumerNegotiations.containsKey(consumerPid)) {
-                val negotiation = consumerNegotiations[consumerPid]!!
+            if (negotiations.containsKey(consumerPid)) {
+                val negotiation = negotiations[consumerPid]!!
                 LOG.atDebug {
                     message = "Using existing negotiation object"
                     payload = logParams
@@ -392,11 +397,15 @@ open class BuiltinNegotiationManager(
                     message = "Waiting for pending negotiation object"
                     payload = logParams
                 }
-                suspend { channel.first() }
+                suspend { channel.await() }
             } else {
                 suspend { null }
             }
         val negotiation = negotiationProducer() ?: return null
+        if (negotiation.role != Negotiation.Role.CONSUMER) {
+            // The ID is used, but not for a consumer negotiation.
+            return null
+        }
 
         if (providerPid != null && negotiation.peerPid != providerPid) {
             LOG.atDebug {
@@ -410,7 +419,7 @@ open class BuiltinNegotiationManager(
             return null
         }
 
-        if (negotiation.peerIdentity != null && negotiation.peerIdentity != peerIdent) {
+        if (negotiation.peerIdentity != peerIdent) {
             LOG.atDebug {
                 message = "Cannot get negotiation as consumer as the peer identity does not match"
                 payload =
@@ -426,7 +435,7 @@ open class BuiltinNegotiationManager(
     }
 
     override suspend fun getNegotiations(): Collection<Negotiation> {
-        return (consumerNegotiations.values + providerNegotiations.values).toList()
+        return negotiations.values.toList()
     }
 
     private suspend fun newProcessId(): String {
@@ -438,20 +447,32 @@ open class BuiltinNegotiationManager(
         }
     }
 
-    // Perform actions required by all our registered negotiations after completion and then call a negotiation-specific
-    // completion callback.
-    private fun completionCallback(next: NegotiationCompletionCallback): NegotiationCompletionCallback {
-        return { result: Result<OdrlPolicy> ->
-            result.fold(
-                onSuccess = { contract -> contractStore.addContract(contract) },
-                onFailure = { err -> LOG.info(err) { "Policy negotiation failed" } },
-            )
-            // We call the next callback asynchronously since it may need to acquire locks that are held up the call
-            // stack.
-            // A reentrant lock may solve this locking problem more elegantly, but I'm not aware of one for kotlin
-            // coroutines.
-            CoroutineScope(Dispatchers.Default).launch {
-                next(result)
+    /**
+     * Observe updates to the negotiation state and updates and dispatch them accordingly.
+     * Optionally accepts a future to receive the final contract when finishing the negotiation.
+     */
+    private fun observeNegotiationState(
+        negotiation: BuiltinNegotiation,
+        future: CompletableDeferred<OdrlAgreement>?,
+    ) {
+        scope.launch {
+            negotiation.data.collect { data ->
+                // TODO: Update the state of the negotiation object in the data store
+                // e.g. negotiationsStore.set(update)
+
+                if (data.state == NegotiationState.FINALIZED || data.state == NegotiationState.TERMINATED) {
+                    val removed = negotiations.remove(data.id)
+                    assert(negotiation == removed)
+
+                    if (data.state == NegotiationState.FINALIZED) {
+                        assert(data.contract != null && data.contract is OdrlAgreement)
+
+                        contractStore.addContract(data.contract as OdrlAgreement)
+                        future?.complete(data.contract)
+                    } else {
+                        future?.completeExceptionally(NegotiationException(data.failureReason ?: "Unknown Error"))
+                    }
+                }
             }
         }
     }

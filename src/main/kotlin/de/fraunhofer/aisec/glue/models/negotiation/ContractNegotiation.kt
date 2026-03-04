@@ -15,4 +15,4 @@ data class ContractNegotiation(
     val consumerPid: String,
     @param:JsonProperty("${Namespaces.DSPACE}/state")
     val state: NegotiationState,
-): DspMessage
+) : DspMessage

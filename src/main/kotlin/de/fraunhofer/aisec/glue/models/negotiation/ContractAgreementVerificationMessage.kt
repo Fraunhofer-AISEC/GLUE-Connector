@@ -13,4 +13,4 @@ data class ContractAgreementVerificationMessage(
     val providerPid: String,
     @param:JsonProperty("${Namespaces.DSPACE}/consumerPid")
     val consumerPid: String,
-): DspMessage
+) : DspMessage

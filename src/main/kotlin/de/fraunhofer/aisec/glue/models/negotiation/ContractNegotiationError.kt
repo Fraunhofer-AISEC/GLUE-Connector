@@ -19,4 +19,4 @@ data class ContractNegotiationError(
     val reason: List<Any>? = null,
     @param:JsonProperty("${Namespaces.DC_TERMS}/description")
     val description: List<MultilanguageProperty>? = null,
-): DspMessage
+) : DspMessage
