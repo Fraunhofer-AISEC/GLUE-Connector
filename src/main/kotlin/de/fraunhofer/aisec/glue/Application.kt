@@ -17,6 +17,7 @@ import de.fraunhofer.aisec.glue.logging.LogbackObjectMapperInjector
 import de.fraunhofer.aisec.glue.negotiation.NegotiationManager
 import de.fraunhofer.aisec.glue.negotiation.builtin.BuiltinNegotiationManager
 import de.fraunhofer.aisec.glue.negotiation.builtin.DummyNegotiator
+import de.fraunhofer.aisec.glue.negotiation.edc.EdcQuirks.makeOutgoingEdcPatcher
 import de.fraunhofer.aisec.glue.negotiation.edc.EdcSidecarNegotiationManager
 import de.fraunhofer.aisec.glue.pipeline.Backend
 import de.fraunhofer.aisec.glue.pipeline.PipelineManager
@@ -24,6 +25,7 @@ import de.fraunhofer.aisec.glue.pipeline.RemotePipelineManager
 import de.fraunhofer.aisec.glue.pipeline.atls.AtlsConfig
 import de.fraunhofer.aisec.glue.pipeline.atls.AtlsParameter
 import de.fraunhofer.aisec.glue.pipeline.docker.DockerBackend
+import de.fraunhofer.aisec.glue.plugins.ClientEdcCompatTransformation
 import de.fraunhofer.aisec.glue.plugins.configureAuthentication
 import de.fraunhofer.aisec.glue.policy.PolicyEngine
 import de.fraunhofer.iosb.odrl.parser.OdrlParser
@@ -67,6 +69,12 @@ val defaultDependencies by DI.Module {
         singleton {
             val atlsConfig = instance<ConfigManager>().getConfig(::AtlsConfig)
             HttpClient(OkHttp) {
+                if (instance<ConnectorConfig>().edcMode == ConnectorConfig.EdcMode.COMPAT) {
+                    val objectMapper = instance<ObjectMapper>()
+                    install(ClientEdcCompatTransformation) {
+                        transformRequest = makeOutgoingEdcPatcher(objectMapper, "client")
+                    }
+                }
                 install(ClientContentNegotiation) {
                     register(ContentType.Application.Json, instance())
                 }
@@ -120,9 +128,10 @@ val defaultDependencies by DI.Module {
     bind<OdrlParser>() with
         singleton {
             OdrlParser(
-                ObjectMapper(JsonFactoryBuilder().enable(StreamReadFeature.INCLUDE_SOURCE_IN_LOCATION).build()).apply {
+                mapper = ObjectMapper(JsonFactoryBuilder().enable(StreamReadFeature.INCLUDE_SOURCE_IN_LOCATION).build()).apply {
                     registerSubtypes(AtlsParameter::class.java)
                 },
+                compactSerialization = true,
             )
         }
     bind<ObjectMapper>() with singleton { instance<OdrlParser>().mapper }

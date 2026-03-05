@@ -5,8 +5,9 @@ import de.fraunhofer.aisec.glue.config.ConnectorConfig
 import de.fraunhofer.aisec.glue.models.negotiation.*
 import de.fraunhofer.aisec.glue.negotiation.NegotiationManager
 import de.fraunhofer.aisec.glue.negotiation.builtin.BuiltinNegotiationManager
-import de.fraunhofer.aisec.glue.negotiation.edc.EdcQuirks
-import de.fraunhofer.aisec.glue.plugins.EdcCompatTransformation
+import de.fraunhofer.aisec.glue.negotiation.edc.EdcQuirks.makeIncomingEdcPatcher
+import de.fraunhofer.aisec.glue.negotiation.edc.EdcQuirks.makeOutgoingEdcPatcher
+import de.fraunhofer.aisec.glue.plugins.ServerEdcCompatTransformation
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ktor.http.*
 import io.ktor.server.auth.*
@@ -34,27 +35,9 @@ open class BuiltinNegotiationController(
             if (objectMapper == null) {
                 throw IllegalArgumentException("ObjectMapper must be set when using EDC compatibility mode!")
             }
-            install(EdcCompatTransformation) {
-                transformRequest = { json ->
-                    LOG.debug { "Applying EDC request transformations..." }
-                    val node = objectMapper.readTree(json)
-                    // If no fixes made, skip serialization
-                    if (EdcQuirks.fixUriFormat(node)) {
-                        objectMapper.writeValueAsString(node)
-                    } else {
-                        json
-                    }
-                }
-                transformResponse = { json ->
-                    LOG.debug { "Applying EDC response transformations..." }
-                    val node = objectMapper.readTree(json)
-                    // If no fixes made, skip serialization
-                    if (EdcQuirks.revertUriFormat(node)) {
-                        objectMapper.writeValueAsString(node)
-                    } else {
-                        json
-                    }
-                }
+            install(ServerEdcCompatTransformation) {
+                transformRequest = makeIncomingEdcPatcher(objectMapper, "server")
+                transformResponse = makeOutgoingEdcPatcher(objectMapper, "server")
             }
         }
 

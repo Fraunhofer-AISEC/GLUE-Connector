@@ -15,16 +15,13 @@ import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
-import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.cancel
+import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
 import java.net.URI
+import java.util.*
 
 class BuiltinNegotiation(
     initialData: BuiltinNegotiationData,
@@ -49,7 +46,7 @@ class BuiltinNegotiation(
     }
 
     override val id: String
-        get() = "urn:uuid:${_data.value.id}"
+        get() = _data.value.id.toString()
 
     override val role: Negotiation.Role
         get() = _data.value.role
@@ -324,7 +321,6 @@ class BuiltinNegotiation(
                     agreement = agreement,
                     callbackAddress = ownEndpoint.toString(),
                 ),
-                id,
             ),
         )
     }
@@ -542,6 +538,7 @@ class BuiltinNegotiation(
                     ContractAgreementVerificationMessage(
                         providerPid = peerPid,
                         consumerPid = id,
+                        uid = UUID.randomUUID().toString(),
                     ),
                 ),
             )
