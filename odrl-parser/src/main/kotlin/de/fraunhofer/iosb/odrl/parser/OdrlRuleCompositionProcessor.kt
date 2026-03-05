@@ -14,7 +14,7 @@ class OdrlRuleCompositionProcessor {
     )
 
     private val sharedPropKeys = listOf(
-        OdrlIdentifiers.HAS_ACTION,
+//        OdrlIdentifiers.HAS_ACTION,
         OdrlIdentifiers.TARGET,
         OdrlIdentifiers.OUTPUT,
         OdrlIdentifiers.ASSIGNEE,
@@ -78,7 +78,7 @@ class OdrlRuleCompositionProcessor {
     ) {
         if (node !is ObjectNode)
             return
-        val existingProp = node.get(key);
+        val existingProp = node.get(key)
         if (existingProp == null) {
             node.replace(key, value)
         } else if (existingProp is ArrayNode) {

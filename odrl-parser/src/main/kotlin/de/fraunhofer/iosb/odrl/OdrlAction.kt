@@ -94,26 +94,40 @@ private fun validateRecursively(action: OdrlAction): Boolean {
 }
 
 class OdrlActionDeserializer : JsonDeserializer<OdrlAction>() {
+    // Helper to unwrap a single-level HAS_ACTION container
+    fun JsonNode.unwrapAction(): JsonNode =
+        this.get(OdrlIdentifiers.HAS_ACTION)?.let { actionNode ->
+            if (actionNode.isArray && actionNode.size() == 1) actionNode[0] else actionNode
+        } ?: this
+
+    /**
+     * Deserializes `OdrlAction` from JSON, handling various formats.
+     * Mostly takes care of unwrapping EDC-specific non-standard structures.
+     */
     override fun deserialize(p: JsonParser, ctxt: DeserializationContext): OdrlAction {
-        val node: JsonNode = p.codec.readTree(p)
+        val mapper = p.codec as ObjectMapper
+        val node: JsonNode = mapper.readTree(p)
 
         // Handle the simple string case: "action": "use"
         if (node.isTextual) {
             return OdrlAction(node.asText())
         }
 
-        // Handle object case with rdf:value or @id
-        val valueNode = node.get(RdfIdentifiers.VALUE) ?: node.get("@id")
-            ?: throw MismatchedInputException.from(p, OdrlAction::class.java, "Missing '${RdfIdentifiers.VALUE}' or '@id' property")
+        // Handle object case with rdf:value, @id, or nested action object
+        // Find and unwrap the value node in one step
+        val valueNode = (node.get(RdfIdentifiers.VALUE)
+            ?: node.get("@id")
+            ?: node.get(OdrlIdentifiers.HAS_ACTION)
+            ?: throw MismatchedInputException.from(
+                p,
+                OdrlAction::class.java,
+                "Missing '${RdfIdentifiers.VALUE}', '@id', or '${OdrlIdentifiers.HAS_ACTION}' property"
+            )).unwrapAction()
 
-        val mapper = p.codec as ObjectMapper
-
-        val value = if (valueNode.isTextual) {
-            RdfValue(valueNode.asText())
-        } else if (valueNode.isObject && valueNode.has("@id")) {
-            mapper.treeToValue(valueNode, RdfValue::class.java)
-        } else {
-            throw MismatchedInputException.from(p, RdfValue::class.java, "Invalid value format: $valueNode")
+        val value = when {
+            valueNode.isTextual -> RdfValue(valueNode.asText())
+            valueNode.isObject && valueNode.has("@id") -> mapper.treeToValue(valueNode, RdfValue::class.java)
+            else -> throw MismatchedInputException.from(p, RdfValue::class.java, "Invalid value format: $valueNode")
         }
 
         // Deserialize other properties

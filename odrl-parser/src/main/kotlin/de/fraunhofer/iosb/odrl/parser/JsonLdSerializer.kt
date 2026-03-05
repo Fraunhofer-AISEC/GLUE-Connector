@@ -6,10 +6,12 @@ import com.apicatalog.jsonld.document.JsonDocument
 import com.apicatalog.jsonld.json.JsonUtils
 import com.apicatalog.jsonld.loader.DocumentLoader
 import com.fasterxml.jackson.core.JsonGenerator
-import com.fasterxml.jackson.databind.*
+import com.fasterxml.jackson.databind.JsonSerializer
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.jsontype.TypeSerializer
+import jakarta.json.JsonStructure
 import jakarta.json.JsonValue
-import java.io.StringReader
 
 class JsonLdSerializer<T>(
     private val mapper: ObjectMapper,
@@ -23,7 +25,8 @@ class JsonLdSerializer<T>(
         gen: JsonGenerator,
         serializers: SerializerProvider
     ) {
-        val jsonDocument = JsonDocument.of(StringReader(mapper.writeValueAsString(value)))
+        val jsonStructure = mapper.convertValue(value, JsonStructure::class.java)
+        val jsonDocument = JsonDocument.of(jsonStructure)
         val context = clazz.getAnnotation(de.fraunhofer.iosb.odrl.parser.JsonLd::class.java).context
         val jsonLdObject = JsonLd.compact(jsonDocument, context).options(options)
             .loader(documentLoader).compactToRelative(false).get()
@@ -31,7 +34,7 @@ class JsonLdSerializer<T>(
         val jsonLdObjectMap: MutableMap<String, JsonValue> = LinkedHashMap(jsonLdObject)
         jsonLdObjectMap.replace("@context", JsonUtils.toJsonValue(context))
 
-        gen.writeRawValue(JsonUtils.toJsonObject(jsonLdObjectMap).toString())
+        gen.writeObject(JsonUtils.toJsonObject(jsonLdObjectMap))
     }
 
     override fun serializeWithType(
