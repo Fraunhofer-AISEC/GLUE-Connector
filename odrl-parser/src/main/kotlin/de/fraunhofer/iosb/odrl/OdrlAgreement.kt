@@ -12,7 +12,7 @@ import java.net.URI
 @JsonLd(GlueIdentifiers.CONTEXT)
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type")
 @JsonTypeName(OdrlIdentifiers.AGREEMENT)
-class OdrlAgreement(
+open class OdrlAgreement(
     // Properties of superclass OdrlPolicy
     uid: URI,
     permission: List<OdrlPermission> = listOf(),

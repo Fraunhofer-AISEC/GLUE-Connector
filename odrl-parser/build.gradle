@@ -1,5 +1,5 @@
 plugins {
-    id 'org.jetbrains.kotlin.jvm'
+    alias(libs.plugins.kotlin.jvm)
 }
 
 group = 'fhg.glue.odrl'
@@ -10,13 +10,14 @@ repositories {
 }
 
 dependencies {
-    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2'
-    implementation 'com.apicatalog:titanium-json-ld:1.4.1'
-    implementation 'org.glassfish:jakarta.json:2.0.1'
-    implementation 'com.fasterxml.jackson.core:jackson-databind:2.18.1'
-    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.18.1'
-    implementation 'com.fasterxml.jackson.module:jackson-module-kotlin:2.18.1'
-    implementation 'io.konform:konform:0.8.0'
+    implementation libs.kotlinx.coroutines.core
+    implementation libs.titanium.json.ld
+    implementation libs.jakarta.json
+    implementation libs.jackson.databind
+    implementation libs.jackson.datatype.jakarta.jsonp
+    implementation libs.jackson.datatype.jsr310
+    implementation libs.jackson.module.kotlin
+    implementation libs.konform
     testImplementation 'org.jetbrains.kotlin:kotlin-test'
     implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk8'
 }

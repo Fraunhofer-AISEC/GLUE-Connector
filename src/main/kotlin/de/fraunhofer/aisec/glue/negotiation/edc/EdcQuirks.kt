@@ -10,9 +10,12 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ArrayNode
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.databind.node.TextNode
+import de.fraunhofer.aisec.glue.models.negotiation.ContractAgreementMessage
+import de.fraunhofer.aisec.glue.models.negotiation.EdcOdrlAgreement
 import de.fraunhofer.aisec.glue.models.negotiation.Namespaces
 import de.fraunhofer.iosb.odrl.OdrlIdentifiers
 import de.fraunhofer.iosb.odrl.OdrlPolicy
+import de.fraunhofer.iosb.odrl.RdfIdentifiers
 import de.fraunhofer.iosb.odrl.glue.GlueIdentifiers
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.io.ByteArrayInputStream
@@ -291,6 +294,67 @@ object EdcQuirks {
             }
         }
         return fixed
+    }
+
+    fun patchAction(serialization: ObjectNode) {
+        val valueKeys = listOf("rdf:value", RdfIdentifiers.VALUE)
+
+        serialization.findValues(ACTION_KEY)
+            .filter { v -> v is ObjectNode && valueKeys.any { v.has(it) } }.forEach {
+                val node = it as ObjectNode
+                val oldAction = node.toString()
+                val rdfValue = valueKeys.firstNotNullOfOrNull { k -> node.remove(k) } as? ObjectNode
+                    ?: return@forEach
+                node.set<JsonNode>("@id", rdfValue["@id"])
+                LOG.atWarn {
+                    message = "Patched action node"
+                    payload = mapOf("oldAction" to oldAction, "newAction" to node.toString())
+                }
+            }
+    }
+
+    fun makeIncomingEdcPatcher(
+        objectMapper: ObjectMapper,
+        role: String,
+    ): (ByteArray) -> ByteArray {
+        return { jsonBytes ->
+            LOG.debug { "Applying incoming ($role) EDC transformations..." }
+            val node = objectMapper.readTree(jsonBytes)
+            // If no fixes made, skip re-serialization and preserve original payload bytes
+            if (fixUriFormat(node)) {
+                objectMapper.writeValueAsBytes(node)
+            } else {
+                jsonBytes
+            }
+        }
+    }
+
+    fun makeOutgoingEdcPatcher(
+        objectMapper: ObjectMapper,
+        role: String,
+    ): (Any) -> JsonNode {
+        return { body ->
+            LOG.debug { "Applying outgoing ($role) EDC transformations..." }
+            // Apply specific transformations on certain object types
+            var needsPatchAction = false
+            val modBody = when (body) {
+                is ContractAgreementMessage -> {
+                    needsPatchAction = true
+                    body.copy(
+                        agreement = EdcOdrlAgreement.from(body.agreement)
+                    )
+                }
+                else -> body
+            }
+            // Apply EDC patches on Jackson IR
+            val tree = objectMapper.valueToTree<ObjectNode>(modBody)
+            revertUriFormat(tree)
+            if (needsPatchAction) {
+                patchAction(tree)
+            }
+            // Let content negotiation perform serialization of IR
+            tree
+        }
     }
 }
 

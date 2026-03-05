@@ -5,7 +5,7 @@ ktor:
     modules:
       - de.fraunhofer.aisec.glue.ApplicationKt.module
 connector:
-  identity: "https://glue-connector.local"
+  identity: "http://glue-connector.local"
   publicUrl: ${PUBLIC_URL:http://localhost:8444}
   edcMode: compat
   edc-negotiation:

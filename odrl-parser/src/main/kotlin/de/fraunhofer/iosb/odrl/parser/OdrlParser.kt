@@ -10,6 +10,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.databind.node.TextNode
 import com.fasterxml.jackson.databind.util.StdDateFormat
+import com.fasterxml.jackson.datatype.jsonp.JSONPModule
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import de.fraunhofer.iosb.odrl.*
@@ -29,6 +30,7 @@ class OdrlParser(
 
     init {
         mapper.registerKotlinModule()
+        mapper.registerModule(JSONPModule())
         odrlMapper = mapper.copy()
             .registerModule(OdrlModule(compactSerialization))
             .registerModule(JavaTimeModule())

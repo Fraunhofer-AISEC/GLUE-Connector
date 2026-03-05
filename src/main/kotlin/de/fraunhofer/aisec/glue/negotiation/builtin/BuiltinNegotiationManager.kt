@@ -24,10 +24,7 @@ import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import kotlinx.coroutines.*
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import java.util.*
-import java.util.Collections.synchronizedSet
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.time.Clock
 
@@ -46,8 +43,6 @@ open class BuiltinNegotiationManager(
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.Default),
 ) : NegotiationManager() {
     private val connectorConfig = configManager.getConfig(::ConnectorConfig)
-    private val pidMutex = Mutex()
-    private val assignedIds = synchronizedSet(mutableSetOf<UUID>())
     private val negotiations = ConcurrentHashMap<UUID, BuiltinNegotiation>()
     private val pendingConsumerNegotiations = ConcurrentHashMap<UUID, CompletableDeferred<BuiltinNegotiation?>>()
 
@@ -87,7 +82,7 @@ open class BuiltinNegotiationManager(
                 ContractRequestMessage(
                     uid = odrlRequest.uid.toEdcFormat(),
                     providerPid = null,
-                    consumerPid = "urn:uuid:$consumerPid",
+                    consumerPid = consumerPid.toString(),
                     callbackAddress = callbackUrl.toString(),
                     offer = odrlRequest,
                 )
@@ -148,7 +143,6 @@ open class BuiltinNegotiationManager(
                         payload = logParams
                     }
 
-                    assignedIds.remove(consumerPid)
                     pendingConsumerNegotiations.remove(consumerPid)!!.complete(null)
                     return CompletableDeferred<OdrlAgreement>().apply {
                         cancel("The provider terminated the negotiation")
@@ -161,7 +155,6 @@ open class BuiltinNegotiationManager(
                         payload = logParams
                     }
 
-                    assignedIds.remove(consumerPid)
                     pendingConsumerNegotiations.remove(consumerPid)!!.complete(null)
                     return CompletableDeferred<OdrlAgreement>().apply {
                         cancel("The provider returned an invalid response")
@@ -370,7 +363,7 @@ open class BuiltinNegotiationManager(
     }
 
     private fun parsePid(providerPid: String): UUID? {
-        val urnPattern = Regex("urn:uuid:([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})")
+        val urnPattern = Regex("(?:urn:uuid:)?([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})")
         return urnPattern.find(providerPid)?.groupValues?.get(1)?.let { UUID.fromString(it) }
     }
 
@@ -420,13 +413,7 @@ open class BuiltinNegotiationManager(
         return negotiations.values.toList()
     }
 
-    private suspend fun newProcessId(): UUID {
-        pidMutex.withLock {
-            return generateSequence { UUID.randomUUID() }
-                .first { id -> !assignedIds.contains(id) }
-                .also { assignedIds.add(it) }
-        }
-    }
+    fun newProcessId(): UUID = UUID.randomUUID()
 
     /**
      * Observe updates to the negotiation state and updates and dispatch them accordingly.
