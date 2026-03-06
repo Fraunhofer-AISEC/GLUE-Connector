@@ -26,6 +26,7 @@ import io.ktor.http.*
 import kotlinx.coroutines.*
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.coroutines.CoroutineContext
 import kotlin.time.Clock
 
 /**
@@ -40,11 +41,33 @@ open class BuiltinNegotiationManager(
     private val dataStore: DataStore,
     private val odrlParser: OdrlParser,
     configManager: ConfigManager,
-    private val scope: CoroutineScope = CoroutineScope(Dispatchers.Default),
+    scope: CoroutineScope = CoroutineScope(Dispatchers.Default),
 ) : NegotiationManager() {
     private val connectorConfig = configManager.getConfig(::ConnectorConfig)
     private val negotiations = ConcurrentHashMap<UUID, BuiltinNegotiation>()
     private val pendingConsumerNegotiations = ConcurrentHashMap<UUID, CompletableDeferred<BuiltinNegotiation?>>()
+    private val childScope = scope + SupervisorJob() + CoroutineExceptionHandler(this::handleCoroutineException)
+
+    init {
+        scope.launch {
+            dataStore.negotiations().forEach { data ->
+                val negotiation =
+                    BuiltinNegotiation(
+                        initialData = data,
+                        httpClient = httpClient,
+                        negotiator = defaultNegotiator,
+                        objectMapper = objectMapper,
+                        odrlParser = odrlParser,
+                        ownIdentity = connectorConfig.identity,
+                        scope = childScope,
+                    )
+
+                // This is a (very theoretical due to UUID collision probability) race with the newProcessId function
+                assignedIds.add(data.id)
+                negotiations[data.id] = negotiation
+            }
+        }
+    }
 
     /**
      * Start a negotiation by sending the provided contract request to the provider.
@@ -188,7 +211,7 @@ open class BuiltinNegotiationManager(
                     objectMapper = objectMapper,
                     odrlParser = odrlParser,
                     ownIdentity = connectorConfig.identity,
-                    scope = scope,
+                    scope = childScope,
                 )
             observeNegotiationState(negotiation, policyFuture)
 
@@ -258,7 +281,7 @@ open class BuiltinNegotiationManager(
                 objectMapper = objectMapper,
                 odrlParser = odrlParser,
                 ownIdentity = connectorConfig.identity,
-                scope = scope,
+                scope = childScope,
             )
 
         observeNegotiationState(negotiation, null)
@@ -309,7 +332,7 @@ open class BuiltinNegotiationManager(
                 objectMapper = objectMapper,
                 odrlParser = odrlParser,
                 ownIdentity = connectorConfig.identity,
-                scope = scope,
+                scope = childScope,
             )
         observeNegotiationState(negotiation, null)
         return negotiation
@@ -424,7 +447,7 @@ open class BuiltinNegotiationManager(
         future: CompletableDeferred<OdrlAgreement>?,
     ) {
         dataStore.addNegotiation(negotiation.data.value)
-        scope.launch {
+        childScope.launch(NegotiationContext(negotiation) + CoroutineName("negotiation-${negotiation.id}-observer")) {
             negotiation.data.collect { data ->
                 dataStore.updateNegotiation(data)
 
@@ -444,6 +467,27 @@ open class BuiltinNegotiationManager(
             }
         }
         negotiations[negotiation.data.value.id] = negotiation
+    }
+
+    private fun handleCoroutineException(
+        context: CoroutineContext,
+        exception: Throwable,
+    ) {
+        val negotiation = context[NegotiationContext]?.negotiation
+        val name = context[CoroutineName]?.name ?: "<unknown>"
+        LOG.atError {
+            message = "Unhandled exception in negotiation coroutine"
+            cause = exception
+            payload = mapOf("negotiation" to negotiation?.data?.value, "coroutine" to name)
+        }
+
+        if (negotiation != null) {
+            // Cancellation is async as we try to send a message to the peer.
+            // The name is set here to make debugging easier for nested failures.
+            childScope.launch(CoroutineName("$name-cleanup")) {
+                negotiation.cancel("Unhandled exception in negotiation coroutine")
+            }
+        }
     }
 
     companion object {
