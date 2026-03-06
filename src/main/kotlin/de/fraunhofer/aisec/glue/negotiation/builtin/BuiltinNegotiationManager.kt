@@ -62,8 +62,6 @@ open class BuiltinNegotiationManager(
                         scope = childScope,
                     )
 
-                // This is a (very theoretical due to UUID collision probability) race with the newProcessId function
-                assignedIds.add(data.id)
                 negotiations[data.id] = negotiation
             }
         }
