@@ -82,7 +82,8 @@ open class BuiltinNegotiationManager(
         return startNegotiation(
             Url(peer),
             connectorConfig.publicUrl,
-            odrlParser.convertToOdrlOffer(offer, assigners = listOf(OdrlParty(connectorConfig.identity))),
+            // TODO: this uses the peer's url as an assigner where the identity would be required.
+            offer as? OdrlOffer ?: odrlParser.convertToOdrlOffer(offer, assigners = listOf(OdrlParty(peer))),
         )
     }
 
@@ -216,8 +217,6 @@ open class BuiltinNegotiationManager(
                     scope = childScope,
                 )
             observeNegotiationState(negotiation, policyFuture)
-
-            LOG.atTrace { message = "About to emit negotiation for consumer $consumerPid" }
 
             // This call here is kind of hacky since kotlin coroutines does not have condition variables.
             // In case the peer sends a message to our negotiation object before this function returns, we have it wait.

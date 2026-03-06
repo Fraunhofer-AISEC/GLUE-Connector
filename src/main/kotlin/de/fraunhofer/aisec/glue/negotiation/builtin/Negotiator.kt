@@ -1,8 +1,8 @@
 package de.fraunhofer.aisec.glue.negotiation.builtin
 
+import de.fraunhofer.aisec.glue.negotiation.resetParties
 import de.fraunhofer.iosb.odrl.OdrlAgreement
 import de.fraunhofer.iosb.odrl.OdrlOffer
-import de.fraunhofer.iosb.odrl.OdrlPolicy
 
 interface Negotiator {
     /**
@@ -25,7 +25,7 @@ interface Negotiator {
      * Returning false with a new contract offer will transition the negotiation into the `offered` state.
      * Otherwise, the negotiation is terminated.
      */
-    fun evaluateRequest(contractRequest: OdrlOffer): Pair<Boolean, OdrlOffer?> // TODO: Replace Policy with types for request and offer
+    fun evaluateRequest(contractRequest: OdrlOffer): Pair<Boolean, OdrlOffer?>
 
     /**
      * Determine if the received agreement is still semantically the same as the policy offer.
@@ -34,6 +34,24 @@ interface Negotiator {
         policyOffer: OdrlOffer,
         receivedAgreement: OdrlAgreement,
     ): Boolean {
-        return (policyOffer as OdrlPolicy) == (receivedAgreement as OdrlPolicy)
+        // TODO: The assigner must be checked here. Offers with an assigner should be rejected well before here(?)
+        if (policyOffer.uid != receivedAgreement.uid) return false
+        if (policyOffer.permission.map { it.resetParties(null, null) } != receivedAgreement.permission.map { it.resetParties(null, null) }
+        ) {
+            return false
+        }
+        if (policyOffer.prohibition.map { it.resetParties(null, null) } != receivedAgreement.prohibition.map { it.resetParties(null, null) }
+        ) {
+            return false
+        }
+        if (policyOffer.obligation.map { it.resetParties(null, null) } != receivedAgreement.obligation.map { it.resetParties(null, null) }
+        ) {
+            return false
+        }
+        if (policyOffer.profile != receivedAgreement.profile) return false
+        if (policyOffer.inheritFrom != receivedAgreement.inheritFrom) return false
+        if (policyOffer.conflict != receivedAgreement.conflict) return false
+
+        return true
     }
 }
