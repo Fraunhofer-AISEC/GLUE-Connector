@@ -40,7 +40,7 @@ class BuiltinNegotiation(
 
     init {
         workerJob =
-            scope.launch {
+            scope.launch(NegotiationContext(this) + CoroutineName("negotiation-$id-worker")) {
                 dispatchMessages()
             }
     }
@@ -564,6 +564,8 @@ class BuiltinNegotiation(
     }
 
     override suspend fun cancel(cause: String?) {
+        // TODO: This must somehow flow through the worker job as well. The easiest way would be to just enqueue a
+        //  termination message, but what do we do if the worker is stopped?
         terminateNegotiation("errCancelled")
     }
 
