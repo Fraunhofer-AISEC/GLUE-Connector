@@ -1,6 +1,5 @@
 package de.fraunhofer.aisec.glue.negotiation.builtin
 
-import de.fraunhofer.iosb.odrl.OdrlAgreement
 import de.fraunhofer.iosb.odrl.OdrlOffer
 import org.slf4j.LoggerFactory
 
@@ -17,13 +16,6 @@ class DummyNegotiator(disableWarning: Boolean = false) : Negotiator {
 
     override fun evaluateRequest(contractRequest: OdrlOffer): Pair<Boolean, OdrlOffer?> {
         return Pair(true, null)
-    }
-
-    override fun verifyAgreement(
-        policyOffer: OdrlOffer,
-        receivedAgreement: OdrlAgreement,
-    ): Boolean {
-        return true
     }
 
     companion object {

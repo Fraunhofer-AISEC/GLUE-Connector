@@ -305,7 +305,8 @@ class BuiltinNegotiation(
             }
         }
 
-        val agreement = req.offer.toAgreement(odrlParser, OdrlParty(uid = URI.create("http://$peerIdentity")))
+        val peerParty = OdrlParty(uid = peerIdentity?.let { URI.create("http://$it") } ?: peerEndpoint.toURI())
+        val agreement = req.offer.toAgreement(odrlParser, peerParty)
 
         updateState { it.copy(contract = agreement, state = NegotiationState.AGREED) }
         terminateOnError(
