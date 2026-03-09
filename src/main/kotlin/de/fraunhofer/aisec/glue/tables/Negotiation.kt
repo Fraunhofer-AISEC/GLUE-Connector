@@ -1,6 +1,5 @@
 package de.fraunhofer.aisec.glue.tables
 
-import de.fraunhofer.aisec.glue.models.negotiation.DspMessage
 import de.fraunhofer.aisec.glue.models.negotiation.NegotiationState
 import de.fraunhofer.aisec.glue.negotiation.Negotiation.Role
 import de.fraunhofer.iosb.odrl.OdrlPolicy
@@ -21,6 +20,6 @@ interface Negotiation : Entity<Negotiation> {
     val peerUrl: String
     val contract: OdrlPolicy?
     val failureReason: String?
-    val lastReceivedMessage: DspMessage?
+    val lastReceivedMessage: String?
     val nextSentMessage: Int
 }

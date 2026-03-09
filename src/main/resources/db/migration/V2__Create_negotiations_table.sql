@@ -10,5 +10,5 @@ CREATE TABLE negotiations (
     contract JSON,
     failure_reason VARCHAR,
     last_received_message VARCHAR,
-    next_sent_message INT,
+    next_sent_message INT NOT NULL,
 );
