@@ -17,6 +17,8 @@ import kotlin.time.toJavaInstant
 import kotlin.time.toKotlinInstant
 
 class Negotiations(objectMapper: ObjectMapper) : Table<Negotiation>("negotiations") {
+    private val ktormObjectMapper = objectMapper.copy().registerModules(KtormModule())
+
     val id = uuid("id").primaryKey().bindTo { it.id }
     val role = enum<Role>("role").bindTo { it.role }
     val peer = varchar("peer").bindTo { it.peer }
@@ -28,8 +30,8 @@ class Negotiations(objectMapper: ObjectMapper) : Table<Negotiation>("negotiation
     val state = enum<NegotiationState>("state").bindTo { it.state }
     val callbackUrl = varchar("callback_url").bindTo { it.callbackUrl }
     val peerUrl = varchar("peer_url").bindTo { it.peerUrl }
-    val contract = json<OdrlPolicy>("contract", objectMapper.copy().registerModules(KtormModule())).bindTo { it.contract }
+    val contract = json<OdrlPolicy>("contract", ktormObjectMapper).bindTo { it.contract }
     val failureReason = varchar("failure_reason").bindTo { it.failureReason }
-    val lastReceivedMessage = json<DspMessage>("last_received_message").bindTo { it.lastReceivedMessage }
+    val lastReceivedMessage = json<DspMessage>("last_received_message", ktormObjectMapper).bindTo { it.lastReceivedMessage }
     val nextSentMessage = int("next_sent_message").bindTo { it.nextSentMessage }
 }
