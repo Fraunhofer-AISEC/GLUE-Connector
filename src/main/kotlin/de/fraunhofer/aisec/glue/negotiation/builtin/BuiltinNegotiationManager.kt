@@ -101,7 +101,7 @@ open class BuiltinNegotiationManager(
         try {
             val contractRequestMessage =
                 ContractRequestMessage(
-                    uid = odrlRequest.uid.toEdcFormat(),
+                    id = odrlRequest.uid.toEdcFormat(),
                     providerPid = null,
                     consumerPid = consumerPid.toString(),
                     callbackAddress = callbackUrl.toString(),

@@ -1,5 +1,6 @@
 package de.fraunhofer.aisec.glue.negotiation.builtin
 
+import de.fraunhofer.aisec.glue.models.negotiation.DspMessage
 import de.fraunhofer.aisec.glue.models.negotiation.NegotiationState
 import de.fraunhofer.aisec.glue.negotiation.Negotiation
 import de.fraunhofer.iosb.odrl.OdrlPolicy
@@ -21,5 +22,7 @@ data class BuiltinNegotiationData(
     val peerUrl: Url,
     val contract: OdrlPolicy? = null,
     val failureReason: String? = null,
+    val lastReceivedMessage: DspMessage? = null,
+    val nextSentMessage: Int = 0,
     //  If we want to keep the Negotiator interface, a reference to its implementation would be required here.
 )

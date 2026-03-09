@@ -5,11 +5,14 @@ import de.fraunhofer.aisec.glue.config.ConnectorConfig
 import de.fraunhofer.aisec.glue.controllers.AtlsController
 import de.fraunhofer.aisec.glue.controllers.BuiltinNegotiationController
 import de.fraunhofer.aisec.glue.models.negotiation.*
+import de.fraunhofer.aisec.glue.negotiation.Negotiation
+import de.fraunhofer.aisec.glue.negotiation.builtin.BuiltinNegotiationData
 import de.fraunhofer.aisec.glue.negotiation.builtin.BuiltinNegotiationManager
 import de.fraunhofer.aisec.glue.negotiation.builtin.DummyNegotiator
 import de.fraunhofer.aisec.glue.negotiation.toAgreement
 import de.fraunhofer.iosb.odrl.OdrlOffer
 import de.fraunhofer.iosb.odrl.OdrlParty
+import de.fraunhofer.iosb.odrl.OdrlPolicy
 import de.fraunhofer.iosb.odrl.parser.OdrlParser
 import io.ktor.client.*
 import io.ktor.client.call.*
@@ -30,6 +33,7 @@ import io.ktor.server.plugins.calllogging.*
 import io.ktor.server.request.*
 import io.ktor.server.routing.*
 import io.ktor.server.testing.*
+import io.mockk.coEvery
 import io.mockk.coJustRun
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -54,6 +58,8 @@ import kotlin.test.assertIs
 import kotlin.test.assertIsNot
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import kotlin.time.Clock
+import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toKotlinDuration
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation as ClientContentNegotiation
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation as ServerContentNegotiation
@@ -75,7 +81,7 @@ class NegotiationTest {
     @Test
     fun `Test negotiation as provider`() =
         runTest(timeout = Duration.ofSeconds(30).toKotlinDuration()) {
-            val consumerPid = "urn:uuid:${UUID.randomUUID()}"
+            val consumerPid = UUID.randomUUID().toString()
             val agreementLatch = CompletableDeferred<Unit>()
             val finalizedLatch = CompletableDeferred<Unit>()
             val httpClient =
@@ -101,6 +107,7 @@ class NegotiationTest {
             coJustRun { dataStore.addContract(any()) }
             coJustRun { dataStore.addNegotiation(any()) }
             coJustRun { dataStore.updateNegotiation(any()) }
+            coEvery { dataStore.negotiations() } returns listOf()
 
             val configManager = ConfigManager(MapApplicationConfig("connector.identity" to "https://test-connector.local"))
             val negotiationManager =
@@ -115,7 +122,7 @@ class NegotiationTest {
 
             val contractRequest =
                 ContractRequestMessage(
-                    uid = "urn:uuid:${UUID.randomUUID()}",
+                    id = UUID.randomUUID().toString(),
                     providerPid = null,
                     consumerPid = consumerPid,
                     callbackAddress = "https://consumer",
@@ -125,7 +132,7 @@ class NegotiationTest {
             val negotiation =
                 negotiationManager.createFromRequest(
                     contractRequest,
-                    "consumer",
+                    "http://dataconsumer.com/org",
                 )
             assertNotNull(negotiation)
 
@@ -144,7 +151,12 @@ class NegotiationTest {
 
             agreementLatch.await()
 
-            val verifyReq = ContractAgreementVerificationMessage(providerPid = initialResp.providerPid, consumerPid = consumerPid)
+            val verifyReq =
+                ContractAgreementVerificationMessage(
+                    id = UUID.randomUUID().toString(),
+                    providerPid = initialResp.providerPid,
+                    consumerPid = consumerPid,
+                )
             val verifyResp = negotiation.submitMessage(verifyReq)
             assertIsNot<ContractNegotiationError>(verifyResp)
 
@@ -154,13 +166,12 @@ class NegotiationTest {
 
             // Verify that the returned and stored policies are the same
             coVerify { dataStore.addContract(any()) }
-
         }
 
     @Test
     fun `Test negotiation as consumer`() =
         runTest(timeout = Duration.ofSeconds(30).toKotlinDuration()) {
-            val providerPid = "urn:uuid:${UUID.randomUUID()}"
+            val providerPid = UUID.randomUUID().toString()
             val acceptedLatch = CompletableDeferred<Unit>()
             val verifiedLatch = CompletableDeferred<Unit>()
             val httpClient =
@@ -187,6 +198,7 @@ class NegotiationTest {
             coJustRun { dataStore.addContract(any()) }
             coJustRun { dataStore.addNegotiation(any()) }
             coJustRun { dataStore.updateNegotiation(any()) }
+            coEvery { dataStore.negotiations() } returns listOf()
 
             val configManager = ConfigManager(MapApplicationConfig("connector.identity" to "https://test-connector.local"))
             val negotiationManager =
@@ -201,6 +213,7 @@ class NegotiationTest {
 
             val contractOffer =
                 ContractOfferMessage(
+                    id = UUID.randomUUID().toString(),
                     providerPid = providerPid,
                     consumerPid = null,
                     callbackAddress = "https://provider",
@@ -232,6 +245,7 @@ class NegotiationTest {
 
             val agreementReq =
                 ContractAgreementMessage(
+                    id = UUID.randomUUID().toString(),
                     providerPid = providerPid,
                     consumerPid = negotiation.id,
                     agreement = exampleAgreement,
@@ -245,6 +259,7 @@ class NegotiationTest {
 
             val finalizeReq =
                 ContractNegotiationEventMessage(
+                    id = UUID.randomUUID().toString(),
                     providerPid = providerPid,
                     consumerPid = initialResp.consumerPid,
                     eventType = NegotiationEvent.FINALIZED,
@@ -287,7 +302,7 @@ class NegotiationTest {
     @Test
     fun `Test negotiation as provider over HTTP`() =
         testApplication {
-            val consumerPid = "urn:uuid:${UUID.randomUUID()}"
+            val consumerPid = UUID.randomUUID().toString()
             val agreedLatch = CompletableDeferred<Unit>()
             val finalizedLatch = CompletableDeferred<Unit>()
             val httpClient =
@@ -333,7 +348,7 @@ class NegotiationTest {
                     contentType(ContentType.Application.Json)
                     setBody(
                         ContractRequestMessage(
-                            uid = "urn:uuid:${UUID.randomUUID()}",
+                            id = UUID.randomUUID().toString(),
                             providerPid = null,
                             consumerPid = consumerPid,
                             callbackAddress = "https://consumer",
@@ -361,6 +376,7 @@ class NegotiationTest {
                     contentType(ContentType.Application.Json)
                     setBody(
                         ContractAgreementVerificationMessage(
+                            id = UUID.randomUUID().toString(),
                             providerPid = respBody.providerPid,
                             consumerPid = consumerPid,
                         ),
@@ -375,7 +391,7 @@ class NegotiationTest {
     @Test
     fun `Test negotiation as consumer over HTTP`() =
         testApplication {
-            val providerPid = "urn:uuid:${UUID.randomUUID()}"
+            val providerPid = UUID.randomUUID().toString()
             val acceptedLatch = CompletableDeferred<Unit>()
             val verificationLatch = CompletableDeferred<Unit>()
             val httpClient =
@@ -402,6 +418,7 @@ class NegotiationTest {
             coJustRun { dataStore.addContract(any()) }
             coJustRun { dataStore.addNegotiation(any()) }
             coJustRun { dataStore.updateNegotiation(any()) }
+            coEvery { dataStore.negotiations() } returns listOf()
 
             val configManager = ConfigManager(MapApplicationConfig("connector.identity" to "https://test-connector.local"))
             val negotiationManager =
@@ -424,6 +441,7 @@ class NegotiationTest {
                     contentType(ContentType.Application.Json)
                     setBody(
                         ContractOfferMessage(
+                            id = UUID.randomUUID().toString(),
                             providerPid = providerPid,
                             consumerPid = null,
                             callbackAddress = "https://provider",
@@ -457,6 +475,7 @@ class NegotiationTest {
                     contentType(ContentType.Application.Json)
                     setBody(
                         ContractAgreementMessage(
+                            id = UUID.randomUUID().toString(),
                             providerPid = providerPid,
                             consumerPid = respBody.consumerPid,
                             agreement = exampleAgreement,
@@ -474,6 +493,7 @@ class NegotiationTest {
                     contentType(ContentType.Application.Json)
                     setBody(
                         ContractNegotiationEventMessage(
+                            id = UUID.randomUUID().toString(),
                             providerPid = providerPid,
                             consumerPid = respBody.consumerPid,
                             eventType = NegotiationEvent.FINALIZED,
@@ -509,8 +529,9 @@ class NegotiationTest {
             coJustRun { providerDataStore.addContract(any()) }
             coJustRun { providerDataStore.addNegotiation(any()) }
             coJustRun { providerDataStore.updateNegotiation(any()) }
+            coEvery { providerDataStore.negotiations() } returns listOf()
 
-            val providerConfig = MapApplicationConfig("connector.identity" to "https://provider-connector.local")
+            val providerConfig = MapApplicationConfig("connector.identity" to "http://dataowner.com/org")
             val providerConfigManager = ConfigManager(providerConfig)
             val providerNegotiationManager =
                 BuiltinNegotiationManager(
@@ -528,8 +549,9 @@ class NegotiationTest {
             coJustRun { consumerDataStore.addContract(any()) }
             coJustRun { consumerDataStore.addNegotiation(any()) }
             coJustRun { consumerDataStore.updateNegotiation(any()) }
+            coEvery { consumerDataStore.negotiations() } returns listOf()
 
-            val consumerConfig = MapApplicationConfig("connector.identity" to "https://consumer-connector.local")
+            val consumerConfig = MapApplicationConfig("connector.identity" to "http://dataconsumer.com/org")
             val consumerConfigManager = ConfigManager(consumerConfig)
             val consumerNegotiationManager =
                 BuiltinNegotiationManager(

@@ -13,7 +13,7 @@ import de.fraunhofer.iosb.odrl.parser.JsonLd
 @JsonTypeName("${Namespaces.DSPACE}/ContractRequestMessage")
 data class ContractRequestMessage(
     @param:JsonProperty("@id")
-    val uid: String,
+    override val id: String,
     @param:JsonProperty("${Namespaces.DSPACE}/providerPid")
     val providerPid: String? = null,
     @param:JsonProperty("${Namespaces.DSPACE}/consumerPid")

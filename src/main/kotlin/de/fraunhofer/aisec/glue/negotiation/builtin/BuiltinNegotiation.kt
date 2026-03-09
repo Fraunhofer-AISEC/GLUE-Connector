@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import java.net.URI
+import java.nio.ByteBuffer
 import java.util.*
 
 class BuiltinNegotiation(
@@ -74,20 +75,34 @@ class BuiltinNegotiation(
 
     private suspend fun dispatchMessages() {
 
-        for ((message, response) in messageQueue) {
-            when (message) {
-                is ContractRequestMessage -> handleRequest(message, response)
-                is ContractOfferMessage -> handleOffer(message, response)
-                is ContractNegotiationEventMessage -> handleEvent(message, response)
-                is ContractAgreementMessage -> handleAgreement(message, response)
-                is ContractAgreementVerificationMessage -> handleVerify(message, response)
-                is ContractNegotiationTerminationMessage -> handleTermination(message, response)
-                else -> response.completeExceptionally(IllegalArgumentException("Unknown message type: ${message::class}"))
-            }
-
+        for ((req, response) in messageQueue) {
             // Negotiation is done, we can exit the worker coroutine
             if (internalState in listOf(NegotiationState.FINALIZED, NegotiationState.TERMINATED)) {
                 break
+            }
+
+            if (req.id == data.value.lastReceivedMessage?.id) {
+                LOG.atTrace {
+                    message = "Ignoring likely duplicate message"
+                    payload =
+                        mapOf(
+                            "role" to role,
+                            "id" to id,
+                            "peerId" to peerPid,
+                            "message" to req,
+                        )
+                }
+                continue
+            }
+
+            when (req) {
+                is ContractRequestMessage -> handleRequest(req, response)
+                is ContractOfferMessage -> handleOffer(req, response)
+                is ContractNegotiationEventMessage -> handleEvent(req, response)
+                is ContractAgreementMessage -> handleAgreement(req, response)
+                is ContractAgreementVerificationMessage -> handleVerify(req, response)
+                is ContractNegotiationTerminationMessage -> handleTermination(req, response)
+                else -> response.completeExceptionally(IllegalArgumentException("Unknown message type: ${req::class}"))
             }
         }
         for ((_, result) in messageQueue) {
@@ -126,7 +141,7 @@ class BuiltinNegotiation(
      * message can lead to a valid state transition and returning an error if not.
      */
     @Suppress("NOTHING_TO_INLINE")
-    private inline fun precondition(
+    private suspend inline fun precondition(
         result: CompletableDeferred<DspMessage?>,
         expectedRole: Negotiation.Role,
         vararg expectedStates: NegotiationState,
@@ -148,11 +163,13 @@ class BuiltinNegotiation(
             val (providerPid, consumerPid) = getProviderAndConsumerPid()
             result.complete(
                 ContractNegotiationError(
+                    id = generateNextMessageId(),
                     providerPid = providerPid,
                     consumerPid = consumerPid,
                     code = "invalidState",
                 ),
             )
+            terminateNegotiation("invalidState", "The message is invalid in the current state")
         }
         return ok
     }
@@ -231,16 +248,38 @@ class BuiltinNegotiation(
         // Note: The spec technically disallows us from terminating in some states, but it's probably better to not
         // care and terminate anyway.
         // What's the worst that can happen? The peer terminating the connection for a protocol violation? :)
-        updateState { it.copy(state = NegotiationState.TERMINATED, failureReason = "${reason ?: "Unknown Error"} ($code)") }
+        updateState {
+            it.copy(
+                state = NegotiationState.TERMINATED,
+                failureReason = "${reason ?: "Unknown Error"} ($code)",
+                nextSentMessage = it.nextSentMessage + 1,
+            )
+        }
         val (providerPid, consumerPid) = getProviderAndConsumerPid()
         sendMessage(
             "$peerPid/termination",
             ContractNegotiationTerminationMessage(
+                id = generateNextMessageId(),
                 providerPid = providerPid,
                 consumerPid = consumerPid,
                 code = code,
                 reason = reason?.let(::listOf),
             ),
+        )
+    }
+
+    private fun generateNextMessageId(): String {
+        return generateNextMessageId(data.value.id, data.value.nextSentMessage)
+    }
+
+    fun getStateMessage(): ContractNegotiation {
+        val (providerPid, consumerPid) = getProviderAndConsumerPid()
+
+        return ContractNegotiation(
+            id = UUID.randomUUID().toString(),
+            providerPid = providerPid,
+            consumerPid = consumerPid,
+            state = internalState,
         )
     }
 
@@ -256,14 +295,16 @@ class BuiltinNegotiation(
             return
         }
 
-        updateState { old -> old.copy(state = NegotiationState.REQUESTED) }
         response.complete(
             ContractNegotiation(
+                id = generateNextMessageId(),
                 providerPid = id,
                 consumerPid = peerPid,
                 state = NegotiationState.REQUESTED,
             ),
         )
+        updateState { old -> old.copy(state = NegotiationState.REQUESTED, nextSentMessage = old.nextSentMessage + 1, contract = req.offer) }
+
 
         // Continue with processing
         val (ok, counter) = negotiator.evaluateRequest(req.offer)
@@ -286,6 +327,7 @@ class BuiltinNegotiation(
                         sendMessage(
                             "$peerPid/offers",
                             ContractOfferMessage(
+                                id = generateNextMessageId(),
                                 providerPid = id,
                                 consumerPid = peerPid,
                                 callbackAddress = ownEndpoint.toString(),
@@ -297,7 +339,7 @@ class BuiltinNegotiation(
                     return
                 }
 
-                updateState { it.copy(contract = counter, state = NegotiationState.OFFERED) }
+                updateState { it.copy(contract = counter, state = NegotiationState.OFFERED, nextSentMessage = it.nextSentMessage + 1) }
                 return
             } else {
                 terminateNegotiation("errPolicyFailure", "No counteroffer can be computed for this request")
@@ -308,11 +350,11 @@ class BuiltinNegotiation(
         val peerParty = OdrlParty(uid = peerIdentity?.let { URI.create("http://$it") } ?: peerEndpoint.toURI())
         val agreement = req.offer.toAgreement(odrlParser, peerParty)
 
-        updateState { it.copy(contract = agreement, state = NegotiationState.AGREED) }
         terminateOnError(
             sendMessage(
                 "$peerPid/agreement",
                 ContractAgreementMessage(
+                    id = generateNextMessageId(),
                     providerPid = id,
                     consumerPid = peerPid,
                     agreement = agreement,
@@ -320,6 +362,7 @@ class BuiltinNegotiation(
                 ),
             ),
         )
+        updateState { it.copy(contract = agreement, state = NegotiationState.AGREED, nextSentMessage = it.nextSentMessage + 1) }
     }
 
     /**
@@ -335,14 +378,15 @@ class BuiltinNegotiation(
             return
         }
 
-        updateState { old -> old.copy(state = NegotiationState.OFFERED, contract = req.offer) }
         result.complete(
             ContractNegotiation(
+                id = generateNextMessageId(),
                 providerPid = peerPid,
                 consumerPid = id,
                 state = NegotiationState.OFFERED,
             ),
         )
+        updateState { old -> old.copy(state = NegotiationState.OFFERED, contract = req.offer, nextSentMessage = old.nextSentMessage + 1) }
 
         val (ok, counter) = negotiator.evaluateOffer(req.offer)
         LOG.atDebug {
@@ -364,7 +408,7 @@ class BuiltinNegotiation(
                         sendMessage(
                             "$peerPid/request",
                             ContractRequestMessage(
-                                uid = counter.uid.toEdcFormat(),
+                                id = counter.uid.toEdcFormat(),
                                 providerPid = peerPid,
                                 consumerPid = id,
                                 callbackAddress = ownEndpoint.toString(),
@@ -375,24 +419,25 @@ class BuiltinNegotiation(
                 ) {
                     return
                 }
-                updateState { it.copy(contract = counter, state = NegotiationState.REQUESTED) }
+                updateState { it.copy(contract = counter, state = NegotiationState.REQUESTED, nextSentMessage = it.nextSentMessage + 1) }
                 return
             } else {
                 terminateNegotiation("errPolicyFailure", "No counteroffer can be computed for this request")
             }
         }
 
-        updateState { it.copy(state = NegotiationState.ACCEPTED, contract = req.offer) }
         terminateOnError(
             sendMessage(
                 "$peerPid/events",
                 ContractNegotiationEventMessage(
+                    id = generateNextMessageId(),
                     providerPid = peerPid,
                     consumerPid = id,
                     eventType = NegotiationEvent.ACCEPTED,
                 ),
             ),
         )
+        updateState { it.copy(state = NegotiationState.ACCEPTED, contract = req.offer, nextSentMessage = it.nextSentMessage + 1) }
     }
 
     private suspend fun handleEvent(
@@ -401,24 +446,21 @@ class BuiltinNegotiation(
     ) {
         // The response to events is different based on our role.
         // Providers only receive accept events, consumers receive finished events.
-        when (role) {
-            Negotiation.Role.PROVIDER -> handleAccept(req, result)
-            Negotiation.Role.CONSUMER -> handleFinalize(req, result)
+        when (req.eventType) {
+            NegotiationEvent.ACCEPTED -> handleAccept(result)
+            NegotiationEvent.FINALIZED -> handleFinalize(result)
         }
     }
 
-    private suspend fun handleAccept(
-        req: ContractNegotiationEventMessage,
-        result: CompletableDeferred<DspMessage?>,
-    ) {
+    private suspend fun handleAccept(result: CompletableDeferred<DspMessage?>) {
         // By making sure that the state machine is in the offered state, we make sure that we have made the current offer,
         // as client offers (= requests) move us into the requested state.
         if (!precondition(result, Negotiation.Role.PROVIDER, NegotiationState.OFFERED)) {
             return
         }
 
-        updateState { it.copy(state = NegotiationState.ACCEPTED) }
         result.complete(null)
+        updateState { it.copy(state = NegotiationState.ACCEPTED) }
 
         val agreement = (currentPolicy as OdrlOffer).toAgreement(odrlParser, OdrlParty())
 
@@ -426,6 +468,7 @@ class BuiltinNegotiation(
                 sendMessage(
                     "$peerPid/agreement",
                     ContractAgreementMessage(
+                        id = generateNextMessageId(),
                         providerPid = id,
                         consumerPid = peerPid,
                         agreement = agreement,
@@ -436,7 +479,7 @@ class BuiltinNegotiation(
         ) {
             return
         }
-        updateState { it.copy(contract = agreement, state = NegotiationState.AGREED) }
+        updateState { it.copy(contract = agreement, state = NegotiationState.AGREED, nextSentMessage = it.nextSentMessage + 1) }
     }
 
     private suspend fun handleVerify(
@@ -447,13 +490,14 @@ class BuiltinNegotiation(
             return
         }
 
-        updateState { it.copy(state = NegotiationState.VERIFIED) }
         result.complete(null)
+        updateState { it.copy(state = NegotiationState.VERIFIED) }
 
         if (!terminateOnError(
                 sendMessage(
                     "$peerPid/events",
                     ContractNegotiationEventMessage(
+                        id = generateNextMessageId(),
                         providerPid = id,
                         consumerPid = peerPid,
                         eventType = NegotiationEvent.FINALIZED,
@@ -465,29 +509,16 @@ class BuiltinNegotiation(
             return
         }
 
-        updateState { it.copy(state = NegotiationState.FINALIZED) }
+        updateState { it.copy(state = NegotiationState.FINALIZED, nextSentMessage = it.nextSentMessage + 1) }
     }
 
-    private fun handleFinalize(
-        req: ContractNegotiationEventMessage,
-        result: CompletableDeferred<DspMessage?>,
-    ) {
+    private suspend fun handleFinalize(result: CompletableDeferred<DspMessage?>) {
         if (!precondition(result, Negotiation.Role.CONSUMER, NegotiationState.VERIFIED)) {
             return
         }
 
-        updateState { it.copy(state = NegotiationState.FINALIZED) }
         result.complete(null)
-    }
-
-    fun getStateMessage(): ContractNegotiation {
-        val (providerPid, consumerPid) = getProviderAndConsumerPid()
-
-        return ContractNegotiation(
-            providerPid = providerPid,
-            consumerPid = consumerPid,
-            state = internalState,
-        )
+        updateState { it.copy(state = NegotiationState.FINALIZED) }
     }
 
     private suspend fun handleAgreement(
@@ -515,24 +546,26 @@ class BuiltinNegotiation(
             }
             result.complete(
                 ContractNegotiationError(
+                    id = generateNextMessageId(),
                     providerPid = peerPid,
                     consumerPid = id,
                     code = "errPolicyFailure",
                 ),
             )
+            terminateNegotiation("errPolicyFailure", "The agreement does not match the previous offer")
             return
         }
 
-        updateState { it.copy(contract = req.agreement, state = NegotiationState.AGREED) }
         result.complete(null)
+        updateState { it.copy(contract = req.agreement, state = NegotiationState.AGREED) }
 
         if (!terminateOnError(
                 sendMessage(
                     "$peerPid/agreement/verification",
                     ContractAgreementVerificationMessage(
+                        id = generateNextMessageId(),
                         providerPid = peerPid,
                         consumerPid = id,
-                        uid = UUID.randomUUID().toString(),
                     ),
                 ),
             )
@@ -540,7 +573,7 @@ class BuiltinNegotiation(
             return
         }
 
-        updateState { it.copy(state = NegotiationState.VERIFIED) }
+        updateState { it.copy(state = NegotiationState.VERIFIED, nextSentMessage = it.nextSentMessage + 1) }
     }
 
     private fun handleTermination(
@@ -553,16 +586,50 @@ class BuiltinNegotiation(
                 messageBuilder.append(": $reason")
             }
         }
-        updateState { it.copy(state = NegotiationState.TERMINATED, failureReason = messageBuilder.toString()) }
         result.complete(null)
+        updateState { it.copy(state = NegotiationState.TERMINATED, failureReason = messageBuilder.toString()) }
     }
 
     override suspend fun cancel(cause: String?) {
         //  termination message, but what do we do if the worker is stopped?
-        terminateNegotiation("errCancelled")
+        if (workerJob.isActive) {
+            submitMessage(
+                ContractNegotiationTerminationMessage(
+                    id = "",
+                    providerPid = "",
+                    consumerPid = "",
+                    code = "errCancelled",
+                    reason = cause?.let(::listOf),
+                ),
+            )
+        } else {
+            LOG.atDebug {
+                message = "The worker job is not active, trying to cancel directly"
+                payload =
+                    mapOf(
+                        "id" to id,
+                        "role" to role,
+                        "peerId" to peerPid,
+                        "state" to internalState,
+                        "cause" to cause,
+                    )
+            }
+            terminateNegotiation("errCancelled")
+        }
     }
 
     companion object {
         private val LOG = KotlinLogging.logger {}
+
+        internal fun generateNextMessageId(
+            id: UUID,
+            index: Int,
+        ): String {
+            val buffer = ByteBuffer.allocate(20)
+            buffer.putLong(id.mostSignificantBits)
+            buffer.putLong(id.leastSignificantBits)
+            buffer.putInt(index)
+            return UUID.nameUUIDFromBytes(buffer.array()).toString()
+        }
     }
 }
