@@ -6,19 +6,14 @@ import de.fraunhofer.aisec.glue.tables.Contracts
 import de.fraunhofer.aisec.glue.tables.Lookups
 import de.fraunhofer.aisec.glue.tables.Negotiations
 import de.fraunhofer.iosb.odrl.OdrlPolicy
-import io.ktor.http.Url
+import io.ktor.http.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.withContext
 import org.apache.commons.dbcp2.BasicDataSource
 import org.flywaydb.core.Flyway
 import org.ktorm.database.Database
-import org.ktorm.dsl.batchInsert
-import org.ktorm.dsl.delete
-import org.ktorm.dsl.eq
-import org.ktorm.dsl.insert
-import org.ktorm.dsl.isNull
-import org.ktorm.dsl.update
+import org.ktorm.dsl.*
 import org.ktorm.entity.filter
 import org.ktorm.entity.find
 import org.ktorm.entity.map
@@ -109,6 +104,8 @@ class DataStore(
                 set(it.peerUrl, data.peerUrl.toString())
                 set(it.contract, data.contract)
                 set(it.failureReason, data.failureReason)
+                set(it.lastReceivedMessage, data.lastReceivedMessage)
+                set(it.nextSentMessage, data.nextSentMessage)
             }
         }
 
@@ -126,6 +123,8 @@ class DataStore(
                     Url(it.peerUrl),
                     it.contract,
                     it.failureReason,
+                    it.lastReceivedMessage,
+                    it.nextSentMessage,
                 )
             }
         }
@@ -144,6 +143,8 @@ class DataStore(
                 set(it.peerUrl, data.peerUrl.toString())
                 set(it.contract, data.contract)
                 set(it.failureReason, data.failureReason)
+                set(it.lastReceivedMessage, data.lastReceivedMessage)
+                set(it.nextSentMessage, data.nextSentMessage)
             }
         }
 

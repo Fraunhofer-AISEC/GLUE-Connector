@@ -8,5 +8,7 @@ CREATE TABLE negotiations (
     callback_url VARCHAR NOT NULL,
     peer_url VARCHAR NOT NULL,
     contract JSON,
-    failure_reason VARCHAR
-)
+    failure_reason VARCHAR,
+    last_received_message VARCHAR,
+    next_sent_message INT,
+);
