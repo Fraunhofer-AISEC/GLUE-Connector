@@ -73,7 +73,42 @@ class BuiltinNegotiation(
     override val state: String
         get() = internalState.toString()
 
+    private suspend fun recover() {
+        LOG.atDebug {
+            message = "Attempting to recover the negotiation process from data"
+            payload =
+                mapOf(
+                    "id" to id,
+                    "role" to role,
+                    "peerId" to peerPid,
+                    "state" to state,
+                )
+        }
+
+        when (Pair(internalState, role)) {
+            Pair(NegotiationState.REQUESTED, Negotiation.Role.PROVIDER) -> handleRequestInner()
+            Pair(NegotiationState.OFFERED, Negotiation.Role.CONSUMER) -> handleOfferInner()
+            Pair(NegotiationState.ACCEPTED, Negotiation.Role.PROVIDER) -> handleAcceptInner()
+            Pair(NegotiationState.AGREED, Negotiation.Role.CONSUMER) -> handleAgreementInner()
+            Pair(NegotiationState.VERIFIED, Negotiation.Role.PROVIDER) -> handleVerifyInner()
+            else ->
+                LOG.atTrace {
+                    message = "No recovery action required"
+                    payload =
+                        mapOf(
+                            "id" to id,
+                            "role" to role,
+                            "peerId" to peerPid,
+                            "state" to state,
+                        )
+                }
+        }
+    }
+
     private suspend fun dispatchMessages() {
+        if (internalState != NegotiationState.INITIAL) {
+            recover()
+        }
 
         for ((req, response) in messageQueue) {
             // Negotiation is done, we can exit the worker coroutine
@@ -81,8 +116,8 @@ class BuiltinNegotiation(
                 break
             }
 
-            if (req.id == data.value.lastReceivedMessage?.id) {
-                LOG.atTrace {
+            if (req.id == data.value.lastReceivedMessage) {
+                LOG.atDebug {
                     message = "Ignoring likely duplicate message"
                     payload =
                         mapOf(
@@ -303,11 +338,22 @@ class BuiltinNegotiation(
                 state = NegotiationState.REQUESTED,
             ),
         )
-        updateState { old -> old.copy(state = NegotiationState.REQUESTED, nextSentMessage = old.nextSentMessage + 1, contract = req.offer) }
+        updateState { old ->
+            old.copy(
+                state = NegotiationState.REQUESTED,
+                contract = req.offer,
+                lastReceivedMessage = req.id,
+                nextSentMessage = old.nextSentMessage + 1,
+            )
+        }
 
+        handleRequestInner()
+    }
 
+    private suspend fun handleRequestInner() {
         // Continue with processing
-        val (ok, counter) = negotiator.evaluateRequest(req.offer)
+        val offer = data.value.contract as? OdrlOffer ?: throw AssertionError("handleRequestInner called without an offer")
+        val (ok, counter) = negotiator.evaluateRequest(offer)
         LOG.atDebug {
             message = "The negotiator validated the request"
             payload =
@@ -348,7 +394,7 @@ class BuiltinNegotiation(
         }
 
         val peerParty = OdrlParty(uid = peerIdentity?.let { URI.create("http://$it") } ?: peerEndpoint.toURI())
-        val agreement = req.offer.toAgreement(odrlParser, peerParty)
+        val agreement = offer.toAgreement(odrlParser, peerParty)
 
         terminateOnError(
             sendMessage(
@@ -386,9 +432,20 @@ class BuiltinNegotiation(
                 state = NegotiationState.OFFERED,
             ),
         )
-        updateState { old -> old.copy(state = NegotiationState.OFFERED, contract = req.offer, nextSentMessage = old.nextSentMessage + 1) }
+        updateState { old ->
+            old.copy(
+                state = NegotiationState.OFFERED,
+                contract = req.offer,
+                lastReceivedMessage = req.id,
+                nextSentMessage = old.nextSentMessage + 1,
+            )
+        }
+        handleOfferInner()
+    }
 
-        val (ok, counter) = negotiator.evaluateOffer(req.offer)
+    private suspend fun handleOfferInner() {
+        val offer = data.value.contract as? OdrlOffer ?: throw AssertionError("handleOfferInner called without an offer")
+        val (ok, counter) = negotiator.evaluateOffer(offer)
         LOG.atDebug {
             message = "The negotiator validated the offer"
             payload =
@@ -437,7 +494,7 @@ class BuiltinNegotiation(
                 ),
             ),
         )
-        updateState { it.copy(state = NegotiationState.ACCEPTED, contract = req.offer, nextSentMessage = it.nextSentMessage + 1) }
+        updateState { it.copy(state = NegotiationState.ACCEPTED, contract = offer, nextSentMessage = it.nextSentMessage + 1) }
     }
 
     private suspend fun handleEvent(
@@ -447,12 +504,15 @@ class BuiltinNegotiation(
         // The response to events is different based on our role.
         // Providers only receive accept events, consumers receive finished events.
         when (req.eventType) {
-            NegotiationEvent.ACCEPTED -> handleAccept(result)
-            NegotiationEvent.FINALIZED -> handleFinalize(result)
+            NegotiationEvent.ACCEPTED -> handleAccept(req, result)
+            NegotiationEvent.FINALIZED -> handleFinalize(req, result)
         }
     }
 
-    private suspend fun handleAccept(result: CompletableDeferred<DspMessage?>) {
+    private suspend fun handleAccept(
+        req: ContractNegotiationEventMessage,
+        result: CompletableDeferred<DspMessage?>,
+    ) {
         // By making sure that the state machine is in the offered state, we make sure that we have made the current offer,
         // as client offers (= requests) move us into the requested state.
         if (!precondition(result, Negotiation.Role.PROVIDER, NegotiationState.OFFERED)) {
@@ -460,8 +520,11 @@ class BuiltinNegotiation(
         }
 
         result.complete(null)
-        updateState { it.copy(state = NegotiationState.ACCEPTED) }
+        updateState { it.copy(state = NegotiationState.ACCEPTED, lastReceivedMessage = req.id) }
+        handleAcceptInner()
+    }
 
+    private suspend fun handleAcceptInner() {
         val agreement = (currentPolicy as OdrlOffer).toAgreement(odrlParser, OdrlParty())
 
         if (!terminateOnError(
@@ -491,8 +554,11 @@ class BuiltinNegotiation(
         }
 
         result.complete(null)
-        updateState { it.copy(state = NegotiationState.VERIFIED) }
+        updateState { it.copy(state = NegotiationState.VERIFIED, lastReceivedMessage = req.id) }
+        handleVerifyInner()
+    }
 
+    private suspend fun handleVerifyInner() {
         if (!terminateOnError(
                 sendMessage(
                     "$peerPid/events",
@@ -512,13 +578,16 @@ class BuiltinNegotiation(
         updateState { it.copy(state = NegotiationState.FINALIZED, nextSentMessage = it.nextSentMessage + 1) }
     }
 
-    private suspend fun handleFinalize(result: CompletableDeferred<DspMessage?>) {
+    private suspend fun handleFinalize(
+        req: ContractNegotiationEventMessage,
+        result: CompletableDeferred<DspMessage?>,
+    ) {
         if (!precondition(result, Negotiation.Role.CONSUMER, NegotiationState.VERIFIED)) {
             return
         }
 
         result.complete(null)
-        updateState { it.copy(state = NegotiationState.FINALIZED) }
+        updateState { it.copy(state = NegotiationState.FINALIZED, lastReceivedMessage = req.id) }
     }
 
     private suspend fun handleAgreement(
@@ -557,8 +626,11 @@ class BuiltinNegotiation(
         }
 
         result.complete(null)
-        updateState { it.copy(contract = req.agreement, state = NegotiationState.AGREED) }
+        updateState { it.copy(contract = req.agreement, state = NegotiationState.AGREED, lastReceivedMessage = req.id) }
+        handleAgreementInner()
+    }
 
+    private suspend fun handleAgreementInner() {
         if (!terminateOnError(
                 sendMessage(
                     "$peerPid/agreement/verification",
