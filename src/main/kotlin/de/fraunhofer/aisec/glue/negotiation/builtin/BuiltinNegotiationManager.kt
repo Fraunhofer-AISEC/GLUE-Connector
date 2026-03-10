@@ -443,8 +443,13 @@ open class BuiltinNegotiationManager(
         future: CompletableDeferred<OdrlAgreement>?,
     ) {
         dataStore.addNegotiation(negotiation.data.value)
-        childScope.launch(NegotiationContext(negotiation) + CoroutineName("negotiation-${negotiation.id}-observer")) {
+        childScope.launch(Dispatchers.Unconfined + NegotiationContext(negotiation) + CoroutineName("negotiation-${negotiation.id}-observer")) {
             negotiation.data.collect { data ->
+                LOG.atTrace {
+                    message = "Observing negotiation state update"
+                    payload = mapOf("negotiation" to data)
+                }
+
                 dataStore.updateNegotiation(data)
 
                 if (data.state == NegotiationState.FINALIZED || data.state == NegotiationState.TERMINATED) {
