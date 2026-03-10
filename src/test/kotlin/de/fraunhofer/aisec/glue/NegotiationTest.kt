@@ -6,13 +6,13 @@ import de.fraunhofer.aisec.glue.controllers.AtlsController
 import de.fraunhofer.aisec.glue.controllers.BuiltinNegotiationController
 import de.fraunhofer.aisec.glue.models.negotiation.*
 import de.fraunhofer.aisec.glue.negotiation.Negotiation
+import de.fraunhofer.aisec.glue.negotiation.builtin.BuiltinNegotiation
 import de.fraunhofer.aisec.glue.negotiation.builtin.BuiltinNegotiationData
 import de.fraunhofer.aisec.glue.negotiation.builtin.BuiltinNegotiationManager
 import de.fraunhofer.aisec.glue.negotiation.builtin.DummyNegotiator
 import de.fraunhofer.aisec.glue.negotiation.toAgreement
 import de.fraunhofer.iosb.odrl.OdrlOffer
 import de.fraunhofer.iosb.odrl.OdrlParty
-import de.fraunhofer.iosb.odrl.OdrlPolicy
 import de.fraunhofer.iosb.odrl.parser.OdrlParser
 import io.ktor.client.*
 import io.ktor.client.call.*
@@ -37,9 +37,13 @@ import io.mockk.coEvery
 import io.mockk.coJustRun
 import io.mockk.coVerify
 import io.mockk.mockk
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -59,7 +63,6 @@ import kotlin.test.assertIsNot
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import kotlin.time.Clock
-import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toKotlinDuration
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation as ClientContentNegotiation
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation as ServerContentNegotiation
@@ -624,6 +627,202 @@ class NegotiationTest {
             coVerify { consumerDataStore.addContract(negotiatedPolicy) }
         }
 
+    @Test
+    fun `Test duplicate messages`() =
+        runTest(timeout = Duration.ofSeconds(30).toKotlinDuration()) {
+            val providerPid = UUID.randomUUID().toString()
+            val acceptedLatch = CompletableDeferred<Unit>()
+            val verifiedLatch = CompletableDeferred<Unit>()
+            val httpClient =
+                httpClient { req ->
+                    when (req.url.encodedPath) {
+                        "/negotiations/$providerPid/events" -> {
+                            val reqBody = convertValue<ContractNegotiationEventMessage>(req.body)
+                            assertEquals(NegotiationEvent.ACCEPTED, reqBody.eventType)
+                            acceptedLatch.complete(Unit)
+                            respond("")
+                        }
+
+                        "/negotiations/$providerPid/agreement/verification" -> {
+                            verifiedLatch.complete(Unit)
+                            respond("")
+                        }
+
+                        else -> {
+                            throw IllegalStateException("Unexpected URL ${req.url} called")
+                        }
+                    }
+                }
+
+            val contractOffer =
+                ContractOfferMessage(
+                    id = UUID.randomUUID().toString(),
+                    providerPid = providerPid,
+                    consumerPid = null,
+                    callbackAddress = "https://provider",
+                    offer = exampleOffer,
+                )
+
+            val negotiation =
+                BuiltinNegotiation(
+                    initialData =
+                        BuiltinNegotiationData(
+                            id = UUID.randomUUID(),
+                            role = Negotiation.Role.CONSUMER,
+                            null,
+                            providerPid,
+                            Clock.System.now(),
+                            state = NegotiationState.INITIAL,
+                            Url("https://consumer"),
+                            Url("https://provider"),
+                        ),
+                    httpClient = httpClient,
+                    negotiator = DummyNegotiator(true),
+                    objectMapper = objectMapper,
+                    odrlParser = OdrlParser(),
+                    ownIdentity = "consumer",
+                    scope = CoroutineScope(currentCoroutineContext()),
+                )
+            assertNotNull(negotiation)
+
+            val stateMachineObserver =
+                StateMachineObserver(
+                    NegotiationState.INITIAL,
+                    NegotiationState.OFFERED,
+                    NegotiationState.ACCEPTED,
+                    NegotiationState.AGREED,
+                    NegotiationState.VERIFIED,
+                    NegotiationState.FINALIZED,
+                )
+            stateMachineObserver.record(this, negotiation.data.map { it.state })
+
+            val initialResp = negotiation.submitMessage(contractOffer)
+            assertIs<ContractNegotiation>(initialResp)
+
+            acceptedLatch.await()
+
+            val agreementReq =
+                ContractAgreementMessage(
+                    id = UUID.randomUUID().toString(),
+                    providerPid = providerPid,
+                    consumerPid = negotiation.id,
+                    agreement = exampleAgreement,
+                    callbackAddress = "https://provider/negotiations",
+                )
+
+            val agreementResp = negotiation.submitMessage(agreementReq)
+            assertIsNot<ContractNegotiationError>(agreementResp)
+
+            // This is the relevant part where we send a duplicate message
+            val agreementResp2 = negotiation.submitMessage(agreementReq)
+            assertIsNot<ContractNegotiationError>(agreementResp2)
+
+            verifiedLatch.await()
+
+            val finalizeReq =
+                ContractNegotiationEventMessage(
+                    id = UUID.randomUUID().toString(),
+                    providerPid = providerPid,
+                    consumerPid = initialResp.consumerPid,
+                    eventType = NegotiationEvent.FINALIZED,
+                )
+            val finalizeResp = negotiation.submitMessage(finalizeReq)
+            assertIsNot<ContractNegotiationError>(finalizeResp)
+
+            stateMachineObserver.verify()
+        }
+
+    @Test
+    fun `Test negotiation recovery`() {
+        runTest(timeout = Duration.ofSeconds(30).toKotlinDuration()) {
+            val consumerPid = UUID.randomUUID().toString()
+            val agreementLatch = CompletableDeferred<Unit>()
+            val finalizedLatch = CompletableDeferred<Unit>()
+            val initialJob = Job()
+            val httpClient =
+                httpClient { req ->
+                    when (req.url.encodedPath) {
+                        "/negotiations/$consumerPid/agreement" -> {
+                            convertValue<ContractAgreementMessage>(req.body)
+                            if (agreementLatch.complete(Unit)) {
+                                currentCoroutineContext().cancel(CancellationException("Intentional cancellation"))
+                            }
+                            respond("")
+                        }
+
+                        "/negotiations/$consumerPid/events" -> {
+                            val reqBody = convertValue<ContractNegotiationEventMessage>(req.body)
+                            assertEquals(NegotiationEvent.FINALIZED, reqBody.eventType)
+                            finalizedLatch.complete(Unit)
+                            respond("")
+                        }
+
+                        else -> {
+                            throw IllegalStateException("Unexpected URL ${req.url} called")
+                        }
+                    }
+                }
+
+            val contractRequest =
+                ContractRequestMessage(
+                    id = UUID.randomUUID().toString(),
+                    providerPid = null,
+                    consumerPid = consumerPid,
+                    callbackAddress = "https://consumer",
+                    offer = exampleOffer,
+                )
+
+            val negotiation =
+                BuiltinNegotiation(
+                    initialData =
+                        BuiltinNegotiationData(
+                            id = UUID.randomUUID(),
+                            role = Negotiation.Role.PROVIDER,
+                            peer = null,
+                            peerPid = consumerPid,
+                            startTimestamp = Clock.System.now(),
+                            state = NegotiationState.INITIAL,
+                            callbackUrl = Url("https://provider"),
+                            peerUrl = Url("https://consumer"),
+                        ),
+                    httpClient = httpClient,
+                    negotiator = DummyNegotiator(true),
+                    objectMapper = objectMapper,
+                    odrlParser = OdrlParser(),
+                    ownIdentity = "https://test-connector.local",
+                    scope = CoroutineScope(currentCoroutineContext() + initialJob),
+                )
+            assertNotNull(negotiation)
+
+            val initialResp = negotiation.submitMessage(contractRequest)
+            assertIs<ContractNegotiation>(initialResp)
+
+            agreementLatch.await()
+
+            val recoveredNegotiation =
+                BuiltinNegotiation(
+                    initialData = negotiation.data.value,
+                    httpClient = httpClient,
+                    negotiator = DummyNegotiator(true),
+                    objectMapper = objectMapper,
+                    odrlParser = OdrlParser(),
+                    ownIdentity = "https://test-connector.local",
+                    scope = CoroutineScope(currentCoroutineContext() + CoroutineName("RecoveredNegotiation")),
+                )
+
+            val verifyReq =
+                ContractAgreementVerificationMessage(
+                    id = UUID.randomUUID().toString(),
+                    providerPid = initialResp.providerPid,
+                    consumerPid = consumerPid,
+                )
+            val verifyResp = recoveredNegotiation.submitMessage(verifyReq)
+            assertIsNot<ContractNegotiationError>(verifyResp)
+
+            finalizedLatch.await()
+        }
+    }
+
     // TODO: Add tests that try incorrect or behavior as well
     // TODO: Technically, we may also want to test using a custom negotiator to cover all code paths
 
@@ -636,7 +835,7 @@ class NegotiationTest {
             flow: Flow<NegotiationState>,
         ) {
             recordJob =
-                scope.launch {
+                scope.launch(Dispatchers.Unconfined) {
                     var current = flow.first()
                     actualStates.add(current)
                     while (true) {
