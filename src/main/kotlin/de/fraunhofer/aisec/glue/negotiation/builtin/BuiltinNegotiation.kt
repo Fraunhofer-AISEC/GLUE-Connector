@@ -67,7 +67,6 @@ class BuiltinNegotiation(
     private val currentPolicy: OdrlPolicy?
         get() = _data.value.contract
 
-    // TODO: Is it ok to throw this exception here?
     val peerPid: String
         get() = _data.value.peerPid
 
@@ -80,6 +79,10 @@ class BuiltinNegotiation(
     override val state: String
         get() = internalState.toString()
 
+    /**
+     * Attempt recovery of a negotiation that is still in progress.
+     * This function must only be called from the worker coroutine.
+     */
     private suspend fun recover() {
         LOG.atDebug {
             message = "Attempting to recover the negotiation process from data"
@@ -112,6 +115,10 @@ class BuiltinNegotiation(
         }
     }
 
+    /**
+     * The main worker function for this negotiation.
+     * This function processes all incoming messages.
+     */
     private suspend fun dispatchMessages() {
         if (internalState != NegotiationState.INITIAL) {
             recover()
@@ -223,6 +230,10 @@ class BuiltinNegotiation(
         return ok
     }
 
+    /**
+     * Send a message to the peer via HTTP POST.
+     * The endpoint shall only contain the path segment after /negotiations/{id}.
+     */
     private suspend inline fun <reified T> sendMessage(
         endpoint: String,
         message: T,
@@ -237,7 +248,7 @@ class BuiltinNegotiation(
                 )
         }
         val url =
-            URLBuilder(peerEndpoint).appendEncodedPathSegments("negotiations", endpoint).build()
+            URLBuilder(peerEndpoint).appendEncodedPathSegments("negotiations", data.value.peerPid, endpoint).build()
 
         // Build a custom Authorization header with JSON structure
         // TODO: We should rather handle auth in a dedicated http client plugin
@@ -259,6 +270,10 @@ class BuiltinNegotiation(
         }
     }
 
+    /**
+     *  For a given HTTP response, terminate the negotiation if it was not successful.
+     *  Returns `true` if the negotiation should continue.
+     */
     private suspend fun terminateOnError(resp: HttpResponse): Boolean {
         if (!resp.status.isSuccess()) {
             val bodyText = resp.body<Map<String, Any>>()
@@ -290,6 +305,7 @@ class BuiltinNegotiation(
 
     /**
      * Send a termination message to the peer containing the stated code and reason (if any)
+     * State transition: any state → TERMINATED
      */
     private suspend fun terminateNegotiation(
         code: String,
@@ -307,7 +323,7 @@ class BuiltinNegotiation(
         }
         val (providerPid, consumerPid) = getProviderAndConsumerPid()
         sendMessage(
-            "$peerPid/termination",
+            "termination",
             ContractNegotiationTerminationMessage(
                 id = generateNextMessageId(),
                 providerPid = providerPid,
@@ -318,10 +334,21 @@ class BuiltinNegotiation(
         )
     }
 
+    /**
+     * Derive a UUID for the next message in the negotiation from the id and the internal sequence number.
+     */
     private fun generateNextMessageId(): String {
-        return generateNextMessageId(data.value.id, data.value.nextSentMessage)
+        val buffer = ByteBuffer.allocate(20)
+        buffer.putLong(data.value.id.mostSignificantBits)
+        buffer.putLong(data.value.id.leastSignificantBits)
+        buffer.putInt(data.value.nextSentMessage)
+        return UUID.nameUUIDFromBytes(buffer.array()).toString()
     }
 
+    /**
+     * Get the negotiation state as a [ContractNegotiation] message.
+     * This message is safe to send to a DSP-Compliant peer unless the state is reported as [NegotiationState.INITIAL].
+     */
     fun getStateMessage(): ContractNegotiation {
         val (providerPid, consumerPid) = getProviderAndConsumerPid()
 
@@ -335,7 +362,10 @@ class BuiltinNegotiation(
 
     /**
      * Handle a contract request message from the consumer.
-     * This is only valid if we are the provider and the negotiation is in its initial or the offered state.
+     *
+     * Possible state transitions:
+     *   - INITIAL | OFFERED → REQUESTED
+     *   - Transitive state transitions through [handleRequestInner]
      */
     private suspend fun handleRequest(
         req: ContractRequestMessage,
@@ -365,6 +395,12 @@ class BuiltinNegotiation(
         handleRequestInner()
     }
 
+    /**
+     * Evaluate the current contract offer as a request using the [negotiator].
+     * Depending on the result, accept the offer, propose a counteroffer, or terminate the negotiation.
+     *
+     * Possible state transition: REQUESTED → OFFERED | AGREED | TERMINATED
+     */
     private suspend fun handleRequestInner() {
         // Continue with processing
         val offer = data.value.contract as? OdrlOffer ?: throw AssertionError("handleRequestInner called without an offer")
@@ -386,7 +422,7 @@ class BuiltinNegotiation(
             if (counter != null) {
                 if (!terminateOnError(
                         sendMessage(
-                            "$peerPid/offers",
+                            "offers",
                             ContractOfferMessage(
                                 id = generateNextMessageId(),
                                 providerPid = id,
@@ -412,9 +448,9 @@ class BuiltinNegotiation(
         val peerParty = OdrlParty(uid = peerIdentity?.let { URI.create("http://$it") } ?: peerEndpoint.toURI())
         val agreement = offer.toAgreement(odrlParser, peerParty)
 
-        terminateOnError(
+        if (!terminateOnError(
             sendMessage(
-                "$peerPid/agreement",
+                "agreement",
                 ContractAgreementMessage(
                     id = generateNextMessageId(),
                     providerPid = id,
@@ -423,14 +459,18 @@ class BuiltinNegotiation(
                     callbackAddress = ownEndpoint.toString(),
                 ),
             ),
-        )
+        )) {
+            return
+        }
         updateState { it.copy(contract = agreement, state = NegotiationState.AGREED, nextSentMessage = it.nextSentMessage + 1) }
     }
 
     /**
      * Process a contract offer sent from the provider.
-     * This operation is only allowed if we are a consumer and the negotiation is either in its initial or the requested
-     * state, which will be reported back by the argument to [responseCallback].
+     *
+     * Possible state transitions:
+     *   - INITIAL | REQUESTED → OFFERED
+     *   - Transitive state transitions through [handleOfferInner]
      */
     private suspend fun handleOffer(
         req: ContractOfferMessage,
@@ -459,6 +499,12 @@ class BuiltinNegotiation(
         handleOfferInner()
     }
 
+    /**
+     * Evaluate the current contract offer using the [negotiator].
+     * Depending on the result, accept the offer, propose a counteroffer, or terminate the negotiation.
+     *
+     * Possible state transitions: OFFERED → REQUESTED | ACCEPTED | TERMINATED
+     */
     private suspend fun handleOfferInner() {
         val offer = data.value.contract as? OdrlOffer ?: throw AssertionError("handleOfferInner called without an offer")
         val (ok, counter) = negotiator.evaluateOffer(offer)
@@ -479,7 +525,7 @@ class BuiltinNegotiation(
             if (counter != null) {
                 if (!terminateOnError(
                         sendMessage(
-                            "$peerPid/request",
+                            "request",
                             ContractRequestMessage(
                                 // TODO: Is this needed?
                                 id = counter.uid.toEdcFormat(),
@@ -500,9 +546,9 @@ class BuiltinNegotiation(
             }
         }
 
-        terminateOnError(
+        if (!terminateOnError(
             sendMessage(
-                "$peerPid/events",
+                "events",
                 ContractNegotiationEventMessage(
                     id = generateNextMessageId(),
                     providerPid = peerPid,
@@ -510,7 +556,9 @@ class BuiltinNegotiation(
                     eventType = NegotiationEvent.ACCEPTED,
                 ),
             ),
-        )
+        )) {
+            return
+        }
         updateState { it.copy(state = NegotiationState.ACCEPTED, contract = offer, nextSentMessage = it.nextSentMessage + 1) }
     }
 
@@ -526,6 +574,13 @@ class BuiltinNegotiation(
         }
     }
 
+    /**
+     * Handle an accept message from the consumer.
+     *
+     * Possible state transitions:
+     *   - OFFERED → ACCEPTED
+     *   - Transitive state transitions through [handleAcceptInner]
+     */
     private suspend fun handleAccept(
         req: ContractNegotiationEventMessage,
         result: CompletableDeferred<DspMessage?>,
@@ -541,13 +596,18 @@ class BuiltinNegotiation(
         handleAcceptInner()
     }
 
+    /**
+     * Send an agreement message to the consumer.
+     *
+     * Possible state transitions: ACCEPTED → AGREED
+     */
     private suspend fun handleAcceptInner() {
         // TODO: Fill in true assignee here
         val agreement = (currentPolicy as OdrlOffer).toAgreement(odrlParser, OdrlParty())
 
         if (!terminateOnError(
                 sendMessage(
-                    "$peerPid/agreement",
+                    "agreement",
                     ContractAgreementMessage(
                         id = generateNextMessageId(),
                         providerPid = id,
@@ -563,6 +623,13 @@ class BuiltinNegotiation(
         updateState { it.copy(contract = agreement, state = NegotiationState.AGREED, nextSentMessage = it.nextSentMessage + 1) }
     }
 
+    /**
+     * Handle a verification message from the consumer.
+     *
+     * Possible state transitions:
+     *   - AGREED → VERIFIED
+     *   - Transitive state transitions through [handleVerifyInner]
+     */
     private suspend fun handleVerify(
         req: ContractAgreementVerificationMessage,
         result: CompletableDeferred<DspMessage?>,
@@ -576,10 +643,15 @@ class BuiltinNegotiation(
         handleVerifyInner()
     }
 
+    /**
+     * Send a finalize message to the consumer.
+     *
+     * Possible state transitions: VERIFIED → FINALIZED
+     */
     private suspend fun handleVerifyInner() {
         if (!terminateOnError(
                 sendMessage(
-                    "$peerPid/events",
+                    "events",
                     ContractNegotiationEventMessage(
                         id = generateNextMessageId(),
                         providerPid = id,
@@ -595,6 +667,11 @@ class BuiltinNegotiation(
         updateState { it.copy(state = NegotiationState.FINALIZED, nextSentMessage = it.nextSentMessage + 1) }
     }
 
+    /**
+     * Process a finalize message from the provider.
+     *
+     * Possible state transitions: VERIFIED → FINALIZED
+     */
     private suspend fun handleFinalize(
         req: ContractNegotiationEventMessage,
         result: CompletableDeferred<DspMessage?>,
@@ -607,6 +684,14 @@ class BuiltinNegotiation(
         updateState { it.copy(state = NegotiationState.FINALIZED, lastReceivedMessage = req.id) }
     }
 
+    /**
+     * Handle an agreement message from the provider and evaluate it using the [negotiator].
+     * If the agreement does not match the current offer, terminate the negotiation.
+     *
+     * Possible state transitions:
+     *   - REQUESTED | ACCEPTED → AGREED | TERMINATED
+     *   - Transitive state transitions through [handleAgreementInner]
+     */
     private suspend fun handleAgreement(
         req: ContractAgreementMessage,
         result: CompletableDeferred<DspMessage?>,
@@ -649,10 +734,15 @@ class BuiltinNegotiation(
         handleAgreementInner()
     }
 
+    /**
+     * Send an agreement verification message to the provider.
+     *
+     * Possible state transitions: AGREED → VERIFIED
+     */
     private suspend fun handleAgreementInner() {
         if (!terminateOnError(
                 sendMessage(
-                    "$peerPid/agreement/verification",
+                    "agreement/verification",
                     ContractAgreementVerificationMessage(
                         id = generateNextMessageId(),
                         providerPid = peerPid,
@@ -667,6 +757,11 @@ class BuiltinNegotiation(
         updateState { it.copy(state = NegotiationState.VERIFIED, nextSentMessage = it.nextSentMessage + 1) }
     }
 
+    /**
+     * Terminate the negotiation with the given code and reason.
+     *
+     * Possible state transitions: any state → TERMINATED
+     */
     private fun handleTermination(
         req: ContractNegotiationTerminationMessage,
         result: CompletableDeferred<DspMessage?>,
@@ -681,6 +776,9 @@ class BuiltinNegotiation(
         updateState { it.copy(state = NegotiationState.TERMINATED, failureReason = messageBuilder.toString()) }
     }
 
+    /**
+     * Cancel the current negotiation with the provided [cause], sending a termination message to the provider.
+     */
     override suspend fun cancel(cause: String?) {
         // TODO: This must somehow flow through the worker job as well. The easiest way would be to just enqueue a
         //  termination message, but what do we do if the worker is stopped?
@@ -712,16 +810,5 @@ class BuiltinNegotiation(
 
     companion object {
         private val LOG = KotlinLogging.logger {}
-
-        internal fun generateNextMessageId(
-            id: UUID,
-            index: Int,
-        ): String {
-            val buffer = ByteBuffer.allocate(20)
-            buffer.putLong(id.mostSignificantBits)
-            buffer.putLong(id.leastSignificantBits)
-            buffer.putInt(index)
-            return UUID.nameUUIDFromBytes(buffer.array()).toString()
-        }
     }
 }
