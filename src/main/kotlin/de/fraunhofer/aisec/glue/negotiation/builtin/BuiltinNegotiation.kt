@@ -24,6 +24,12 @@ import java.net.URI
 import java.nio.ByteBuffer
 import java.util.*
 
+/**
+ * The main driver for the builtin DSP negotiation process.
+ * The negotiation processes runs in a separate coroutine that accepts incoming messages with the [submitMessage]
+ * function.
+ * The state of the negotiation is observable via the [data] flow.
+ */
 class BuiltinNegotiation(
     initialData: BuiltinNegotiationData,
     val httpClient: HttpClient,
@@ -110,11 +116,8 @@ class BuiltinNegotiation(
             recover()
         }
 
-        for ((req, response) in messageQueue) {
-            // Negotiation is done, we can exit the worker coroutine
-            if (internalState in listOf(NegotiationState.FINALIZED, NegotiationState.TERMINATED)) {
-                break
-            }
+        while (internalState !in listOf(NegotiationState.FINALIZED, NegotiationState.TERMINATED)) {
+            val (req, response) = messageQueue.receive()
 
             if (req.id == data.value.lastReceivedMessage) {
                 LOG.atDebug {
@@ -127,6 +130,7 @@ class BuiltinNegotiation(
                             "message" to req,
                         )
                 }
+                response.complete(null)
                 continue
             }
 
@@ -140,12 +144,21 @@ class BuiltinNegotiation(
                 else -> response.completeExceptionally(IllegalArgumentException("Unknown message type: ${req::class}"))
             }
         }
-        for ((_, result) in messageQueue) {
+
+        messageQueue.close()
+        while (true) {
+            val (_, result) = messageQueue.tryReceive().getOrNull() ?: break
             result.cancel("Negotiation has ${if (internalState == NegotiationState.FINALIZED) "completed" else "terminated"}")
         }
-        messageQueue.close()
     }
 
+    /**
+     * Submit a received contract negotiation protocol message to the negotiation state machine.
+     * When the message is processed, returns a response message or null if no message is to be sent.
+     * If the returned value is of type [ContractNegotiationError], an appropriate transport protocol error (e.g. HTTP status 400)
+     * must be returned to the caller.
+     * Received messages are processed in order of arrival.
+     */
     suspend fun submitMessage(message: DspMessage): DspMessage? {
         val response = CompletableDeferred<DspMessage?>()
         messageQueue.send(Pair(message, response))
@@ -571,7 +584,6 @@ class BuiltinNegotiation(
                 ),
             )
         ) {
-            //
             return
         }
 
