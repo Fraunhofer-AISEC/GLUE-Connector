@@ -307,6 +307,7 @@ class NegotiationTest {
         testApplication {
             val consumerPid = UUID.randomUUID().toString()
             val agreedLatch = CompletableDeferred<Unit>()
+            val agreedContinueLatch = CompletableDeferred<Unit>()
             val finalizedLatch = CompletableDeferred<Unit>()
             val httpClient =
                 httpClient { req ->
@@ -314,6 +315,7 @@ class NegotiationTest {
                         "/negotiations/$consumerPid/agreement" -> {
                             convertValue<ContractAgreementMessage>(req.body)
                             agreedLatch.complete(Unit)
+                            agreedContinueLatch.await()
                             respond("")
                         }
 
@@ -369,9 +371,11 @@ class NegotiationTest {
             val negotiation = negotiationManager.getAsProvider(respBody.providerPid, consumerPid, "consumer")
             assertNotNull(negotiation)
 
-            val observer = StateMachineObserver(NegotiationState.AGREED, NegotiationState.VERIFIED, NegotiationState.FINALIZED)
+            val observer = StateMachineObserver(NegotiationState.REQUESTED, NegotiationState.AGREED, NegotiationState.VERIFIED, NegotiationState.FINALIZED)
             val scope = CoroutineScope(currentCoroutineContext())
             observer.record(scope, negotiation.data.map { it.state })
+
+            agreedContinueLatch.complete(Unit)
 
             resp =
                 testClient.post("https://localhost/negotiations/${respBody.providerPid}/agreement/verification") {
@@ -396,6 +400,7 @@ class NegotiationTest {
         testApplication {
             val providerPid = UUID.randomUUID().toString()
             val acceptedLatch = CompletableDeferred<Unit>()
+            val acceptedContinueLatch = CompletableDeferred<Unit>()
             val verificationLatch = CompletableDeferred<Unit>()
             val httpClient =
                 httpClient { req ->
@@ -404,6 +409,7 @@ class NegotiationTest {
                             val reqBody = convertValue<ContractNegotiationEventMessage>(req.body)
                             assertEquals(NegotiationEvent.ACCEPTED, reqBody.eventType)
                             acceptedLatch.complete(Unit)
+                            acceptedContinueLatch.await()
                             respond("")
                         }
 
@@ -464,6 +470,7 @@ class NegotiationTest {
 
             val observer =
                 StateMachineObserver(
+                    NegotiationState.OFFERED,
                     NegotiationState.ACCEPTED,
                     NegotiationState.AGREED,
                     NegotiationState.VERIFIED,
@@ -471,6 +478,8 @@ class NegotiationTest {
                 )
             val scope = CoroutineScope(currentCoroutineContext())
             observer.record(scope, negotiation.data.map { it.state })
+
+            acceptedContinueLatch.complete(Unit)
 
             resp =
                 testClient.post("https://localhost/negotiations/${respBody.consumerPid}/agreement") {
