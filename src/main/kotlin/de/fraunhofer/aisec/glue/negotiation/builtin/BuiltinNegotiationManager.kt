@@ -449,8 +449,13 @@ open class BuiltinNegotiationManager(
     ) {
         dataStore.addNegotiation(negotiation.data.value)
         // TODO: This will cancel the negotiation if any of these operations fail. Do we want that?
-        childScope.launch(NegotiationContext(negotiation) + CoroutineName("negotiation-${negotiation.id}-observer")) {
+        childScope.launch(Dispatchers.Unconfined + NegotiationContext(negotiation) + CoroutineName("negotiation-${negotiation.id}-observer")) {
             negotiation.data.collect { data ->
+                LOG.atTrace {
+                    message = "Observing negotiation state update"
+                    payload = mapOf("negotiation" to data)
+                }
+
                 dataStore.updateNegotiation(data)
 
                 if (data.state == NegotiationState.FINALIZED || data.state == NegotiationState.TERMINATED) {
