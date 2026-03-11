@@ -33,6 +33,6 @@ class ConnectorConfig(inner: ApplicationConfig) : Config(inner) {
 
     val edcMode by withDefault(
         convert(stringProp()) { EdcMode.valueOf(it.uppercase()) },
-        EdcMode.NONE,
+        EdcMode.COMPAT,
     )
 }

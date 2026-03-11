@@ -24,7 +24,7 @@ import java.net.URISyntaxException
 import kotlin.reflect.full.findAnnotation
 
 // Prefix to make base64-"URI"s of EDC RFC-compliant
-val EDC_URI_COMPAT_SCHEME = "x-edc"
+const val EDC_URI_COMPAT_SCHEME = "x-edc"
 
 object EdcQuirks {
     // Compact JSON-LD identifiers
@@ -306,8 +306,9 @@ object EdcQuirks {
             .filter { v -> v is ObjectNode && valueKeys.any { v.has(it) } }.forEach {
                 val node = it as ObjectNode
                 val oldAction = node.toString()
-                val rdfValue = valueKeys.firstNotNullOfOrNull { k -> node.remove(k) } as? ObjectNode
-                    ?: return@forEach
+                val rdfValue =
+                    valueKeys.firstNotNullOfOrNull { k -> node.remove(k) } as? ObjectNode
+                        ?: return@forEach
                 node.set<JsonNode>("@id", rdfValue["@id"])
                 LOG.atWarn {
                     message = "Patched action node"
@@ -340,15 +341,16 @@ object EdcQuirks {
             LOG.debug { "Applying outgoing ($role) EDC transformations..." }
             // Apply specific transformations on certain object types
             var needsPatchAction = false
-            val modBody = when (body) {
-                is ContractAgreementMessage -> {
-                    needsPatchAction = true
-                    body.copy(
-                        agreement = EdcOdrlAgreement.from(body.agreement)
-                    )
+            val modBody =
+                when (body) {
+                    is ContractAgreementMessage -> {
+                        needsPatchAction = true
+                        body.copy(
+                            agreement = EdcOdrlAgreement.from(body.agreement),
+                        )
+                    }
+                    else -> body
                 }
-                else -> body
-            }
             // Apply EDC patches on Jackson IR
             val tree = objectMapper.valueToTree<ObjectNode>(modBody)
             revertUriFormat(tree)

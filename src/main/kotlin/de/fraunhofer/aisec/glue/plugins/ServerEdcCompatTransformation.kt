@@ -1,5 +1,6 @@
 package de.fraunhofer.aisec.glue.plugins
 
+import de.fraunhofer.aisec.glue.Constants
 import io.ktor.http.content.*
 import io.ktor.server.application.*
 import io.ktor.server.request.*
@@ -17,16 +18,16 @@ val ServerEdcCompatTransformation =
         val config = pluginConfig
 
         // Phase ordering: this runs BEFORE ContentNegotiation
-        on(ReceiveRequestBodyTransformed) { _, byteChannel ->
-            if (byteChannel !is ByteReadChannel) {
+        on(ReceiveRequestBodyTransformed) { call, byteChannel ->
+            if (call.shouldSkipEdcCompatTransformation() || byteChannel !is ByteReadChannel) {
                 return@on byteChannel
             }
             ByteReadChannel(config.transformRequest(byteChannel.toByteArray()))
         }
 
         // Transform response BEFORE ContentNegotiation serialization
-        on(SendResponseBodyBeforeContentNegotiation) { _, body ->
-            if (body is OutgoingContent) {
+        on(SendResponseBodyBeforeContentNegotiation) { call, body ->
+            if (call.shouldSkipEdcCompatTransformation() || body is OutgoingContent) {
                 return@on body
             }
             config.transformResponse(body)
@@ -48,6 +49,7 @@ private object ReceiveRequestBodyTransformed : Hook<suspend (ApplicationCall, An
 
 // Hook definition that runs before ContentNegotiation serializes the response body
 val beforeTransform = PipelinePhase("BeforeTransform")
+
 private object SendResponseBodyBeforeContentNegotiation : Hook<suspend (ApplicationCall, Any) -> Any> {
     override fun install(
         pipeline: ApplicationCallPipeline,
@@ -59,4 +61,9 @@ private object SendResponseBodyBeforeContentNegotiation : Hook<suspend (Applicat
             proceedWith(transformed)
         }
     }
+}
+
+private fun ApplicationCall.shouldSkipEdcCompatTransformation(): Boolean {
+    val userAgent = request.userAgent() ?: return false
+    return Constants.TC_USER_AGENT_REGEX.containsMatchIn(userAgent)
 }

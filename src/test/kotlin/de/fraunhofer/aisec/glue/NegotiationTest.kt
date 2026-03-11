@@ -1,5 +1,6 @@
 package de.fraunhofer.aisec.glue
 
+import de.fraunhofer.aisec.glue.DataStore.Companion.ioAsync
 import de.fraunhofer.aisec.glue.config.ConfigManager
 import de.fraunhofer.aisec.glue.config.ConnectorConfig
 import de.fraunhofer.aisec.glue.controllers.AtlsController
@@ -34,7 +35,6 @@ import io.ktor.server.request.*
 import io.ktor.server.routing.*
 import io.ktor.server.testing.*
 import io.mockk.coEvery
-import io.mockk.coJustRun
 import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.CancellationException
@@ -45,18 +45,13 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.*
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.withTimeout
 import org.slf4j.event.Level
 import java.io.File
 import java.time.Duration
 import java.util.*
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertIs
-import kotlin.test.assertIsNot
-import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
+import kotlin.test.*
 import kotlin.time.Clock
 import kotlin.time.toKotlinDuration
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation as ClientContentNegotiation
@@ -101,11 +96,7 @@ class NegotiationTest {
                         }
                     }
                 }
-            val dataStore = mockk<DataStore>()
-            coJustRun { dataStore.addContract(any()) }
-            coJustRun { dataStore.addNegotiation(any()) }
-            coJustRun { dataStore.updateNegotiation(any()) }
-            coEvery { dataStore.negotiations() } returns listOf()
+            val dataStore = mockDataStore()
 
             val configManager = ConfigManager(MapApplicationConfig("connector.identity" to "https://test-connector.local"))
             val negotiationManager =
@@ -192,11 +183,7 @@ class NegotiationTest {
                         }
                     }
                 }
-            val dataStore = mockk<DataStore>()
-            coJustRun { dataStore.addContract(any()) }
-            coJustRun { dataStore.addNegotiation(any()) }
-            coJustRun { dataStore.updateNegotiation(any()) }
-            coEvery { dataStore.negotiations() } returns listOf()
+            val dataStore = mockDataStore()
 
             val configManager = ConfigManager(MapApplicationConfig("connector.identity" to "https://test-connector.local"))
             val negotiationManager =
@@ -423,11 +410,7 @@ class NegotiationTest {
                         }
                     }
                 }
-            val dataStore = mockk<DataStore>()
-            coJustRun { dataStore.addContract(any()) }
-            coJustRun { dataStore.addNegotiation(any()) }
-            coJustRun { dataStore.updateNegotiation(any()) }
-            coEvery { dataStore.negotiations() } returns listOf()
+            val dataStore = mockDataStore()
 
             val configManager = ConfigManager(MapApplicationConfig("connector.identity" to "https://test-connector.local"))
             val negotiationManager =
@@ -536,11 +519,7 @@ class NegotiationTest {
 
             val odrlParser = OdrlParser()
 
-            val providerDataStore = mockk<DataStore>()
-            coJustRun { providerDataStore.addContract(any()) }
-            coJustRun { providerDataStore.addNegotiation(any()) }
-            coJustRun { providerDataStore.updateNegotiation(any()) }
-            coEvery { providerDataStore.negotiations() } returns listOf()
+            val providerDataStore = mockDataStore()
 
             val providerConfig = MapApplicationConfig("connector.identity" to "http://dataowner.com/org")
             val providerConfigManager = ConfigManager(providerConfig)
@@ -556,11 +535,7 @@ class NegotiationTest {
             val providerController =
                 BuiltinNegotiationController(providerNegotiationManager, providerConfigManager.getConfig(::ConnectorConfig))
 
-            val consumerDataStore = mockk<DataStore>()
-            coJustRun { consumerDataStore.addContract(any()) }
-            coJustRun { consumerDataStore.addNegotiation(any()) }
-            coJustRun { consumerDataStore.updateNegotiation(any()) }
-            coEvery { consumerDataStore.negotiations() } returns listOf()
+            val consumerDataStore = mockDataStore()
 
             val consumerConfig = MapApplicationConfig("connector.identity" to "http://dataconsumer.com/org")
             val consumerConfigManager = ConfigManager(consumerConfig)
@@ -868,5 +843,28 @@ class NegotiationTest {
             }
 
         val exampleAgreement = exampleOffer.toAgreement(OdrlParser(), OdrlParty("http://dataconsumer.com/org"))
+
+        private suspend fun <T> simulateDbOp(block: () -> T): T =
+            ioAsync {
+                LOG.atWarn {
+                    message = "Simulate DB operation..."
+                    payload = mapOf("thread" to Thread.currentThread().name)
+                }
+                Thread.sleep(20)
+                LOG.atWarn {
+                    message = "... done"
+                    payload = mapOf("thread" to Thread.currentThread().name)
+                }
+                block()
+            }
+
+        private fun mockDataStore(): DataStore {
+            val dataStore = mockk<DataStore>()
+            coEvery { dataStore.addContract(any()) } coAnswers { simulateDbOp { } }
+            coEvery { dataStore.addNegotiation(any()) } coAnswers { simulateDbOp { 1 } }
+            coEvery { dataStore.updateNegotiation(any()) } coAnswers { simulateDbOp { 1 } }
+            coEvery { dataStore.negotiations() } coAnswers { simulateDbOp { listOf() } }
+            return dataStore
+        }
     }
 }

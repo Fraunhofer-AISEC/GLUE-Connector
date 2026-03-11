@@ -24,8 +24,9 @@ class EdcOdrlAgreement(
     inheritFrom: List<OdrlIri> = listOf(),
     conflict: OdrlConflictTerm? = null,
     @field:JsonProperty("${Namespaces.DSPACE}/timestamp")
-    val timestamp: OffsetDateTime = OffsetDateTime.now(ZoneOffset.UTC)
-        .truncatedTo(ChronoUnit.SECONDS),
+    val timestamp: OffsetDateTime =
+        OffsetDateTime.now(ZoneOffset.UTC)
+            .truncatedTo(ChronoUnit.SECONDS),
 ) : OdrlAgreement(uid, permission, prohibition, obligation, profile, inheritFrom, conflict) {
     override fun getPropertyMap(): MutableMap<String, Any> {
         return super.getPropertyMap().apply { put("timestamp", timestamp) }
@@ -36,14 +37,15 @@ class EdcOdrlAgreement(
     }
 
     companion object {
-        fun from(policy: OdrlPolicy) = EdcOdrlAgreement(
-            policy.uid,
-            policy.permission,
-            policy.prohibition,
-            policy.obligation,
-            policy.profile,
-            policy.inheritFrom,
-            policy.conflict,
-        )
+        fun from(policy: OdrlPolicy) =
+            EdcOdrlAgreement(
+                policy.uid,
+                policy.permission,
+                policy.prohibition,
+                policy.obligation,
+                policy.profile,
+                policy.inheritFrom,
+                policy.conflict,
+            )
     }
 }
