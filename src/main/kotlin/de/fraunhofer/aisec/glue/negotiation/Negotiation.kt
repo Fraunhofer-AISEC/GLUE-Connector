@@ -1,5 +1,7 @@
 package de.fraunhofer.aisec.glue.negotiation
 
+import de.fraunhofer.iosb.odrl.OdrlAgreement
+
 interface Negotiation {
     val role: Role
     val id: String
@@ -10,6 +12,8 @@ interface Negotiation {
      * Cancel this negotiation
      */
     suspend fun cancel(cause: String?)
+
+    suspend fun awaitCompletion(): OdrlAgreement
 
     enum class Role {
         PROVIDER,

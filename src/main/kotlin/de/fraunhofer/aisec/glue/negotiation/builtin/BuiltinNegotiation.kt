@@ -3,8 +3,10 @@ package de.fraunhofer.aisec.glue.negotiation.builtin
 import com.fasterxml.jackson.databind.ObjectMapper
 import de.fraunhofer.aisec.glue.models.negotiation.*
 import de.fraunhofer.aisec.glue.negotiation.Negotiation
+import de.fraunhofer.aisec.glue.negotiation.NegotiationException
 import de.fraunhofer.aisec.glue.negotiation.edc.toEdcFormat
 import de.fraunhofer.aisec.glue.negotiation.toAgreement
+import de.fraunhofer.iosb.odrl.OdrlAgreement
 import de.fraunhofer.iosb.odrl.OdrlOffer
 import de.fraunhofer.iosb.odrl.OdrlParty
 import de.fraunhofer.iosb.odrl.OdrlPolicy
@@ -17,6 +19,7 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.future.asCompletableFuture
 import java.net.URI
 import java.nio.ByteBuffer
 import java.util.*
@@ -820,6 +823,23 @@ class BuiltinNegotiation(
             }
             terminateNegotiation("errCancelled")
         }
+    }
+
+    override suspend fun awaitCompletion(): OdrlAgreement {
+        val resultFuture = CompletableDeferred<OdrlAgreement>()
+        stateObservers.add { data ->
+            if (data.state == NegotiationState.FINALIZED) {
+                resultFuture.complete(data.contract as OdrlAgreement)
+            }
+            else if (data.state == NegotiationState.TERMINATED) {
+                resultFuture.completeExceptionally(
+                    NegotiationException(
+                        "Negotiation terminated: ${data.failureReason}"
+                    ),
+                )
+            }
+        }
+        return resultFuture.await()
     }
 
     private class InternalCancellationMessage(val details: String?) : DspMessage {

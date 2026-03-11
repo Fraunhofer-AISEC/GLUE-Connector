@@ -51,6 +51,10 @@ class EdcNegotiation(
         }
     }
 
+    override suspend fun awaitCompletion(): OdrlAgreement {
+        return completed.await()
+    }
+
     private suspend fun fetchAgreement(): OdrlAgreement {
         // Fetch the agreement from the EDC
         val response =
