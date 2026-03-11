@@ -201,7 +201,23 @@ class BuiltinNegotiation(
         data = newData
 
         for (observer in stateObservers) {
-            observer(newData)
+            try {
+                observer(newData)
+            } catch (e: Exception) {
+                LOG.atWarn {
+                    message = "Exception in negotiation state observer"
+                    cause = e
+                    payload =
+                        mapOf(
+                            "role" to role,
+                            "id" to id,
+                            "peerId" to peerPid,
+                            // I don't think there is a better way to log this information.
+                            // Maybe the index would be better, but would require a debugger to be useful at all.
+                            "observer" to observer,
+                        )
+                }
+            }
         }
     }
 
