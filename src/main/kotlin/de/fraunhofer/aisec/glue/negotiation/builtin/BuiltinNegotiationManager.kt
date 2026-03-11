@@ -447,10 +447,8 @@ open class BuiltinNegotiationManager(
         negotiation: BuiltinNegotiation,
         future: CompletableDeferred<OdrlAgreement>?,
     ) {
-        dataStore.addNegotiation(negotiation.data.value)
-        // TODO: This will cancel the negotiation if any of these operations fail. Do we want that?
-        childScope.launch(Dispatchers.Unconfined + NegotiationContext(negotiation) + CoroutineName("negotiation-${negotiation.id}-observer")) {
-            negotiation.data.collect { data ->
+        dataStore.addNegotiation(negotiation.data)
+            negotiation.stateObservers.add { data ->
                 LOG.atTrace {
                     message = "Observing negotiation state update"
                     payload = mapOf("negotiation" to data)
@@ -473,8 +471,7 @@ open class BuiltinNegotiationManager(
                     }
                 }
             }
-        }
-        negotiations[negotiation.data.value.id] = negotiation
+        negotiations[negotiation.data.id] = negotiation
     }
 
     private fun handleCoroutineException(
@@ -486,7 +483,7 @@ open class BuiltinNegotiationManager(
         LOG.atError {
             message = "Unhandled exception in negotiation coroutine"
             cause = exception
-            payload = mapOf("negotiation" to negotiation?.data?.value, "coroutine" to name)
+            payload = mapOf("negotiation" to negotiation?.data, "coroutine" to name)
         }
 
         if (negotiation != null) {

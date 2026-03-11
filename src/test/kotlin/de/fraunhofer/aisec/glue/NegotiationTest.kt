@@ -147,7 +147,7 @@ class NegotiationTest {
                     NegotiationState.VERIFIED,
                     NegotiationState.FINALIZED,
                 )
-            stateMachineObserver.record(this, negotiation.data.map { it.state })
+            stateMachineObserver.record(negotiation)
 
             val initialResp = negotiation.submitMessage(contractRequest)
             assertIs<ContractNegotiation>(initialResp)
@@ -239,7 +239,7 @@ class NegotiationTest {
                     NegotiationState.VERIFIED,
                     NegotiationState.FINALIZED,
                 )
-            stateMachineObserver.record(this, negotiation.data.map { it.state })
+            stateMachineObserver.record(negotiation)
 
             val initialResp = negotiation.submitMessage(contractOffer)
             assertIs<ContractNegotiation>(initialResp)
@@ -372,8 +372,7 @@ class NegotiationTest {
             assertNotNull(negotiation)
 
             val observer = StateMachineObserver(NegotiationState.REQUESTED, NegotiationState.AGREED, NegotiationState.VERIFIED, NegotiationState.FINALIZED)
-            val scope = CoroutineScope(currentCoroutineContext())
-            observer.record(scope, negotiation.data.map { it.state })
+            observer.record(negotiation)
 
             agreedContinueLatch.complete(Unit)
 
@@ -476,8 +475,7 @@ class NegotiationTest {
                     NegotiationState.VERIFIED,
                     NegotiationState.FINALIZED,
                 )
-            val scope = CoroutineScope(currentCoroutineContext())
-            observer.record(scope, negotiation.data.map { it.state })
+            observer.record(negotiation)
 
             acceptedContinueLatch.complete(Unit)
 
@@ -703,7 +701,7 @@ class NegotiationTest {
                     NegotiationState.VERIFIED,
                     NegotiationState.FINALIZED,
                 )
-            stateMachineObserver.record(this, negotiation.data.map { it.state })
+            stateMachineObserver.record(negotiation)
 
             val initialResp = negotiation.submitMessage(contractOffer)
             assertIs<ContractNegotiation>(initialResp)
@@ -810,7 +808,7 @@ class NegotiationTest {
 
             val recoveredNegotiation =
                 BuiltinNegotiation(
-                    initialData = negotiation.data.value,
+                    initialData = negotiation.data,
                     httpClient = httpClient,
                     negotiator = DummyNegotiator(true),
                     objectMapper = objectMapper,
@@ -836,26 +834,24 @@ class NegotiationTest {
     // TODO: Technically, we may also want to test using a custom negotiator to cover all code paths
 
     class StateMachineObserver(vararg val expectedStates: NegotiationState) {
-        private lateinit var recordJob: Job
+        private val recordJob = CompletableDeferred<Unit>()
         private val actualStates = mutableListOf<NegotiationState>()
 
         fun record(
-            scope: CoroutineScope,
-            flow: Flow<NegotiationState>,
+            negotiation: BuiltinNegotiation
         ) {
-            recordJob =
-                scope.launch(Dispatchers.Unconfined) {
-                    var current = flow.first()
-                    actualStates.add(current)
-                    while (true) {
-                        val next = flow.first { it != current }
-                        actualStates.add(next)
-                        if (next == NegotiationState.FINALIZED || next == NegotiationState.TERMINATED) {
-                            break
-                        }
-                        current = next
+            recordJob
+            var currentState = negotiation.data.state
+            actualStates.add(currentState)
+            negotiation.stateObservers.add { data ->
+                if (data.state != currentState) {
+                    actualStates.add(data.state)
+                    if (data.state in setOf(NegotiationState.FINALIZED, NegotiationState.TERMINATED)) {
+                        recordJob.complete(Unit)
                     }
+                    currentState = data.state
                 }
+            }
         }
 
         suspend fun verify() {

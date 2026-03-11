@@ -17,12 +17,10 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import java.net.URI
 import java.nio.ByteBuffer
 import java.util.*
+import java.util.concurrent.ConcurrentLinkedQueue
 
 /**
  * The main driver for the builtin DSP negotiation process.
@@ -38,9 +36,11 @@ class BuiltinNegotiation(
     private val odrlParser: OdrlParser,
     val ownIdentity: String,
     scope: CoroutineScope,
+    initialStateObservers: Collection<suspend (BuiltinNegotiationData) -> Unit> = emptyList()
 ) : Negotiation {
-    private val _data = MutableStateFlow(initialData)
-    val data = _data.asStateFlow()
+    val stateObservers: ConcurrentLinkedQueue<suspend (BuiltinNegotiationData) -> Unit> = ConcurrentLinkedQueue(initialStateObservers)
+    var data = initialData
+        private set
 
     private val messageQueue = Channel<Pair<DspMessage, CompletableDeferred<DspMessage?>>>(Channel.UNLIMITED)
     private val workerJob: Job
@@ -53,28 +53,28 @@ class BuiltinNegotiation(
     }
 
     override val id: String
-        get() = _data.value.id.toString()
+        get() = data.id.toString()
 
     override val role: Negotiation.Role
-        get() = _data.value.role
+        get() = data.role
 
     override val peerIdentity: String?
-        get() = _data.value.peer
+        get() = data.peer
 
     private val internalState: NegotiationState
-        get() = _data.value.state
+        get() = data.state
 
     private val currentPolicy: OdrlPolicy?
-        get() = _data.value.contract
+        get() = data.contract
 
     val peerPid: String
-        get() = _data.value.peerPid
+        get() = data.peerPid
 
     private val ownEndpoint: Url
-        get() = _data.value.callbackUrl
+        get() = data.callbackUrl
 
     private val peerEndpoint: Url
-        get() = _data.value.peerUrl
+        get() = data.peerUrl
 
     override val state: String
         get() = internalState.toString()
@@ -127,7 +127,7 @@ class BuiltinNegotiation(
         while (internalState !in listOf(NegotiationState.FINALIZED, NegotiationState.TERMINATED)) {
             val (req, response) = messageQueue.receive()
 
-            if (req.id == data.value.lastReceivedMessage) {
+            if (req.id == data.lastReceivedMessage) {
                 LOG.atDebug {
                     message = "Ignoring likely duplicate message"
                     payload =
@@ -173,21 +173,23 @@ class BuiltinNegotiation(
         return response.await()
     }
 
-    private fun updateState(updateAction: (BuiltinNegotiationData) -> BuiltinNegotiationData) {
-        _data.update { old ->
-            val new = updateAction(old)
-            LOG.atTrace {
-                message = "Updating negotiation state"
-                payload =
-                    mapOf(
-                        "role" to role,
-                        "id" to id,
-                        "peerId" to peerPid,
-                        "oldState" to old,
-                        "newState" to new,
-                    )
-            }
-            new
+    private suspend fun updateState(updateAction: (BuiltinNegotiationData) -> BuiltinNegotiationData) {
+        val newData = updateAction(data)
+        LOG.atTrace {
+            message = "Updating negotiation state"
+            payload =
+                mapOf(
+                    "role" to role,
+                    "id" to id,
+                    "peerId" to peerPid,
+                    "oldState" to data,
+                    "newState" to newData,
+                )
+        }
+        data = newData
+
+        for (observer in stateObservers) {
+            observer(newData)
         }
     }
 
@@ -248,7 +250,7 @@ class BuiltinNegotiation(
                 )
         }
         val url =
-            URLBuilder(peerEndpoint).appendEncodedPathSegments("negotiations", data.value.peerPid, endpoint).build()
+            URLBuilder(peerEndpoint).appendEncodedPathSegments("negotiations", data.peerPid, endpoint).build()
 
         // Build a custom Authorization header with JSON structure
         // TODO: We should rather handle auth in a dedicated http client plugin
@@ -339,9 +341,9 @@ class BuiltinNegotiation(
      */
     private fun generateNextMessageId(): String {
         val buffer = ByteBuffer.allocate(20)
-        buffer.putLong(data.value.id.mostSignificantBits)
-        buffer.putLong(data.value.id.leastSignificantBits)
-        buffer.putInt(data.value.nextSentMessage)
+        buffer.putLong(data.id.mostSignificantBits)
+        buffer.putLong(data.id.leastSignificantBits)
+        buffer.putInt(data.nextSentMessage)
         return UUID.nameUUIDFromBytes(buffer.array()).toString()
     }
 
@@ -403,7 +405,7 @@ class BuiltinNegotiation(
      */
     private suspend fun handleRequestInner() {
         // Continue with processing
-        val offer = data.value.contract as? OdrlOffer ?: throw AssertionError("handleRequestInner called without an offer")
+        val offer = data.contract as? OdrlOffer ?: throw AssertionError("handleRequestInner called without an offer")
         val (ok, counter) = negotiator.evaluateRequest(offer)
         LOG.atDebug {
             message = "The negotiator validated the request"
@@ -506,7 +508,7 @@ class BuiltinNegotiation(
      * Possible state transitions: OFFERED → REQUESTED | ACCEPTED | TERMINATED
      */
     private suspend fun handleOfferInner() {
-        val offer = data.value.contract as? OdrlOffer ?: throw AssertionError("handleOfferInner called without an offer")
+        val offer = data.contract as? OdrlOffer ?: throw AssertionError("handleOfferInner called without an offer")
         val (ok, counter) = negotiator.evaluateOffer(offer)
         LOG.atDebug {
             message = "The negotiator validated the offer"
@@ -762,7 +764,7 @@ class BuiltinNegotiation(
      *
      * Possible state transitions: any state → TERMINATED
      */
-    private fun handleTermination(
+    private suspend fun handleTermination(
         req: ContractNegotiationTerminationMessage,
         result: CompletableDeferred<DspMessage?>,
     ) {
