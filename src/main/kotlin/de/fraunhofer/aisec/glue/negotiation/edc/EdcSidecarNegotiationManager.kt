@@ -93,6 +93,10 @@ class EdcSidecarNegotiationManager(
 
     override suspend fun getNegotiations(): Collection<Negotiation> = negotiations.values
 
+    override suspend fun getNegotiation(id: String): Negotiation? {
+        return negotiations[URI(id)]
+    }
+
     private fun convertToOffer(policy: OdrlPolicy): Result<Pair<OdrlPolicy, String?>> {
         // The required format is `[contractId]:[target]:[uuid]` with all three parts being base64 encoded.
         // If this format is already there, we do nothing and hope for the best.
@@ -137,11 +141,8 @@ class EdcSidecarNegotiationManager(
     override suspend fun startNegotiation(
         peer: String,
         offer: OdrlPolicy,
-    ): Deferred<OdrlAgreement> {
-        val (newOffer, newId) =
-            convertToOffer(offer).getOrElse {
-                return CompletableDeferred<OdrlAgreement>().apply { completeExceptionally(it) }
-            }
+    ): Negotiation {
+        val (newOffer, newId) = convertToOffer(offer).getOrThrow()
 
         val compactedSerializedOffer = odrlParser.mapper.writeValueAsString(newOffer)
 
@@ -175,9 +176,7 @@ class EdcSidecarNegotiationManager(
                 setBody(contractRequest)
             }
         if (!createResp.status.isSuccess()) {
-            return CompletableDeferred<OdrlAgreement>().apply {
-                completeExceptionally(makeHttpException(createResp))
-            }
+            throw makeHttpException(createResp)
         }
 
         val contractResponse = createResp.body<ContractRequestResponse>()
@@ -194,7 +193,7 @@ class EdcSidecarNegotiationManager(
             )
         negotiations[contractResponse.uid] = negotiation
 
-        return contractFuture
+        return negotiation
     }
 
     companion object {

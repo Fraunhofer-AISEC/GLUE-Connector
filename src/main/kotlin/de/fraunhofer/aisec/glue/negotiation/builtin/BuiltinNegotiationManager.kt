@@ -76,7 +76,7 @@ open class BuiltinNegotiationManager(
     override suspend fun startNegotiation(
         peer: String,
         offer: OdrlPolicy,
-    ): Deferred<OdrlAgreement> {
+    ): Negotiation {
         return startNegotiation(
             Url(peer),
             connectorConfig.publicUrl,
@@ -94,7 +94,7 @@ open class BuiltinNegotiationManager(
         callbackUrl: Url,
         odrlRequest: OdrlOffer,
         negotiator: Negotiator? = null,
-    ): Deferred<OdrlAgreement> {
+    ): BuiltinNegotiation {
         val logParams = mutableMapOf<String, Any>()
         val consumerPid = newProcessId()
         pendingConsumerNegotiations[consumerPid] = CompletableDeferred()
@@ -137,9 +137,7 @@ open class BuiltinNegotiationManager(
                             put("description", body)
                         }
                 }
-                return CompletableDeferred<OdrlAgreement>().apply {
-                    cancel("Initial HTTP request failed with code ${resp.status}: $body")
-                }
+                throw IllegalStateException("Initial HTTP request failed with code ${resp.status}: $body")
             }
 
             val deserializedResponse = resp.body<ContractNegotiation>()
@@ -165,9 +163,7 @@ open class BuiltinNegotiationManager(
                     }
 
                     pendingConsumerNegotiations.remove(consumerPid)!!.complete(null)
-                    return CompletableDeferred<OdrlAgreement>().apply {
-                        cancel("The provider terminated the negotiation")
-                    }
+                    throw IllegalStateException("The provider terminated the negotiation")
                 }
 
                 else -> {
@@ -177,15 +173,9 @@ open class BuiltinNegotiationManager(
                     }
 
                     pendingConsumerNegotiations.remove(consumerPid)!!.complete(null)
-                    return CompletableDeferred<OdrlAgreement>().apply {
-                        cancel("The provider returned an invalid response")
-                    }
+                    throw IllegalStateException("The provider returned an invalid response")
                 }
             }
-
-            // We return a future object that we use to notify code of when a negotiation is finished.
-            // Note that this is not good enough for when negotiation takes really long.
-            val policyFuture = CompletableDeferred<OdrlAgreement>()
 
             // Create the final negotiation object now that we have all the information required.
             // Note that we cannot bind the peer identity yet because we don't have a request with an Authorization header
@@ -211,14 +201,14 @@ open class BuiltinNegotiationManager(
                     ownIdentity = connectorConfig.identity,
                     scope = childScope,
                 )
-            observeNegotiationState(negotiation, policyFuture)
+            observeNegotiationState(negotiation, null)
 
             // This call here is kind of hacky since kotlin coroutines does not have condition variables.
             // In case the peer sends a message to our negotiation object before this function returns, we have it wait.
             // We use this channel to notify any waiting coroutines that this negotiation is usable.
             pendingConsumerNegotiations.remove(consumerPid)!!.complete(negotiation)
 
-            return policyFuture
+            return negotiation
         } catch (e: Exception) {
             // Make sure we don't have coroutines waiting forever.
             pendingConsumerNegotiations.remove(consumerPid)?.cancel("Unhandled exception in start negotiation", e)
@@ -432,6 +422,10 @@ open class BuiltinNegotiationManager(
         return negotiations.values.toList()
     }
 
+    override suspend fun getNegotiation(id: String): Negotiation? {
+        return parsePid(id)?.let(negotiations::get)
+    }
+
     fun newProcessId(): UUID = UUID.randomUUID()
 
     /**
@@ -443,28 +437,25 @@ open class BuiltinNegotiationManager(
         future: CompletableDeferred<OdrlAgreement>?,
     ) {
         dataStore.addNegotiation(negotiation.data)
-            negotiation.stateObservers.add { data ->
-                LOG.atTrace {
-                    message = "Observing negotiation state update"
-                    payload = mapOf("negotiation" to data)
-                }
+        negotiation.stateObservers.add { data ->
+            LOG.atTrace {
+                message = "Observing negotiation state update"
+                payload = mapOf("negotiation" to data)
+            }
 
-                dataStore.updateNegotiation(data)
+            dataStore.updateNegotiation(data)
 
-                if (data.state == NegotiationState.FINALIZED || data.state == NegotiationState.TERMINATED) {
-                    val removed = negotiations.remove(data.id)
-                    assert(negotiation == removed)
+            if (data.state == NegotiationState.FINALIZED || data.state == NegotiationState.TERMINATED) {
+                if (data.state == NegotiationState.FINALIZED) {
+                    assert(data.contract != null && data.contract is OdrlAgreement)
 
-                    if (data.state == NegotiationState.FINALIZED) {
-                        assert(data.contract != null && data.contract is OdrlAgreement)
-
-                        dataStore.addContract(data.contract as OdrlAgreement)
-                        future?.complete(data.contract)
-                    } else {
-                        future?.completeExceptionally(NegotiationException(data.failureReason ?: "Unknown Error"))
-                    }
+                    dataStore.addContract(data.contract as OdrlAgreement)
+                    future?.complete(data.contract)
+                } else {
+                    future?.completeExceptionally(NegotiationException(data.failureReason ?: "Unknown Error"))
                 }
             }
+        }
         negotiations[negotiation.data.id] = negotiation
     }
 
