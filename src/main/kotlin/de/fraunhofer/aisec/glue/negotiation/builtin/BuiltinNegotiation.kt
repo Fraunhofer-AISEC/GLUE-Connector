@@ -19,7 +19,6 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.future.asCompletableFuture
 import java.net.URI
 import java.nio.ByteBuffer
 import java.util.*
@@ -39,7 +38,7 @@ class BuiltinNegotiation(
     private val odrlParser: OdrlParser,
     val ownIdentity: String,
     scope: CoroutineScope,
-    initialStateObservers: Collection<suspend (BuiltinNegotiationData) -> Unit> = emptyList()
+    initialStateObservers: Collection<suspend (BuiltinNegotiationData) -> Unit> = emptyList(),
 ) : Negotiation {
     /**
      * A collection of observers notified about all state updates.
@@ -482,17 +481,18 @@ class BuiltinNegotiation(
         val agreement = offer.toAgreement(odrlParser, peerParty)
 
         if (!terminateOnError(
-            sendMessage(
-                "agreement",
-                ContractAgreementMessage(
-                    id = generateNextMessageId(),
-                    providerPid = id,
-                    consumerPid = peerPid,
-                    agreement = agreement,
-                    callbackAddress = ownEndpoint.toString(),
+                sendMessage(
+                    "agreement",
+                    ContractAgreementMessage(
+                        id = generateNextMessageId(),
+                        providerPid = id,
+                        consumerPid = peerPid,
+                        agreement = agreement,
+                        callbackAddress = ownEndpoint.toString(),
+                    ),
                 ),
-            ),
-        )) {
+            )
+        ) {
             return
         }
         updateState { it.copy(contract = agreement, state = NegotiationState.AGREED, nextSentMessage = it.nextSentMessage + 1) }
@@ -580,16 +580,17 @@ class BuiltinNegotiation(
         }
 
         if (!terminateOnError(
-            sendMessage(
-                "events",
-                ContractNegotiationEventMessage(
-                    id = generateNextMessageId(),
-                    providerPid = peerPid,
-                    consumerPid = id,
-                    eventType = NegotiationEvent.ACCEPTED,
+                sendMessage(
+                    "events",
+                    ContractNegotiationEventMessage(
+                        id = generateNextMessageId(),
+                        providerPid = peerPid,
+                        consumerPid = id,
+                        eventType = NegotiationEvent.ACCEPTED,
+                    ),
                 ),
-            ),
-        )) {
+            )
+        ) {
             return
         }
         updateState { it.copy(state = NegotiationState.ACCEPTED, contract = offer, nextSentMessage = it.nextSentMessage + 1) }
@@ -836,11 +837,10 @@ class BuiltinNegotiation(
         stateObservers.add { data ->
             if (data.state == NegotiationState.FINALIZED) {
                 resultFuture.complete(data.contract as OdrlAgreement)
-            }
-            else if (data.state == NegotiationState.TERMINATED) {
+            } else if (data.state == NegotiationState.TERMINATED) {
                 resultFuture.completeExceptionally(
                     NegotiationException(
-                        "Negotiation terminated: ${data.failureReason}"
+                        "Negotiation terminated: ${data.failureReason}",
                     ),
                 )
             }

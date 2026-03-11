@@ -41,14 +41,9 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
@@ -371,7 +366,13 @@ class NegotiationTest {
             val negotiation = negotiationManager.getAsProvider(respBody.providerPid, consumerPid, "consumer")
             assertNotNull(negotiation)
 
-            val observer = StateMachineObserver(NegotiationState.REQUESTED, NegotiationState.AGREED, NegotiationState.VERIFIED, NegotiationState.FINALIZED)
+            val observer =
+                StateMachineObserver(
+                    NegotiationState.REQUESTED,
+                    NegotiationState.AGREED,
+                    NegotiationState.VERIFIED,
+                    NegotiationState.FINALIZED,
+                )
             observer.record(negotiation)
 
             agreedContinueLatch.complete(Unit)
@@ -627,7 +628,7 @@ class NegotiationTest {
                     consumerNegotiationManager.startNegotiation(
                         providerAddress,
                         exampleOffer,
-                    ).await()
+                    ).awaitCompletion()
                 }
 
             coVerify { providerDataStore.addContract(negotiatedPolicy) }
@@ -837,9 +838,7 @@ class NegotiationTest {
         private val recordJob = CompletableDeferred<Unit>()
         private val actualStates = mutableListOf<NegotiationState>()
 
-        fun record(
-            negotiation: BuiltinNegotiation
-        ) {
+        fun record(negotiation: BuiltinNegotiation) {
             recordJob
             var currentState = negotiation.data.state
             actualStates.add(currentState)

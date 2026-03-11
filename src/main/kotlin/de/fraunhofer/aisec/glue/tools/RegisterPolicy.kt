@@ -141,14 +141,14 @@ fun main(args: Array<String>) {
         }
 
         val localAddress = addressChan.receive()
-        val negotiationFuture =
+        val negotiation =
             negotiationManager.startNegotiation(
                 connectorUrl,
                 URLBuilder(localAddress).appendPathSegments("negotiations").build(),
                 policy,
             )
 
-        val negotiatedContract = negotiationFuture.await()
+        val negotiatedContract = negotiation.awaitCompletion()
         val pretty = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(negotiatedContract)
         println("Successfully negotiated policy $pretty")
         closeChan.send(Unit)

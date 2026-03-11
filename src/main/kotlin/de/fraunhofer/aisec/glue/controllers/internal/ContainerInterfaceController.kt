@@ -220,7 +220,7 @@ class ContainerInterfaceController(
                                 )
                         }
 
-                        val negotiationResult = negotiation.await()
+                        val negotiationResult = negotiation.awaitCompletion()
                         callingPipeline.addContract(destinationHost, negotiationResult)
                         negotiationResult
                     }

@@ -59,31 +59,13 @@ class NegotiationApiController(
                             builder.buildString()
                         }
 
-                    val negotiationFuture = negotiationManager.startNegotiation(peerUrl, req.contractRequest)
-
-                    if (negotiationFuture.isCompleted) {
-                        try {
-                            negotiationFuture.await()
-                            // This is supposed to fail
-                            // If not, we have some really weird scheduling going on, but so be it
-                        } catch (e: Exception) {
-                            LOG.atDebug {
-                                message = "Contract negotiation completed exceptionally"
-                                cause = e
-                                payload = mapOf("peerConnector" to req.peer, "contractRequest" to req.contractRequest.uid)
-                            }
-                            // Note: This could also be an internal server error, but we will assume
-                            // that it's the user's fault
-                            call.respond(HttpStatusCode.BadRequest, "$e")
-                            return@post
-                        }
-                    }
+                    val negotiation = negotiationManager.startNegotiation(peerUrl, req.contractRequest)
 
                     // If we have a local pipeline, spawn it on success
                     if (req.localPipeline != null) {
                         CoroutineScope(Dispatchers.Default).launch {
                             // The error is handled in the negotiation subsystem, we just need to know to
-                            val contract = runCatching { negotiationFuture.await() }.getOrElse { return@launch }
+                            val contract = runCatching { negotiation.awaitCompletion() }.getOrElse { return@launch }
 
                             // Spawn a local pipeline with a terminating ATLS proxy that will spawn the remote pipeline.
                             // TODO: Note that the handling of the ATLS proxy is a bit dodgy at the moment, which will be
