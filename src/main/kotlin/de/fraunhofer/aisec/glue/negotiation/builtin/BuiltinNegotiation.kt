@@ -26,7 +26,7 @@ import java.util.concurrent.ConcurrentLinkedQueue
  * The main driver for the builtin DSP negotiation process.
  * The negotiation processes runs in a separate coroutine that accepts incoming messages with the [submitMessage]
  * function.
- * The state of the negotiation is observable via the [data] flow.
+ * All state updates are sent to all listeners in [stateObservers] synchronously.
  */
 class BuiltinNegotiation(
     initialData: BuiltinNegotiationData,
@@ -38,7 +38,18 @@ class BuiltinNegotiation(
     scope: CoroutineScope,
     initialStateObservers: Collection<suspend (BuiltinNegotiationData) -> Unit> = emptyList()
 ) : Negotiation {
+    /**
+     * A collection of observers notified about all state updates.
+     * All observers are called synchronously and in order of registration.
+     * [Exception]s in observers are caught and logged.
+     */
     val stateObservers: ConcurrentLinkedQueue<suspend (BuiltinNegotiationData) -> Unit> = ConcurrentLinkedQueue(initialStateObservers)
+
+    /**
+     * The current state of the negotiation.
+     * All updates to the state replace this object, meaning that references to this object will always capture a snapshot of the negotiation.
+     * To be notified of updates to this negotiation, register a listener with [stateObservers].
+     */
     var data = initialData
         private set
 
@@ -127,7 +138,7 @@ class BuiltinNegotiation(
         while (internalState !in listOf(NegotiationState.FINALIZED, NegotiationState.TERMINATED)) {
             val (req, response) = messageQueue.receive()
 
-            if (req.id == data.lastReceivedMessage) {
+            if (req.id == data.lastReceivedMessage && req !is InternalCancellationMessage) {
                 LOG.atDebug {
                     message = "Ignoring likely duplicate message"
                     payload =
@@ -149,6 +160,7 @@ class BuiltinNegotiation(
                 is ContractAgreementMessage -> handleAgreement(req, response)
                 is ContractAgreementVerificationMessage -> handleVerify(req, response)
                 is ContractNegotiationTerminationMessage -> handleTermination(req, response)
+                is InternalCancellationMessage -> terminateNegotiation("errCancelled", req.details)
                 else -> response.completeExceptionally(IllegalArgumentException("Unknown message type: ${req::class}"))
             }
         }
@@ -776,17 +788,8 @@ class BuiltinNegotiation(
      * Cancel the current negotiation with the provided [cause], sending a termination message to the provider.
      */
     override suspend fun cancel(cause: String?) {
-        //  termination message, but what do we do if the worker is stopped?
         if (workerJob.isActive) {
-            submitMessage(
-                ContractNegotiationTerminationMessage(
-                    id = "",
-                    providerPid = "",
-                    consumerPid = "",
-                    code = "errCancelled",
-                    reason = cause?.let(::listOf),
-                ),
-            )
+            submitMessage(InternalCancellationMessage(cause))
         } else {
             LOG.atDebug {
                 message = "The worker job is not active, trying to cancel directly"
@@ -801,6 +804,10 @@ class BuiltinNegotiation(
             }
             terminateNegotiation("errCancelled")
         }
+    }
+
+    private class InternalCancellationMessage(val details: String?) : DspMessage {
+        override val id = "internal cancellation message"
     }
 
     companion object {
