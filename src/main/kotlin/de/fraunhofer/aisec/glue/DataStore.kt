@@ -6,6 +6,7 @@ import de.fraunhofer.aisec.glue.tables.Contracts
 import de.fraunhofer.aisec.glue.tables.Lookups
 import de.fraunhofer.aisec.glue.tables.Negotiations
 import de.fraunhofer.iosb.odrl.OdrlPolicy
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ktor.http.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.asCoroutineDispatcher
@@ -18,7 +19,6 @@ import org.ktorm.entity.filter
 import org.ktorm.entity.find
 import org.ktorm.entity.map
 import org.ktorm.entity.sequenceOf
-import org.slf4j.LoggerFactory
 import java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor
 import kotlin.io.path.createTempDirectory
 
@@ -155,11 +155,11 @@ class DataStore(
             }
         }
 
-    suspend inline fun <T> ioAsync(crossinline block: suspend CoroutineScope.() -> T): T = withContext(LOOM_DISPATCHER) { block() }
-
     companion object {
         // see https://kt.academy/article/dispatcher-for-backend#why-loom-dispatcher-is-a-perfect-choice--but-only-once-it-gets-stable
         val LOOM_DISPATCHER = newVirtualThreadPerTaskExecutor().asCoroutineDispatcher()
-        private val LOG = LoggerFactory.getLogger(DataStore::class.java)
+        private val LOG = KotlinLogging.logger {}
+
+        suspend inline fun <T> ioAsync(crossinline block: suspend CoroutineScope.() -> T): T = withContext(LOOM_DISPATCHER) { block() }
     }
 }

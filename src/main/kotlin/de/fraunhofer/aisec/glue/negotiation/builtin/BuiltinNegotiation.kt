@@ -6,6 +6,7 @@ import de.fraunhofer.aisec.glue.negotiation.Negotiation
 import de.fraunhofer.aisec.glue.negotiation.NegotiationException
 import de.fraunhofer.aisec.glue.negotiation.edc.toEdcFormat
 import de.fraunhofer.aisec.glue.negotiation.toAgreement
+import de.fraunhofer.aisec.glue.plugins.EdcCompatPeerEndpointAttribute
 import de.fraunhofer.iosb.odrl.OdrlAgreement
 import de.fraunhofer.iosb.odrl.OdrlOffer
 import de.fraunhofer.iosb.odrl.OdrlParty
@@ -294,9 +295,11 @@ class BuiltinNegotiation(
 
         return httpClient.post(url) {
             contentType(ContentType.Application.Json)
-            // Override default auth by setting custom Authorization header
+            // Override default auth by setting a custom Authorization header
             headers.remove(HttpHeaders.Authorization)
             header(HttpHeaders.Authorization, authHeader)
+            // Pass the peer endpoint for more efficient EDC compat status caching
+            attributes.put(EdcCompatPeerEndpointAttribute, peerEndpoint.toString())
             setBody(message)
         }
     }

@@ -35,6 +35,7 @@ import io.ktor.client.engine.okhttp.*
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.auth.*
 import io.ktor.client.plugins.auth.providers.*
+import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.serialization.*
 import io.ktor.serialization.jackson.*
@@ -44,6 +45,7 @@ import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.calllogging.*
 import io.ktor.server.plugins.cors.routing.*
+import io.ktor.server.plugins.defaultheaders.*
 import io.ktor.server.request.*
 import io.ktor.server.routing.*
 import io.netty.handler.ssl.ClientAuth
@@ -75,13 +77,16 @@ val defaultDependencies by DI.Module {
                         transformRequest = makeOutgoingEdcPatcher(objectMapper, "client")
                     }
                 }
+                install(DefaultRequest) {
+                    header(HttpHeaders.UserAgent, Constants.TC_USER_AGENT)
+                }
                 install(ClientContentNegotiation) {
                     register(ContentType.Application.Json, instance())
                 }
                 install(Auth) {
                     basic {
                         credentials {
-                            val(username, password) = Utils.getCredentials()
+                            val (username, password) = Utils.getCredentials()
                             BasicAuthCredentials(username, password)
                         }
                     }
@@ -102,13 +107,16 @@ val defaultDependencies by DI.Module {
                     engine {
                         config {
                             val atlsManager = instance<AtlsManager>()
-                            sslSocketFactory(atlsManager.socketFactory, atlsManager.trustManager)
+                            sslSocketFactory(
+                                atlsManager.socketFactory,
+                                atlsManager.trustManager,
+                            )
                         }
                     }
                 }
-            }.also { client ->
+            }.apply {
                 // Monitor retry events for logging
-                client.monitor.subscribe(HttpRequestRetryEvent) { event ->
+                monitor.subscribe(HttpRequestRetryEvent) { event ->
                     val delayBase = 1.5
                     val nextDelay =
                         (delayBase * 1000 * delayBase.pow(event.retryCount.toDouble() - 1)).toLong()
@@ -128,9 +136,13 @@ val defaultDependencies by DI.Module {
     bind<OdrlParser>() with
         singleton {
             OdrlParser(
-                mapper = ObjectMapper(JsonFactoryBuilder().enable(StreamReadFeature.INCLUDE_SOURCE_IN_LOCATION).build()).apply {
-                    registerSubtypes(AtlsParameter::class.java)
-                },
+                mapper =
+                    ObjectMapper(
+                        JsonFactoryBuilder().enable(StreamReadFeature.INCLUDE_SOURCE_IN_LOCATION)
+                            .build(),
+                    ).apply {
+                        registerSubtypes(AtlsParameter::class.java)
+                    },
                 compactSerialization = true,
             )
         }
@@ -170,10 +182,29 @@ val defaultDependencies by DI.Module {
                 else -> BuiltinNegotiationController(instance(), instance(), instance())
             }
         }
-    bind<PipelineController>() with singleton { PipelineController(instance(), instance(), instance()) }
-    bind<NegotiationApiController>() with singleton { NegotiationApiController(instance(), instance()) }
+    bind<PipelineController>() with
+        singleton {
+            PipelineController(
+                instance(),
+                instance(),
+                instance(),
+            )
+        }
+    bind<NegotiationApiController>() with
+        singleton {
+            NegotiationApiController(
+                instance(),
+                instance(),
+            )
+        }
     bind<PipelineApiController>() with singleton { PipelineApiController(instance()) }
-    bind<RemotePipelineApiController>() with singleton { RemotePipelineApiController(instance(), instance()) }
+    bind<RemotePipelineApiController>() with
+        singleton {
+            RemotePipelineApiController(
+                instance(),
+                instance(),
+            )
+        }
     bind<AtlsConfig>() with singleton { instance<ConfigManager>().getConfig(::AtlsConfig) }
     bind<ContainerInterfaceController>() with
         singleton {
@@ -201,11 +232,12 @@ val defaultDependencies by DI.Module {
                     },
                 module = {
                     configureAuthentication()
-
+                    install(DefaultHeaders) {
+                        header(HttpHeaders.Server, Constants.TC_USER_AGENT)
+                    }
                     install(ServerContentNegotiation) {
                         register(ContentType.Application.Json, instance())
                     }
-
                     routing {
                         allInstances<AtlsController>().forEach { it.apply { registerRoutes() } }
                     }
@@ -268,19 +300,19 @@ fun Application.moduleWithDeps(dependencies: DirectDI) {
     LogbackObjectMapperInjector.register(dependencies.instance())
 
     configureAuthentication()
-
+    install(DefaultHeaders) {
+        header(HttpHeaders.Server, Constants.TC_USER_AGENT)
+    }
     install(CORS) {
         anyHost()
         allowMethod(HttpMethod.Delete)
         allowHeader(HttpHeaders.ContentType)
     }
-
     install(ServerContentNegotiation) {
         register(ContentType.Application.Json, dependencies.instance())
     }
-
     install(CallLogging) {
-        level = org.slf4j.event.Level.INFO
+        level = org.slf4j.event.Level.TRACE
         format { call ->
             val status = call.response.status()
             val httpMethod = call.request.httpMethod.value
@@ -289,7 +321,6 @@ fun Application.moduleWithDeps(dependencies: DirectDI) {
             "$httpMethod $uri -> $status (User-Agent: $userAgent)"
         }
     }
-
     routing {
         dependencies.allInstances<Controller>().forEach { it.apply { registerRoutes() } }
     }
