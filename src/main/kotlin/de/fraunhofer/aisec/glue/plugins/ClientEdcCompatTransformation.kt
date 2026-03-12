@@ -55,8 +55,10 @@ private suspend fun HttpRequestBuilder.shouldSkipEdcCompatTransformation(
         return true
     }
 
-    // We use either a URL prefix we got from upstream or the entire URL as the cache key
-    val cacheKey = getPeerEndpointPrefixOrFullRequestUrl()
+    // We use either the URL prefix we got from upstream or assume that no EDC compat
+    // transformations are required.
+    val cacheKey = getPeerEndpointPrefixOrFullRequestUrl() ?: return true
+
     trustedConnectorServerCache[cacheKey]?.let { return it }
 
     // If we did not find a match, we probe the server with the "cacheKey" as HEAD URL.
@@ -71,10 +73,5 @@ private suspend fun HttpRequestBuilder.shouldSkipEdcCompatTransformation(
     return shouldSkip
 }
 
-private fun HttpRequestBuilder.getPeerEndpointPrefixOrFullRequestUrl(): String {
-    return if (attributes.contains(EdcCompatPeerEndpointAttribute)) {
-        attributes[EdcCompatPeerEndpointAttribute]
-    } else {
-        url.buildString()
-    }
-}
+private fun HttpRequestBuilder.getPeerEndpointPrefixOrFullRequestUrl(): String? =
+    attributes.getOrNull(EdcCompatPeerEndpointAttribute)
