@@ -118,7 +118,7 @@ func (cp *ClientProxy) handleConnection(clientConn net.Conn) {
 		cp.tlsConfig,
 		attestedtls.WithCmcAddr(cp.proxyConfig.CmcAddress),
 		attestedtls.WithAttest(attestedtls.Attest_Mutual),
-		attestedtls.WithCmcApi(attestedtls.CmcApi_Socket),
+		attestedtls.WithCmcApi("socket"),
 		attestedtls.WithMtls(true),
 		attestedtls.WithApiSerializer(attestationreport.JsonSerializer{}),
 		attestedtls.WithResultCb(func(result *attestationreport.VerificationResult) {
@@ -211,7 +211,7 @@ func createClientTLSConfig(proxyConfig atlsProxyConfig) (*tls.Config, error) {
 
 	clientCert, err := attestedtls.GetCert(
 		attestedtls.WithCmcAddr(proxyConfig.CmcAddress),
-		attestedtls.WithCmcApi(attestedtls.CmcApi_Socket),
+		attestedtls.WithCmcApi("socket"),
 		attestedtls.WithApiSerializer(attestationreport.JsonSerializer{}),
 	)
 	if err != nil {

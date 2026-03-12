@@ -82,7 +82,7 @@ func (sp *ServerProxy) listen() error {
 		sp.tlsConfig,
 		attestedtls.WithCmcAddr(sp.proxyConfig.CmcAddress),
 		attestedtls.WithAttest(attestedtls.Attest_Mutual),
-		attestedtls.WithCmcApi(attestedtls.CmcApi_Socket),
+		attestedtls.WithCmcApi("socket"),
 		attestedtls.WithMtls(true),
 		attestedtls.WithApiSerializer(attestationreport.JsonSerializer{}),
 		attestedtls.WithResultCb(func(result *attestationreport.VerificationResult) {
@@ -151,7 +151,7 @@ func createServerTLSConfig(proxyConfig atlsProxyConfig) (*tls.Config, error) {
 
 	serverCert, err := attestedtls.GetCert(
 		attestedtls.WithCmcAddr(proxyConfig.CmcAddress),
-		attestedtls.WithCmcApi(attestedtls.CmcApi_Socket),
+		attestedtls.WithCmcApi("socket"),
 		attestedtls.WithApiSerializer(attestationreport.JsonSerializer{}),
 	)
 	if err != nil {
