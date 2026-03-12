@@ -10,12 +10,12 @@ class AtlsConfig(rawConfig: ApplicationConfig) : Config(rawConfig) {
 
     val proxyContainer by withDefault(
         stringProp(),
-        "container-registry.gitlab.cc-asp.fraunhofer.de/ccit-glue/usage-control/container-pipeline/atls-proxy:latest",
+        "container-registry.gitlab.cc-asp.fraunhofer.de/ccit-glue/usage-control/container-pipeline/atls-proxy:running-example",
     )
 
     val proxyHash by withDefault(
         stringProp(),
-        "sha256:a17650a85ae57d948fdd729bb0fa15ba2d56208370b841ed85bb853f57ff704d",
+        "sha256:ea0ffc24a3dc58455489f1c885244709d518aedfcbec965229b0f9191aa578ef",
     )
 
     val cmcAddress by withDefault(
