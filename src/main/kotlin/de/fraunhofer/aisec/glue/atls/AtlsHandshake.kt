@@ -316,7 +316,7 @@ class AtlsHandshake(
                 }
                 runBlocking(
                     handshakeScope.coroutineContext,
-                ) { cmcClient.verify(channelBinding, report, cacheKey) }.also { result ->
+                ) { cmcClient.verify(channelBinding, report, req.metadata, req.cacheMisses, cacheKey) }.also { result ->
                     LOG.atDebug {
                         message = "CMC verification completed"
                         payload = mapOf("verificationResult" to result)
