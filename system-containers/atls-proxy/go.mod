@@ -3,7 +3,7 @@ module atls-proxy
 go 1.25.0
 
 require (
-	github.com/Fraunhofer-AISEC/cmc v0.9.7
+	github.com/Fraunhofer-AISEC/cmc v0.9.8-0.20260311171329-d670b8866e89
 	golang.org/x/sync v0.20.0
 )
 
