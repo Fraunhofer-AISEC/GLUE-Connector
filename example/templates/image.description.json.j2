@@ -3,8 +3,8 @@
   "name": "de.example.image-description",
   "version": "{{ datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ') }}",
   "validity": {
-    "notBefore": "{{ (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%dT%H:%M:%SZ') }}",
-    "notAfter": "{{ (datetime.now() + timedelta(days=365 * 2)).strftime('%Y-%m-%dT%H:%M:%SZ') }}"
+    "notBefore": "{{ shell('date -u +"%Y-%m-%dT%H:%M:%SZ" -d "-1 day"') }}",
+    "notAfter": "{{ shell('date -u +"%Y-%m-%dT%H:%M:%SZ" -d "+100 years"') }}"
   },
   "description": "Image Description",
   "descriptions": [
