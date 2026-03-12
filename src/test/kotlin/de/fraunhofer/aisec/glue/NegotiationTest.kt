@@ -19,6 +19,7 @@ import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.engine.mock.*
+import io.ktor.client.plugins.DefaultRequest
 import io.ktor.client.plugins.auth.*
 import io.ktor.client.plugins.auth.providers.*
 import io.ktor.client.request.*
@@ -31,6 +32,7 @@ import io.ktor.server.config.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.calllogging.*
+import io.ktor.server.plugins.defaultheaders.DefaultHeaders
 import io.ktor.server.request.*
 import io.ktor.server.routing.*
 import io.ktor.server.testing.*
@@ -62,6 +64,9 @@ class NegotiationTest {
         HttpClient(MockEngine(mockFactory)) {
             install(ClientContentNegotiation) {
                 register(ContentType.Application.Json, JacksonConverter(objectMapper, streamRequestBody = false))
+            }
+            install(DefaultRequest) {
+                userAgent(Constants.TC_USER_AGENT)
             }
         }
 
@@ -271,6 +276,9 @@ class NegotiationTest {
                     validate { creds -> UserIdPrincipal(creds.name) }
                 }
             }
+            install(DefaultHeaders) {
+                header(HttpHeaders.Server, Constants.TC_USER_AGENT)
+            }
             routing {
                 controller.apply { registerRoutes() }
             }
@@ -314,7 +322,7 @@ class NegotiationTest {
                     }
                 }
             val dataStore = DataStore(objectMapper)
-            val configManager = ConfigManager(MapApplicationConfig("connector.identity" to "https://test-connector.local"))
+            val configManager = ConfigManager(MapApplicationConfig("connector.identity" to "https://test-connector.local", "connector.edcMode" to "none"))
             val negotiationManager =
                 BuiltinNegotiationManager(
                     httpClient,
@@ -412,7 +420,7 @@ class NegotiationTest {
                 }
             val dataStore = mockDataStore()
 
-            val configManager = ConfigManager(MapApplicationConfig("connector.identity" to "https://test-connector.local"))
+            val configManager = ConfigManager(MapApplicationConfig("connector.identity" to "https://test-connector.local", "connector.edcMode" to "none"))
             val negotiationManager =
                 BuiltinNegotiationManager(
                     httpClient,
@@ -521,7 +529,7 @@ class NegotiationTest {
 
             val providerDataStore = mockDataStore()
 
-            val providerConfig = MapApplicationConfig("connector.identity" to "http://dataowner.com/org")
+            val providerConfig = MapApplicationConfig("connector.identity" to "http://dataowner.com/org", "connector.edcMode" to "none")
             val providerConfigManager = ConfigManager(providerConfig)
             val providerNegotiationManager =
                 BuiltinNegotiationManager(
@@ -537,7 +545,7 @@ class NegotiationTest {
 
             val consumerDataStore = mockDataStore()
 
-            val consumerConfig = MapApplicationConfig("connector.identity" to "http://dataconsumer.com/org")
+            val consumerConfig = MapApplicationConfig("connector.identity" to "http://dataconsumer.com/org", "connector.edcMode" to "none")
             val consumerConfigManager = ConfigManager(consumerConfig)
             val consumerNegotiationManager =
                 BuiltinNegotiationManager(
@@ -581,6 +589,9 @@ class NegotiationTest {
                         format { call ->
                             "$role: ${call.request.httpMethod.value} ${call.request.path()} - ${call.response.status()}"
                         }
+                    }
+                    install(DefaultHeaders) {
+                        header(HttpHeaders.Server, Constants.TC_USER_AGENT)
                     }
                     routing {
                         controller.apply { registerRoutes() }

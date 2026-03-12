@@ -34,6 +34,7 @@ class EdcClientCompatTransformationTest {
                 ) {
                     install(ClientEdcCompatTransformation) {
                         transformRequest = { body ->
+                            println(body)
                             when (body) {
                                 is Payload -> body.copy(value = "transformed")
                                 else -> body
@@ -48,6 +49,7 @@ class EdcClientCompatTransformationTest {
             client.post("https://example.com/test") {
                 contentType(ContentType.Application.Json)
                 setBody(Payload("original"))
+                attributes.put(EdcCompatPeerEndpointAttribute, "https://example.com")
             }
 
             client.close()
