@@ -38,6 +38,7 @@ class CMCClient(
                 mapOf(
                     "requestType" to T::class.simpleName,
                     "cmcAddress" to cmcAddress,
+                    "serializedRequest" to serializedRequest.decodeToString(),
                 )
         }
 
@@ -77,8 +78,9 @@ class CMCClient(
                     payload =
                         mapOf(
                             "requestType" to T::class.simpleName,
-                            "replyType" to replyType,
+                            "replyType" to CMC_RESPONSE_LOOKUP[replyType]?.simpleName,
                             "cmcAddress" to cmcAddress,
+                            "serializedReply" to replyPayload.array().decodeToString(),
                         )
                 }
 
@@ -109,7 +111,7 @@ class CMCClient(
         val encodedNonce = Base64.encode(nonce)
         val req = AttestationRequest(VERSION, encodedNonce, cached)
         when (val resp = sendCmcRequest(req)) {
-            is AttestationResponse -> return CMCReport(resp.report, null, null)
+            is AttestationResponse -> return CMCReport(resp.report, resp.metadata, resp.cacheMisses)
             is SocketError -> throw IllegalStateException("Received error from CMC: ${resp.msg}")
             else -> throw IllegalStateException("Unexpected response type ${resp::class.qualifiedName}")
         }
@@ -121,10 +123,12 @@ class CMCClient(
     suspend fun verify(
         nonce: ByteArray,
         report: String,
+        metadata: Map<String, Any>?,
+        cacheMisses: List<String>? = null,
         peer: String? = null,
     ): Boolean {
         val encodedNonce = Base64.encode(nonce)
-        val req = VerificationRequest(VERSION, encodedNonce, report, peer)
+        val req = VerificationRequest(VERSION, encodedNonce, report, metadata, peer, cacheMisses)
         when (val resp = sendCmcRequest(req)) {
             is VerificationResponse -> return resp.result.summary.status == "success"
             is SocketError -> throw IllegalStateException("Received error from CMC: ${resp.msg}")

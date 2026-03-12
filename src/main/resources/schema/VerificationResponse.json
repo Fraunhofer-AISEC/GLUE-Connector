@@ -2,50 +2,6 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$ref": "#/$defs/VerificationResponse",
   "$defs": {
-    "AttestationResult": {
-      "properties": {
-        "version": {
-          "type": "string"
-        },
-        "type": {
-          "type": "string"
-        },
-        "summary": {
-          "$ref": "#/$defs/Result"
-        },
-        "prover": {
-          "type": "string"
-        },
-        "created": {
-          "type": "string"
-        },
-        "freshness": {
-          "$ref": "#/$defs/Result"
-        },
-        "certLevel": {
-          "type": "integer"
-        },
-        "measurements": {
-          "items": {
-            "$ref": "#/$defs/MeasurementResult"
-          },
-          "type": "array"
-        },
-        "metadata": {
-          "$ref": "#/$defs/MetadataSummary"
-        }
-      },
-      "type": "object",
-      "required": [
-        "version",
-        "type",
-        "summary",
-        "freshness",
-        "certLevel",
-        "measurements",
-        "metadata"
-      ]
-    },
     "BooleanMatch": {
       "properties": {
         "success": {
@@ -1468,7 +1424,8 @@
         "name",
         "version",
         "validity",
-        "summary"
+        "summary",
+        "signatureValidation"
       ]
     },
     "MetadataSummary": {
@@ -1498,6 +1455,7 @@
       "type": "object",
       "required": [
         "imageDescriptionResult",
+        "manifestResults",
         "compatibilityResult"
       ]
     },
@@ -2776,13 +2734,60 @@
           "type": "string"
         },
         "result": {
-          "$ref": "#/$defs/AttestationResult"
+          "$ref": "#/$defs/VerificationResult"
         }
       },
       "type": "object",
       "required": [
         "version",
         "result"
+      ]
+    },
+    "VerificationResult": {
+      "properties": {
+        "version": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "summary": {
+          "$ref": "#/$defs/Result"
+        },
+        "prover": {
+          "type": "string"
+        },
+        "created": {
+          "type": "string"
+        },
+        "certLevel": {
+          "type": "integer"
+        },
+        "measurements": {
+          "items": {
+            "$ref": "#/$defs/MeasurementResult"
+          },
+          "type": "array"
+        },
+        "metadata": {
+          "$ref": "#/$defs/MetadataSummary"
+        },
+        "reportSignatureCheck": {
+          "items": {
+            "$ref": "#/$defs/SignatureResult"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object",
+      "required": [
+        "version",
+        "type",
+        "summary",
+        "certLevel",
+        "measurements",
+        "metadata",
+        "reportSignatureCheck"
       ]
     },
     "VersionCheck": {
