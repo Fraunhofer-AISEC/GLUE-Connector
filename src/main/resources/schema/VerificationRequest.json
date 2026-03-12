@@ -15,8 +15,21 @@
           "type": "string",
           "contentEncoding": "base64"
         },
+        "metadata": {
+          "additionalProperties": {
+            "type": "string",
+            "contentEncoding": "base64"
+          },
+          "type": "object"
+        },
         "peer": {
           "type": "string"
+        },
+        "cacheMisses": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         },
         "policies": {
           "type": "string",
