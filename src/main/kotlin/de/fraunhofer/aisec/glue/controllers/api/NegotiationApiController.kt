@@ -7,9 +7,11 @@ import de.fraunhofer.aisec.glue.negotiation.NegotiationManager
 import de.fraunhofer.aisec.glue.pipeline.PipelineManager
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ktor.http.*
+import io.ktor.server.plugins.NotFoundException
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.ktor.server.util.getOrFail
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -87,7 +89,23 @@ class NegotiationApiController(
                         }
                     }
 
-                    call.respond(HttpStatusCode.Created)
+                    call.respond(HttpStatusCode.Created, NegotiationInfoResponse(
+                        id = negotiation.id,
+                        role = negotiation.role,
+                        peer = negotiation.peerIdentity ?: "unknown",
+                        state = negotiation.state,
+                    ))
+                }
+
+                get("{id}") {
+                    val id = call.parameters.getOrFail<String>("id")
+                    val negotiation = negotiationManager.getNegotiation(id) ?: throw NotFoundException()
+                    call.respond(NegotiationInfoResponse(
+                        id = negotiation.id,
+                        role = negotiation.role,
+                        peer = negotiation.peerIdentity ?: "unknown",
+                        state = negotiation.state,
+                    ))
                 }
 
                 delete {
