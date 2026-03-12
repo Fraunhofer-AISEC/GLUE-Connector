@@ -76,9 +76,9 @@ dependencies {
     implementation(libs.kotlinLogging.jvm)
     implementation(libs.ktor.server.cors)
     implementation(libs.ktor.server.callLogging)
+    implementation(libs.ktor.server.defaultHeaders)
     implementation(libs.flyway.core)
     implementation(libs.flyway.database.duckdb)
-    implementation("io.ktor:ktor-server-default-headers:3.3.3")
     // Parsson is the default implementation for jakarta.json-api 2.1.3
     runtimeOnly(libs.parsson)
 
