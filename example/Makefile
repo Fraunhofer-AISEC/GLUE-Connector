@@ -19,7 +19,7 @@ deploy-pipeline:
 out:
 	mkdir out
 
-out/compose.yml: out j2render $(EXAMPLE)-values.json templates/compose.yml.j2 out/images/atls-proxy.tar
+out/compose.yml: out j2render $(EXAMPLE)-values.json templates/compose.yml.j2
 	./j2render templates/compose.yml.j2 "$(EXAMPLE)-values.json" > out/compose.yml
 
 # PKI setup
