@@ -28,6 +28,7 @@ services:
     environment:
       DOCKER_HOST: "unix:///tmp/docker.sock"
     init: true
+    network_mode: service:{{ component.name }}-connector
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
