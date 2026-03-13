@@ -44,13 +44,15 @@ pull_and_get_hash() {
     local image_path="${REGISTRY}/${image_name}:latest"
     # shellcheck disable=SC2155
     local image=$(docker pull -q "$image_path")
+
+    # Get the canonical digest from the registry (manifest list)
     # shellcheck disable=SC2155
-    local image_hash=$(docker images --no-trunc --quiet "$image_path")
+    local image_digest=$(docker inspect --format='{{index .RepoDigests 0}}' "$image_path" | cut -d'@' -f2)
 
-    # Export the hash with the provided variable name
-    export "$var_name"="$image_hash"
+    # Export the digest with the provided variable name
+    export "$var_name"="$image_digest"
 
-    printf "Found hash of %s:\n%s\n" "$image" "$image_hash"
+    printf "Found digest of %s:\n%s\n" "$image" "$image_digest"
 }
 
 # Pull images and get their hashes
@@ -91,7 +93,7 @@ local_pipeline_def="$(envsubst <<<'{
       {
         "@type": "http://fhg.de/glue/AtlsProxyEndpoint",
         "http://fhg.de/glue/listenEndpoint": "0.0.0.0:8080",
-        "http://fhg.de/glue/nextEndpoint": "connector1:8444"
+        "http://fhg.de/glue/nextEndpoint": "intermediary:8444"
       }
     ]
   },
@@ -107,10 +109,20 @@ local_pipeline_def="$(envsubst <<<'{
 
 echo "Starting the contract negotiation..."
 negotiation_req="$(jo peer="https://$remote_connector:8444" contractRequest="$policy_content" localPipeline="$local_pipeline_def")"
-curl -v -X POST "${common_curl_opts[@]}" -d "$negotiation_req" "http://$local_connector:8080/api/v1.0/negotiations"
+negotiation_id=$(curl -v -X POST "${common_curl_opts[@]}" -d "$negotiation_req" "http://$local_connector:8080/api/v1.0/negotiations" | jq -r ".id")
 
 echo "Requesting negotiated contracts..."
-while (( "$(curl "${common_curl_opts[@]}" "http://$local_connector:8080/api/v1.0/negotiations" | jq "length")" != 0 )); do
+while true; do
+  negotiation_state="$(curl "${common_curl_opts[@]}" "http://$local_connector:8080/api/v1.0/negotiations/$negotiation_id" | jq -r ".state")"
+  case "$negotiation_state" in
+    FINALIZED)
+      break
+      ;;
+    TERMINATED)
+      echo "Negotiation was terminated with an error"
+      exit 1
+      ;;
+  esac
   sleep 1s
 done
 
