@@ -19,8 +19,14 @@ require() {
 
 require curl jq jo envsubst
 
+peer_proto="https"
+if [[ "$1" == "--no-atls" ]]; then
+  peer_proto="http"
+  shift
+fi
+
 if (( $# != 3 )); then
-  echo "Usage: $0 <local connector> <remote connector> <policy path>" >&2
+  echo "Usage: $0 [--no-atls] <local connector> <remote connector> <policy path>" >&2
   exit 1
 fi
 
@@ -86,12 +92,22 @@ fi
 policy_content="$(envsubst < "$policy")"
 
 echo "Starting the contract negotiation..."
-negotiation_req="$(jo peer="http://$remote_connector:8444" contractRequest="$policy_content")"
+negotiation_req="$(jo peer="$peer_proto://$remote_connector:8444" contractRequest="$policy_content")"
 negotiation_id=$(curl -v -X POST "${common_curl_opts[@]}" -d "$negotiation_req" "http://$local_connector:8080/api/v1.0/negotiations" | jq -r ".id")
 
 # TODO: Once the negotiation objects have some ID for the API, use it instead of querying all negotiations
 echo "Requesting negotiated contracts..."
-while [[ "$(curl "${common_curl_opts[@]}" "http://$local_connector:8080/api/v1.0/negotiations/$negotiation_id" | jq -r ".state")" != "FINALIZED" ]]; do
+while true; do
+  negotiation_state="$(curl "${common_curl_opts[@]}" "http://$local_connector:8080/api/v1.0/negotiations/$negotiation_id" | jq -r ".state")"
+  case "$negotiation_state" in
+    FINALIZED)
+      break
+      ;;
+    TERMINATED)
+      echo "Negotiation was terminated with an error"
+      exit 1
+      ;;
+  esac
   sleep 1s
 done
 
@@ -103,7 +119,7 @@ contract_target="$(jq -r '.["odrl:permission"][0]["odrl:target"]' <<< "$policy_c
 contract_action="$(jq -r '.["odrl:permission"][0]["odrl:action"]' <<< "$policy_content")"
 
 echo "Starting remote pipeline..."
-pipeline_start_req="$(jo peer="http://$remote_connector:8444" request="$(jo target="$contract_target" action="$contract_action" contractId="$contract_id")")"
+pipeline_start_req="$(jo peer="$peer_proto://$remote_connector:8444" request="$(jo target="$contract_target" action="$contract_action" contractId="$contract_id")")"
 pipeline_start_resp="$(curl -X POST "${common_curl_opts[@]}" -d "$pipeline_start_req" "http://$local_connector:8080/api/v1.0/remote-pipelines")"
 
 pipeline_id="$(jq -r '.localId' <<< "$pipeline_start_resp")"
