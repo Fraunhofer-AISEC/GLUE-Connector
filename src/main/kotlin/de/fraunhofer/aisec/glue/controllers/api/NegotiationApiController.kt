@@ -66,7 +66,7 @@ class NegotiationApiController(
                             val pipeline =
                                 pipelineManager.createPipeline(
                                     req.localPipeline,
-                                    "Local Pipeline for ${contract.uid}",
+                                    contract.uid.toString(),
                                     contract.permission[0].target!!.uid.toString(),
                                 )
                             LOG.atInfo {
