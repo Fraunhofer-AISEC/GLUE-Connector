@@ -19,17 +19,16 @@ class EdcClientCompatTransformationTest {
 
     private fun httpClient(mockFactory: suspend MockRequestHandleScope.(HttpRequestData) -> HttpResponseData) =
         HttpClient(MockEngine(mockFactory)) {
-            install(ClientContentNegotiation) {
-                register(ContentType.Application.Json, JacksonConverter(objectMapper, streamRequestBody = false))
-            }
             install(ClientEdcCompatTransformation) {
                 transformRequest = { body ->
-                    println(body)
                     when (body) {
                         is Payload -> body.copy(value = "transformed")
                         else -> body
                     }
                 }
+            }
+            install(ClientContentNegotiation) {
+                register(ContentType.Application.Json, JacksonConverter(objectMapper, streamRequestBody = false))
             }
         }
 
