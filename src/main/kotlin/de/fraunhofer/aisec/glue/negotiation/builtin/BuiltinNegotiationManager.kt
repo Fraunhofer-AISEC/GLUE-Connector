@@ -9,7 +9,6 @@ import de.fraunhofer.aisec.glue.models.negotiation.ContractOfferMessage
 import de.fraunhofer.aisec.glue.models.negotiation.ContractRequestMessage
 import de.fraunhofer.aisec.glue.models.negotiation.NegotiationState
 import de.fraunhofer.aisec.glue.negotiation.Negotiation
-import de.fraunhofer.aisec.glue.negotiation.NegotiationException
 import de.fraunhofer.aisec.glue.negotiation.NegotiationManager
 import de.fraunhofer.aisec.glue.negotiation.edc.toEdcFormat
 import de.fraunhofer.iosb.odrl.OdrlAgreement
@@ -201,7 +200,7 @@ open class BuiltinNegotiationManager(
                     ownIdentity = connectorConfig.identity,
                     scope = childScope,
                 )
-            observeNegotiationState(negotiation, null)
+            observeNegotiationState(negotiation)
 
             // This call here is kind of hacky since kotlin coroutines does not have condition variables.
             // In case the peer sends a message to our negotiation object before this function returns, we have it wait.
@@ -217,206 +216,65 @@ open class BuiltinNegotiationManager(
     }
 
     /**
-     * Create a new negotiation object from a consumer's request.
-     * If the request contains a PID for an existing negotiation, this function is equivalent to [getAsProvider].
+     * Create a new contract negotiation representation and write it to the data store.
      */
-    suspend fun createFromRequest(
-        request: ContractRequestMessage,
-        peerIdent: String?,
-    ): BuiltinNegotiation? {
-        val logParams = mutableMapOf<String, Any?>("consumerPid" to request.consumerPid, "peerIdentity" to peerIdent)
-
-        // We call this function when we receive a new contract request message, which can also happen for a follow-up
-        // request in case we reject the initial contract.
-        // In that special case, the negotiation already exists and we use the getter instead.
-        if (request.providerPid != null) {
-            LOG.atDebug {
-                message = "This negotiation already exists, switching to getter"
-                payload =
-                    buildMap {
-                        putAll(logParams)
-                        put("providerPid", request.providerPid)
-                    }
-            }
-            return getAsProvider(request.providerPid, request.consumerPid, peerIdent)
-        }
-
-        val providerPid = newProcessId()
-
-        logParams["id"] = providerPid
+    suspend fun createNegotiation(
+        role: Negotiation.Role,
+        peer: String?,
+        peerPid: String,
+        peerUrl: Url,
+        initialState: NegotiationState = NegotiationState.INITIAL,
+        callbackUrl: Url = connectorConfig.publicUrl,
+        contract: OdrlPolicy? = null,
+    ): BuiltinNegotiation {
+        val id = newProcessId()
         LOG.atDebug {
-            message = "Creating new negotiation object as provider for request"
-            payload = logParams
+            message = "Creating new negotiation object"
+            payload = mapOf("id" to id, "role" to role, "peer" to peer, "peerPid" to peerPid, "peerUrl" to peerUrl)
         }
 
-        val negotiation =
-            BuiltinNegotiation(
-                initialData =
-                    BuiltinNegotiationData(
-                        id = providerPid,
-                        role = Negotiation.Role.PROVIDER,
-                        peer = peerIdent,
-                        peerPid = request.consumerPid,
-                        startTimestamp = Clock.System.now(),
-                        state = NegotiationState.INITIAL,
-                        callbackUrl = connectorConfig.publicUrl,
-                        peerUrl = Url(request.callbackAddress),
-                    ),
-                httpClient = httpClient,
-                negotiator = defaultNegotiator,
-                objectMapper = objectMapper,
-                odrlParser = odrlParser,
-                ownIdentity = connectorConfig.identity,
-                scope = childScope,
-            )
-
-        observeNegotiationState(negotiation, null)
+        val negotiation = BuiltinNegotiation(
+            initialData = BuiltinNegotiationData(
+                id = id,
+                role = role,
+                peer = peer,
+                peerPid = peerPid,
+                startTimestamp = Clock.System.now(),
+                state = initialState,
+                callbackUrl = callbackUrl,
+                peerUrl = peerUrl,
+                contract = contract,
+            ),
+            httpClient = httpClient,
+            negotiator = defaultNegotiator,
+            objectMapper = objectMapper,
+            odrlParser = odrlParser,
+            ownIdentity = connectorConfig.identity,
+            scope = childScope,
+        )
+        observeNegotiationState(negotiation)
         return negotiation
     }
 
-    suspend fun createFromOffer(
-        request: ContractOfferMessage,
-        peerIdent: String,
-    ): BuiltinNegotiation? {
-        val logParams = mutableMapOf<String, Any?>("providerPid" to request.providerPid, "peerIdentity" to peerIdent)
+    /**
+     * Get the negotiation for the provided [id], [role], and [peer] identity.
+     */
+    suspend fun getNegotiation(id: String, role: Negotiation.Role?, peer: String?): BuiltinNegotiation? {
+        // Since all of our IDs are UUIDs, we can safely say that every other format will not be one of our negotiations
+        val parsedId = parsePid(id) ?: return null
 
-        if (request.consumerPid != null) {
-            LOG.atDebug {
-                message = "This negotiation already exists, switching to getter"
-                payload =
-                    buildMap {
-                        putAll(logParams)
-                        put("consumerPid", request.consumerPid)
-                    }
-            }
-            return getAsConsumer(request.consumerPid, request.providerPid, peerIdent)
-        }
-
-        val consumerPid = newProcessId()
-
-        logParams["id"] = consumerPid
-        LOG.atDebug {
-            message = "Creating new negotiation object for offer as consumer"
-            payload = logParams
-        }
-
-        val negotiation =
-            BuiltinNegotiation(
-                initialData =
-                    BuiltinNegotiationData(
-                        id = consumerPid,
-                        role = Negotiation.Role.CONSUMER,
-                        peer = peerIdent,
-                        peerPid = request.providerPid,
-                        startTimestamp = Clock.System.now(),
-                        state = NegotiationState.INITIAL,
-                        callbackUrl = connectorConfig.publicUrl,
-                        peerUrl = Url(request.callbackAddress),
-                    ),
-                httpClient = httpClient,
-                negotiator = defaultNegotiator,
-                objectMapper = objectMapper,
-                odrlParser = odrlParser,
-                ownIdentity = connectorConfig.identity,
-                scope = childScope,
-            )
-        observeNegotiationState(negotiation, null)
-        return negotiation
-    }
-
-    fun getAsProvider(
-        providerPid: String,
-        consumerPid: String?,
-        peerIdent: String?,
-    ): BuiltinNegotiation? {
-        val logParams = mutableMapOf<String, Any?>()
-        val parsedId = parsePid(providerPid) ?: return null
-        val negotiation = negotiations[parsedId] ?: return null
-        if (negotiation.role != Negotiation.Role.PROVIDER) {
-            // The ID is used, but not for a provider negotiation.
-            return null
-        }
-
-        logParams["providerPid"] = providerPid
-        logParams["consumerPid"] = consumerPid ?: "unset"
-        logParams["peerIdentity"] = peerIdent
-
-        if (consumerPid != null && negotiation.peerPid != consumerPid) {
-            LOG.atDebug {
-                message = "Cannot get negotiation as provider as the consumer pid does not match"
-                payload =
-                    buildMap {
-                        putAll(logParams)
-                        put("expectedConsumerPid", negotiation.peerPid)
-                    }
-            }
-            // While this would be more of a bad request scenario, but we just return not found in order to prevent
-            // even the remote possibility of probing for negotiations
-            return null
-        }
-
-        // We check if the identity of the negotiation partner is set correctly
-        if (negotiation.peerIdentity != peerIdent) {
-            LOG.atDebug {
-                message = "Cannot get negotiation as provider as the peer identity does not match"
-                payload =
-                    buildMap {
-                        putAll(logParams)
-                        put("expectedPeerIdentity", negotiation.peerIdentity)
-                    }
-            }
-            return null
-        }
-
-        return negotiation
-    }
-
-    private fun parsePid(providerPid: String): UUID? {
-        val urnPattern = Regex("(?:urn:uuid:)?([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})")
-        return urnPattern.find(providerPid)?.groupValues?.get(1)?.let { UUID.fromString(it) }
-    }
-
-    suspend fun getAsConsumer(
-        consumerPid: String,
-        providerPid: String?,
-        peerIdent: String?,
-    ): BuiltinNegotiation? {
-        val logParams =
-            mutableMapOf("consumerPid" to consumerPid, "providerPid" to (providerPid ?: "unset"), "peerIdentity" to peerIdent)
-
-        val parsedId = parsePid(consumerPid) ?: return null
         val negotiation = negotiations[parsedId] ?: pendingConsumerNegotiations[parsedId]?.await() ?: return null
-        if (negotiation.role != Negotiation.Role.CONSUMER) {
-            // The ID is used, but not for a consumer negotiation.
-            return null
-        }
-
-        if (providerPid != null && negotiation.peerPid != providerPid) {
-            LOG.atDebug {
-                message = "Cannot get negotiation as consumer as the provider pid does not match"
-                payload =
-                    buildMap {
-                        putAll(logParams)
-                        put("expectedProviderPid", negotiation.peerPid)
-                    }
-            }
-            return null
-        }
-
-        if (negotiation.peerIdentity != peerIdent) {
-            LOG.atDebug {
-                message = "Cannot get negotiation as consumer as the peer identity does not match"
-                payload =
-                    buildMap {
-                        putAll(logParams)
-                        put("expectedPeerIdentity", negotiation.peerIdentity)
-                    }
+        if ((role != null && negotiation.role != role) || negotiation.peerIdentity != peer) {
+            LOG.atTrace {
+                message = "A requested negotiation exists but its role or identity do not match"
+                payload = mapOf("id" to id, "role" to role, "peer" to peer, "expectedRole" to negotiation.role, "expectedPeer" to negotiation.peerIdentity)
             }
             return null
         }
 
         return negotiation
     }
+
 
     override suspend fun getNegotiations(): Collection<Negotiation> {
         return negotiations.values.toList()
@@ -426,15 +284,19 @@ open class BuiltinNegotiationManager(
         return parsePid(id)?.let(negotiations::get)
     }
 
-    fun newProcessId(): UUID = UUID.randomUUID()
+    private fun parsePid(providerPid: String): UUID? {
+        val urnPattern = Regex("(?:urn:uuid:)?([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})")
+        return urnPattern.find(providerPid)?.groupValues?.get(1)?.let { UUID.fromString(it) }
+    }
+
+    private fun newProcessId(): UUID = UUID.randomUUID()
 
     /**
      * Observe updates to the negotiation state and updates and dispatch them accordingly.
      * Optionally accepts a future to receive the final contract when finishing the negotiation.
      */
     private suspend fun observeNegotiationState(
-        negotiation: BuiltinNegotiation,
-        future: CompletableDeferred<OdrlAgreement>?,
+        negotiation: BuiltinNegotiation
     ) {
         dataStore.addNegotiation(negotiation.data)
         negotiation.stateObservers.add { data ->
@@ -446,13 +308,8 @@ open class BuiltinNegotiationManager(
             dataStore.updateNegotiation(data)
 
             if (data.state == NegotiationState.FINALIZED || data.state == NegotiationState.TERMINATED) {
-                if (data.state == NegotiationState.FINALIZED) {
-                    assert(data.contract != null && data.contract is OdrlAgreement)
-                    dataStore.addContract(data.contract as OdrlAgreement)
-                    future?.complete(data.contract)
-                } else {
-                    future?.completeExceptionally(NegotiationException(data.failureReason ?: "Unknown Error"))
-                }
+                assert(data.contract != null && data.contract is OdrlAgreement)
+                dataStore.addContract(data.contract as OdrlAgreement)
             }
         }
         negotiations[negotiation.data.id] = negotiation

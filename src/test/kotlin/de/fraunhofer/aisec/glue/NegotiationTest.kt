@@ -123,12 +123,7 @@ class NegotiationTest {
                     offer = exampleOffer,
                 )
 
-            val negotiation =
-                negotiationManager.createFromRequest(
-                    contractRequest,
-                    "http://dataconsumer.com/org",
-                )
-            assertNotNull(negotiation)
+            val negotiation = negotiationManager.createNegotiation(Negotiation.Role.PROVIDER, null, contractRequest.consumerPid, Url("https://consumer"))
 
             val stateMachineObserver =
                 StateMachineObserver(
@@ -210,12 +205,7 @@ class NegotiationTest {
                     offer = exampleOffer,
                 )
 
-            val negotiation =
-                negotiationManager.createFromOffer(
-                    contractOffer,
-                    "provider",
-                )
-            assertNotNull(negotiation)
+            val negotiation = negotiationManager.createNegotiation(Negotiation.Role.CONSUMER, null, contractOffer.providerPid, Url("https://provider"))
 
             val stateMachineObserver =
                 StateMachineObserver(
@@ -358,7 +348,7 @@ class NegotiationTest {
 
             agreedLatch.await()
 
-            val negotiation = negotiationManager.getAsProvider(respBody.providerPid, consumerPid, "consumer")
+            val negotiation = negotiationManager.getNegotiation(respBody.providerPid, Negotiation.Role.PROVIDER, "consumer")
             assertNotNull(negotiation)
 
             val observer =
@@ -456,7 +446,7 @@ class NegotiationTest {
 
             acceptedLatch.await()
 
-            val negotiation = negotiationManager.getAsConsumer(respBody.consumerPid, providerPid, "provider")
+            val negotiation = negotiationManager.getNegotiation(respBody.consumerPid, Negotiation.Role.CONSUMER, "provider")
             assertNotNull(negotiation)
 
             val observer =
