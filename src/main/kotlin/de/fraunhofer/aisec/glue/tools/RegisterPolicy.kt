@@ -59,17 +59,11 @@ fun main(args: Array<String>) {
         exitProcess(1)
     }
 
-    val connectorUrl =
-        run {
-            val address = if (connectorAddress.contains("://")) connectorAddress else "http://$connectorAddress"
-            val builder = URLBuilder(address)
-
-            if (builder.pathSegments.isEmpty()) {
-                builder.path("negotiations")
-            }
-
-            builder.build()
-        }
+    val connectorUrl = if (connectorAddress.contains("://")) {
+        Url(connectorAddress)
+    } else {
+        Url("http://$connectorAddress")
+    }
 
     val policy: OdrlOffer =
         if (policyPath == "-") {

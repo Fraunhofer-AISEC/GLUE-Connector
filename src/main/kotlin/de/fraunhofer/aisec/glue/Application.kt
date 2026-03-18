@@ -18,7 +18,6 @@ import de.fraunhofer.aisec.glue.negotiation.NegotiationManager
 import de.fraunhofer.aisec.glue.negotiation.builtin.BuiltinNegotiationManager
 import de.fraunhofer.aisec.glue.negotiation.builtin.DummyNegotiator
 import de.fraunhofer.aisec.glue.negotiation.edc.EdcQuirks.makeOutgoingEdcPatcher
-import de.fraunhofer.aisec.glue.negotiation.edc.EdcSidecarNegotiationManager
 import de.fraunhofer.aisec.glue.pipeline.Backend
 import de.fraunhofer.aisec.glue.pipeline.PipelineManager
 import de.fraunhofer.aisec.glue.pipeline.RemotePipelineManager
@@ -157,28 +156,18 @@ val defaultDependencies by DI.Module {
     bind<ConnectorConfig>() with singleton { instance<ConfigManager>().getConfig(::ConnectorConfig) }
     bind<NegotiationManager>() with
         singleton {
-            when (instance<ConnectorConfig>().edcMode) {
-                ConnectorConfig.EdcMode.SIDECAR ->
-                    EdcSidecarNegotiationManager(
-                        instance(),
-                        instance(),
-                        instance(),
-                    )
-                else ->
-                    BuiltinNegotiationManager(
-                        instance(),
-                        instance(),
-                        DummyNegotiator(),
-                        instance(),
-                        instance(),
-                        instance(),
-                    )
-            }
+            BuiltinNegotiationManager(
+                instance(),
+                instance(),
+                DummyNegotiator(),
+                instance(),
+                instance(),
+                instance(),
+            )
         }
     bind<NegotiationController>() with
         singleton {
             when (instance<ConnectorConfig>().edcMode) {
-                ConnectorConfig.EdcMode.SIDECAR -> object : NegotiationController {}
                 else -> BuiltinNegotiationController(instance(), instance(), instance())
             }
         }

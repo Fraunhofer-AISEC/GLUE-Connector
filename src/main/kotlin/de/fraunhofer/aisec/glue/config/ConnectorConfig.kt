@@ -28,7 +28,6 @@ class ConnectorConfig(inner: ApplicationConfig) : Config(inner) {
     enum class EdcMode {
         NONE,
         COMPAT,
-        SIDECAR,
     }
 
     val edcMode by withDefault(

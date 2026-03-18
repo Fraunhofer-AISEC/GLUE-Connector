@@ -204,7 +204,7 @@ class ContainerInterfaceController(
                         // TODO: Replace with more generic handler once the negotiation-next branch is merged
                         val negotiation =
                             negotiationManager.startNegotiation(
-                                "$remotePeerProtocol://$destinationHost/negotiations",
+                                "$remotePeerProtocol://$destinationHost",
                                 convertedNextPolicy,
                             )
 

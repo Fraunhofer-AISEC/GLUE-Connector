@@ -87,11 +87,11 @@ policy_content="$(envsubst < "$policy")"
 
 echo "Starting the contract negotiation..."
 negotiation_req="$(jo peer="http://$remote_connector:8444" contractRequest="$policy_content")"
-negotiation_id=$(curl -v -X POST "${common_curl_opts[@]}" -d "$negotiation_req" "http://$local_connector:8080/api/v1.0/negotiations" | jq ".id")
+negotiation_id=$(curl -v -X POST "${common_curl_opts[@]}" -d "$negotiation_req" "http://$local_connector:8080/api/v1.0/negotiations" | jq -r ".id")
 
 # TODO: Once the negotiation objects have some ID for the API, use it instead of querying all negotiations
 echo "Requesting negotiated contracts..."
-while (( "$(curl "${common_curl_opts[@]}" "http://$local_connector:8080/api/v1.0/negotiations/$negotiation_id" | jq "state")" != "FINALIZED" )); do
+while [[ "$(curl "${common_curl_opts[@]}" "http://$local_connector:8080/api/v1.0/negotiations/$negotiation_id" | jq -r ".state")" != "FINALIZED" ]]; do
   sleep 1s
 done
 
