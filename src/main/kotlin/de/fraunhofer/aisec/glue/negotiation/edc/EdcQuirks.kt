@@ -18,7 +18,7 @@ import de.fraunhofer.iosb.odrl.OdrlPolicy
 import de.fraunhofer.iosb.odrl.RdfIdentifiers
 import de.fraunhofer.iosb.odrl.glue.GlueIdentifiers
 import io.github.oshai.kotlinlogging.KotlinLogging
-import java.io.ByteArrayInputStream
+import jakarta.json.JsonStructure
 import java.net.URI
 import java.net.URISyntaxException
 import kotlin.reflect.full.findAnnotation
@@ -103,27 +103,6 @@ object EdcQuirks {
     }
 
     /**
-     * For some reason, the jsonld compaction makes `@type` to `type` in the [EdcSidecarNegotiationManager]'s call to
-     * [ObjectMapper.writeValueAsString].
-     * While this gets somehow remedied before we send out our requests it is an issue when we stringify values for the
-     * EDC.
-     * For this reason, this function recursively replaces all `type` properties with `@type`.
-     */
-    @Suppress("DEPRECATION")
-    @Deprecated("Should have been fixed upstream")
-    fun rewriteTypeFields(node: JsonNode) {
-        node.walkObjects {
-            remove("type").let { type ->
-                val copy = mutableListOf<Map.Entry<String, JsonNode>>()
-                properties().forEach { copy.add(it) }
-                removeAll()
-                set<JsonNode>("@type", type)
-                copy.forEach { (k, v) -> set<JsonNode>(k, v) }
-            }
-        }
-    }
-
-    /**
      * As all the GLUE-tags in ODRL policies are not in the actual standard, the EDC is unable to work with them.
      * Instead of just ignoring them or passing them through as strings, the EDC just stringifies all of our items, but
      * only during serialization.
@@ -149,8 +128,8 @@ object EdcQuirks {
         // The EDC stores its stringified values in expanded representation,
         // so we need to convert to compact JsonLd and back to expanded representation.
         fun stringifyNode(node: JsonNode): String {
-            val compactString = objectMapper.writeValueAsString(node)
-            val document = JsonDocument.of(ByteArrayInputStream(compactString.toByteArray()))
+            val jsonStructure = objectMapper.convertValue(node, JsonStructure::class.java)
+            val document = JsonDocument.of(jsonStructure)
             val expanded = JsonLd.expand(document).options(JsonLdOptions()).get()
             return expanded[0].toString()
         }

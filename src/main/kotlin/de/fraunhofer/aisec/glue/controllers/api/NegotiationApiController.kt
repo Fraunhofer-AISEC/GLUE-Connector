@@ -7,11 +7,11 @@ import de.fraunhofer.aisec.glue.negotiation.NegotiationManager
 import de.fraunhofer.aisec.glue.pipeline.PipelineManager
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ktor.http.*
-import io.ktor.server.plugins.NotFoundException
+import io.ktor.server.plugins.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import io.ktor.server.util.getOrFail
+import io.ktor.server.util.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -47,17 +47,11 @@ class NegotiationApiController(
                     val req = call.receive<NegotiationCreationRequest>()
                     //  the url and protocol version is derived.
                     //  For not, it is just the URL with some simple parsing.
-                    val peerUrl =
-                        run {
-                            val address = if (req.peer.contains("://")) req.peer else "http://${req.peer}"
-                            val builder = URLBuilder(address)
-
-                            if (builder.pathSegments.isEmpty()) {
-                                builder.path("negotiations")
-                            }
-
-                            builder.buildString()
-                        }
+                    val peerUrl = if (req.peer.contains("://")) {
+                        req.peer
+                    } else {
+                        "http://${req.peer}"
+                    }
 
                     val negotiation = negotiationManager.startNegotiation(peerUrl, req.contractRequest)
 

@@ -191,7 +191,7 @@ class ContainerInterfaceController(
 
                         val negotiation =
                             negotiationManager.startNegotiation(
-                                "$remotePeerProtocol://$destinationHost/negotiations",
+                                "$remotePeerProtocol://$destinationHost",
                                 convertedNextPolicy,
                             )
 
