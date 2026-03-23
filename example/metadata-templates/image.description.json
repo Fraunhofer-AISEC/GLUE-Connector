@@ -1,10 +1,10 @@
 {
   "type": "Image Description",
   "name": "de.example.image-description",
-  "version": "{{ shell('date -u +"%Y-%m-%dT%H:%M:%SZ"') }}",
+  "version": "2026-03-23T12:00:00Z",
   "validity": {
-    "notBefore": "{{ shell('date -u +"%Y-%m-%dT%H:%M:%SZ" -d "-1 day"') }}",
-    "notAfter": "{{ shell('date -u +"%Y-%m-%dT%H:%M:%SZ" -d "+100 years"') }}"
+    "notBefore": "2026-03-22T12:00:00Z",
+    "notAfter": "2126-03-23T12:00:00Z"
   },
   "description": "Image Description",
   "descriptions": [
