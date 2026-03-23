@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-out_dir="${1:-out/pki}"
+out_dir="${1:-pki}"
 
 mkdir -p "$out_dir"
 

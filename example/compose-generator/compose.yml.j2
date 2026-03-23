@@ -10,7 +10,7 @@ services:
     volumes:
       - {{ component.name }}-tmp:/tmp
       - ./data:/data
-      - ./out/pki:/pki:ro
+      - ./pki:/pki:ro
     env_file: .env
     environment:
       AUTH_USERNAME: "${AUTH_USERNAME}"
@@ -24,29 +24,15 @@ services:
     privileged: true
     volumes:
       - {{ component.name }}-tmp:/tmp
-      - ./out/images:/images:ro
     environment:
       DOCKER_HOST: "unix:///tmp/docker.sock"
     init: true
     network_mode: service:{{ component.name }}-connector
-    entrypoint: ["/bin/sh", "-c"]
-    command:
-      - |
-        dockerd-entrypoint.sh &
-        DOCKER_PID=$$!
-
-        while ! docker info >/dev/null 2>&1; do sleep 1; done
-
-        for img in /images/*.tar; do
-          [ -f "$$img" ] && docker load -i "$$img"
-        done
-
-        wait $$DOCKER_PID
 
   {{ component.name }}-cmc:
     build:
       context: .
-      dockerfile: cmc.dockerfile
+      dockerfile: dockerfiles/cmc.dockerfile
     init: true
     entrypoint: ["/bin/sh", "-c"]
     command:
@@ -61,7 +47,7 @@ services:
     volumes:
       - {{ component.name }}-tmp:/tmp
       - ./data:/data
-      - ./out/pki:/pki:ro
+      - ./pki:/pki:ro
       - metadata:/metadata
       - tpm-sysfs-hack:/sys/class/tpm/tpm0/
     # The connector and the cmc need to share one hostname in order to allow the connector to use the CMC's certificate
@@ -70,7 +56,7 @@ services:
   {{ component.name }}-swtpm:
     build:
         context: .
-        dockerfile: swtpm.dockerfile
+        dockerfile: dockerfiles/swtpm.dockerfile
     init: true
     command:
       - |
@@ -116,8 +102,8 @@ services:
       start_period: 2s
     volumes:
       - ./data:/data:ro
-      - ./out/pki:/pki:ro
-      - ./out/metadata-templates:/metadata-templates:ro
+      - ./pki:/pki:ro
+      - ./metadata-templates:/metadata-templates:ro
       - metadata:/metadata
 
 volumes:

@@ -1,0 +1,280 @@
+services:
+
+  #
+  # Services for the initiator
+  #
+
+  initiator-connector:
+    image: container-pipeline:1.0-SNAPSHOT
+    hostname: initiator
+    volumes:
+      - initiator-tmp:/tmp
+      - ./data:/data
+      - ./pki:/pki:ro
+    env_file: .env
+    environment:
+      AUTH_USERNAME: "${AUTH_USERNAME}"
+      AUTH_PASSWORD: "${AUTH_PASSWORD}"
+      DOCKER_HOST: "unix:///tmp/docker.sock"
+      JAVA_TOOL_OPTIONS: "-agentlib:jdwp=transport=dt_socket,address=*:5005,server=y,suspend=n"
+      PUBLIC_URL: "https://initiator:8444"
+
+  initiator-docker:
+    image: docker:29-dind
+    privileged: true
+    volumes:
+      - initiator-tmp:/tmp
+    environment:
+      DOCKER_HOST: "unix:///tmp/docker.sock"
+    init: true
+    network_mode: service:initiator-connector
+
+  initiator-cmc:
+    build:
+      context: .
+      dockerfile: dockerfiles/cmc.dockerfile
+    init: true
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        ln -s /tmp/tpm0 /dev/tpm0
+        /opt/cmcd -config /data/cmcd-conf.json
+    depends_on:
+      initiator-swtpm:
+        condition: service_healthy
+      estserver:
+        condition: service_healthy
+    volumes:
+      - initiator-tmp:/tmp
+      - ./data:/data
+      - ./pki:/pki:ro
+      - metadata:/metadata
+      - tpm-sysfs-hack:/sys/class/tpm/tpm0/
+    # The connector and the cmc need to share one hostname in order to allow the connector to use the CMC's certificate
+    network_mode: service:initiator-connector
+
+  initiator-swtpm:
+    build:
+        context: .
+        dockerfile: dockerfiles/swtpm.dockerfile
+    init: true
+    command:
+      - |
+        mkdir /tmp/swtpm-state
+        swtpm_setup --tpm2 --tpmstate /tmp/swtpm-state --create-ek-cert
+        swtpm socket --tpm2 --tpmstate dir=/tmp/swtpm-state --server type=unixio,path=/tmp/tpm0 --flags not-need-init,startup-clear --log level=20
+    healthcheck:
+      test: ["CMD", "[", "-S", "/tmp/tpm0", "]"]
+      interval: 1s
+      timeout: 5s
+      retries: 10
+      start_period: 2s
+    volumes:
+      - initiator-tmp:/tmp
+      - ./data:/data
+
+  #
+  # Services for the intermediary
+  #
+
+  intermediary-connector:
+    image: container-pipeline:1.0-SNAPSHOT
+    hostname: intermediary
+    volumes:
+      - intermediary-tmp:/tmp
+      - ./data:/data
+      - ./pki:/pki:ro
+    env_file: .env
+    environment:
+      AUTH_USERNAME: "${AUTH_USERNAME}"
+      AUTH_PASSWORD: "${AUTH_PASSWORD}"
+      DOCKER_HOST: "unix:///tmp/docker.sock"
+      JAVA_TOOL_OPTIONS: "-agentlib:jdwp=transport=dt_socket,address=*:5005,server=y,suspend=n"
+      PUBLIC_URL: "https://intermediary:8444"
+
+  intermediary-docker:
+    image: docker:29-dind
+    privileged: true
+    volumes:
+      - intermediary-tmp:/tmp
+    environment:
+      DOCKER_HOST: "unix:///tmp/docker.sock"
+    init: true
+    network_mode: service:intermediary-connector
+
+  intermediary-cmc:
+    build:
+      context: .
+      dockerfile: dockerfiles/cmc.dockerfile
+    init: true
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        ln -s /tmp/tpm0 /dev/tpm0
+        /opt/cmcd -config /data/cmcd-conf.json
+    depends_on:
+      intermediary-swtpm:
+        condition: service_healthy
+      estserver:
+        condition: service_healthy
+    volumes:
+      - intermediary-tmp:/tmp
+      - ./data:/data
+      - ./pki:/pki:ro
+      - metadata:/metadata
+      - tpm-sysfs-hack:/sys/class/tpm/tpm0/
+    # The connector and the cmc need to share one hostname in order to allow the connector to use the CMC's certificate
+    network_mode: service:intermediary-connector
+
+  intermediary-swtpm:
+    build:
+        context: .
+        dockerfile: dockerfiles/swtpm.dockerfile
+    init: true
+    command:
+      - |
+        mkdir /tmp/swtpm-state
+        swtpm_setup --tpm2 --tpmstate /tmp/swtpm-state --create-ek-cert
+        swtpm socket --tpm2 --tpmstate dir=/tmp/swtpm-state --server type=unixio,path=/tmp/tpm0 --flags not-need-init,startup-clear --log level=20
+    healthcheck:
+      test: ["CMD", "[", "-S", "/tmp/tpm0", "]"]
+      interval: 1s
+      timeout: 5s
+      retries: 10
+      start_period: 2s
+    volumes:
+      - intermediary-tmp:/tmp
+      - ./data:/data
+
+  #
+  # Services for the destination
+  #
+
+  destination-connector:
+    image: container-pipeline:1.0-SNAPSHOT
+    hostname: destination
+    volumes:
+      - destination-tmp:/tmp
+      - ./data:/data
+      - ./pki:/pki:ro
+    env_file: .env
+    environment:
+      AUTH_USERNAME: "${AUTH_USERNAME}"
+      AUTH_PASSWORD: "${AUTH_PASSWORD}"
+      DOCKER_HOST: "unix:///tmp/docker.sock"
+      JAVA_TOOL_OPTIONS: "-agentlib:jdwp=transport=dt_socket,address=*:5005,server=y,suspend=n"
+      PUBLIC_URL: "https://destination:8444"
+
+  destination-docker:
+    image: docker:29-dind
+    privileged: true
+    volumes:
+      - destination-tmp:/tmp
+    environment:
+      DOCKER_HOST: "unix:///tmp/docker.sock"
+    init: true
+    network_mode: service:destination-connector
+
+  destination-cmc:
+    build:
+      context: .
+      dockerfile: dockerfiles/cmc.dockerfile
+    init: true
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        ln -s /tmp/tpm0 /dev/tpm0
+        /opt/cmcd -config /data/cmcd-conf.json
+    depends_on:
+      destination-swtpm:
+        condition: service_healthy
+      estserver:
+        condition: service_healthy
+    volumes:
+      - destination-tmp:/tmp
+      - ./data:/data
+      - ./pki:/pki:ro
+      - metadata:/metadata
+      - tpm-sysfs-hack:/sys/class/tpm/tpm0/
+    # The connector and the cmc need to share one hostname in order to allow the connector to use the CMC's certificate
+    network_mode: service:destination-connector
+
+  destination-swtpm:
+    build:
+        context: .
+        dockerfile: dockerfiles/swtpm.dockerfile
+    init: true
+    command:
+      - |
+        mkdir /tmp/swtpm-state
+        swtpm_setup --tpm2 --tpmstate /tmp/swtpm-state --create-ek-cert
+        swtpm socket --tpm2 --tpmstate dir=/tmp/swtpm-state --server type=unixio,path=/tmp/tpm0 --flags not-need-init,startup-clear --log level=20
+    healthcheck:
+      test: ["CMD", "[", "-S", "/tmp/tpm0", "]"]
+      interval: 1s
+      timeout: 5s
+      retries: 10
+      start_period: 2s
+    volumes:
+      - destination-tmp:/tmp
+      - ./data:/data
+
+
+  #
+  # Infrastructure
+  #
+
+  estserver:
+    build:
+      context: .
+      dockerfile: cmc.dockerfile
+    command:
+      - |
+        find /metadata-templates -maxdepth 1 -type f | while read -r path; do
+          out_file="$$(basename "$$path")"
+
+          /opt/metasign -in "$${path}" \
+            -out "/metadata/$${out_file}" \
+            -keys /pki/est-signing-key.pem \
+            -x5cs "/pki/est-signing-cert.pem,/pki/ca-cert.pem"
+        done
+
+        /opt/estserver -config /data/est-conf.json
+    healthcheck:
+      test: ["CMD", "curl", "-k", "https://localhost:9000"]
+      interval: 1s
+      timeout: 5s
+      retries: 10
+      start_period: 2s
+    volumes:
+      - ./data:/data:ro
+      - ./pki:/pki:ro
+      - ./metadata-templates:/metadata-templates:ro
+      - metadata:/metadata
+
+volumes:
+
+  initiator-tmp:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+
+  intermediary-tmp:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+
+  destination-tmp:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+
+  metadata:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+  tpm-sysfs-hack: {}
