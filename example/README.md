@@ -8,12 +8,33 @@ data-plane messages over attested TLS.
 
 ## Dependencies
 
-TODO: Collect all dependencies with apt/pacman/etc. commands here.
+In addition to the requirements for building the GLUE connector itself, the examples require docker compose, openssl, jq, jo, envsubst, and curl.
+
+### Debian-based systems
+
+> [!NOTE]
+> The installation command assumes that the [official docker repository](https://docs.docker.com/engine/install/debian/#install-using-the-repository) is configured.
+
+```shell
+apt install openjdk-25-jdk docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin openssl jq jo gettext-base curl
+```
+
+### Arch Linux
+
+```shell
+pacman -S jdk25-openjdk docker docker-buildx docker-compose openssl jq jo gettext curl
+```
+
+### Nix Shell
+
+```shell
+nix-shell -p jdk25 docker docker-buildx docker-compose openssl jq jo gettext curl
+```
 
 ## Setup
 
 1. Generate the CMC PKI infrastructure by running `./generate-pki.sh`.
-2. Build the connector docker image by running `./gradlew jibDockerBuiold` in the parent directory.
+2. Build the connector docker image by running `./gradlew jibDockerBuild` in the parent directory.
 3. Run the desired example using docker compose with `docker compose -f <example>.compose.yml up`.
 
 ## Usage (multi-stage example)
