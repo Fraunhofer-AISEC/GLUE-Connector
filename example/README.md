@@ -1,6 +1,10 @@
 # GLUE Connector Example
 
-This is a complete example of how to deploy and network the GLUE connector.
+This directory contains examples for the deployment of the GLUE connector.
+The examples consist of multiple instances of the connector and their supporting infrastructure deployed using docker compose.
+
+Currently, only the multi-stage example is available, which consists of three connectors that exchange control- and
+data-plane messages over attested TLS.
 
 ## Dependencies
 
@@ -12,6 +16,8 @@ TODO: Collect all dependencies with apt/pacman/etc. commands here.
 2. Build the connector docker image by running `./gradlew jibDockerBuiold` in the parent directory.
 3. Run the desired example using docker compose with `docker compose -f <example>.compose.yml up`.
 
-## Usage
+## Usage (multi-stage example)
 
-TODO: Once the CMC proxy is merged upstream, add a special container that proxies requests.
+Initiate a contract negotiation between the first and second connector and spawn the first container pipeline using `./run-example.sh initial intermediary multi-stage-policy.json`.
+When the negotiation is finished, the script will print the IP address and port of the first, locally deployed pipeline.
+POSTing an HTTP request to the provided addresses `/echo` endpoint will trigger the creation of follow-up pipelines on the subsequent connectors, which will eventually echo the input data.
