@@ -15,10 +15,7 @@ import org.apache.commons.dbcp2.BasicDataSource
 import org.flywaydb.core.Flyway
 import org.ktorm.database.Database
 import org.ktorm.dsl.*
-import org.ktorm.entity.filter
-import org.ktorm.entity.find
-import org.ktorm.entity.map
-import org.ktorm.entity.sequenceOf
+import org.ktorm.entity.*
 import java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor
 import kotlin.io.path.createTempDirectory
 
@@ -89,7 +86,9 @@ class DataStore(
                 .map { it.contract.contract }
         }
 
-    suspend fun contracts(): List<OdrlPolicy> = ioAsync { connection.contracts.map { it.contract } }
+    suspend fun contracts(): Map<String, OdrlPolicy> = ioAsync {
+        connection.contracts.associate { it.id to it.contract }
+    }
 
     suspend fun addNegotiation(data: BuiltinNegotiationData) =
         ioAsync {

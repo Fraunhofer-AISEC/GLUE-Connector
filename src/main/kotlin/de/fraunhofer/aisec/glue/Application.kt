@@ -8,6 +8,7 @@ import de.fraunhofer.aisec.glue.atls.NettyAtlsHandshakeHandler
 import de.fraunhofer.aisec.glue.config.ConfigManager
 import de.fraunhofer.aisec.glue.config.ConnectorConfig
 import de.fraunhofer.aisec.glue.controllers.*
+import de.fraunhofer.aisec.glue.controllers.api.ContractApiController
 import de.fraunhofer.aisec.glue.controllers.api.NegotiationApiController
 import de.fraunhofer.aisec.glue.controllers.api.PipelineApiController
 import de.fraunhofer.aisec.glue.controllers.api.RemotePipelineApiController
@@ -179,6 +180,7 @@ val defaultDependencies by DI.Module {
                 instance(),
             )
         }
+    bind<ContractApiController>() with singleton { ContractApiController(instance()) }
     bind<NegotiationApiController>() with
         singleton {
             NegotiationApiController(
