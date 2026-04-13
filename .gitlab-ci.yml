@@ -23,6 +23,16 @@ cache:
     - .gradle/wrapper
     - .gradle/caches
 
+jar_build:
+  stage: build
+  script: ./gradlew shadowJar
+  artifacts:
+    when: on_success
+    paths:
+      - build/libs/container-pipeline-all.jar
+  tags:
+    - munich-glue-local
+
 jib_container_pipeline_build:
   stage: build
   script:
