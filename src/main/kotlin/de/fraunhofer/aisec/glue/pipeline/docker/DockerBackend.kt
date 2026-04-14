@@ -143,7 +143,13 @@ class DockerBackend(
         contractId: String,
         targetId: String,
     ): List<Network> {
-        val containerPairs = containers.windowed(2)
+        // windowed(2) yields no pairs for a single container, so use that as minimum to always
+        // create at least one network (connecting the sole container and the gateway/controller).
+        val containerPairs = if (containers.size == 1) {
+            listOf(containers)
+        } else {
+            containers.windowed(2)
+        }
         val networks = mutableListOf<Network>()
 
         try {
@@ -180,8 +186,7 @@ class DockerBackend(
                     )
 
                 networks.add(network)
-                network.connect(c[0])
-                network.connect(c[1])
+                c.forEach { network.connect(it) }
                 // We always want to have the controller reachable
                 selfContainer?.let { self -> network.connect(self) }
             }
@@ -268,7 +273,16 @@ class DockerBackend(
                     dockerClient.networks.get(network).inspect().ipam?.config?.get(0)?.gateway
                 }
             }
-        return address ?: throw IllegalStateException("No shared address exists with container ${relativeTo.name}")
+        return address ?: run {
+            LOG.atError {
+                message = "No shared address found for container ${relativeTo.name}"
+                payload = mapOf(
+                    "container" to container,
+                    "containerNetworks" to containerNetworks
+                )
+            }
+            throw IllegalStateException("No shared address exists with container ${relativeTo.name}")
+        }
     }
 
     override suspend fun getPipelineFromIp(ipAddress: String): String? {

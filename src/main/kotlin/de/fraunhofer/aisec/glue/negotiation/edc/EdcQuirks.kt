@@ -41,8 +41,8 @@ object EdcQuirks {
         types.map { it.findAnnotation<JsonTypeName>()!!.value.replace("${Namespaces.ODRL}/", "odrl:") }
     }
 
-    // TODO: Do we also need to stringify policy templates?
     val GLUE_TYPES = listOf(GlueIdentifiers.CONTAINER_PIPELINE)
+    val GLUE_OPS = listOf(GlueIdentifiers.HAS_CONTAINER_PIPELINE)
 
     val LOG = KotlinLogging.logger {}
 
@@ -182,26 +182,36 @@ object EdcQuirks {
     fun destringifyOperators(
         objectMapper: ObjectMapper,
         jsonNode: JsonNode,
-    ) {
+    ): Boolean {
+        var changed = false
+
         fun shouldDestringify(objectNode: ObjectNode): Boolean {
             if (!(objectNode.has(LEFT_OPERAND_KEY) && objectNode.has(RIGHT_OPERAND_KEY))) {
                 return false
             }
 
-            val leftOp = objectNode[LEFT_OPERAND_KEY]
+            val leftOpRaw = objectNode[LEFT_OPERAND_KEY]
+            val leftOp = if (leftOpRaw.isObject) {
+                (leftOpRaw as ObjectNode).get("@id")?.asText() ?: leftOpRaw.asText()
+            } else {
+                leftOpRaw.asText()
+            }
             val rightOp = objectNode[RIGHT_OPERAND_KEY]
 
             // Check if the right op is a string and if the left op is known
-            return rightOp.isTextual && leftOp.isTextual && GLUE_TYPES.contains(leftOp.asText())
+            return rightOp.isTextual && GLUE_OPS.contains(leftOp)
         }
 
         jsonNode.walkObjects {
             if (shouldDestringify(this)) {
+                changed = true
                 val rightOp = this[RIGHT_OPERAND_KEY].asText()
                 val destringified = objectMapper.readTree(rightOp)
                 set<ObjectNode>(RIGHT_OPERAND_KEY, destringified)
             }
         }
+
+        return changed
     }
 
     /**
@@ -304,7 +314,7 @@ object EdcQuirks {
             LOG.debug { "Applying incoming ($role) EDC transformations..." }
             val node = objectMapper.readTree(jsonBytes)
             // If no fixes made, skip re-serialization and preserve original payload bytes
-            if (fixUriFormat(node)) {
+            if (fixUriFormat(node) || destringifyOperators(objectMapper, node)) {
                 objectMapper.writeValueAsBytes(node)
             } else {
                 jsonBytes
@@ -332,6 +342,7 @@ object EdcQuirks {
                 }
             // Apply EDC patches on Jackson IR
             val tree = objectMapper.valueToTree<ObjectNode>(modBody)
+            stringifyGlueKeys(objectMapper, tree)
             revertUriFormat(tree)
             if (needsPatchAction) {
                 patchAction(tree)
