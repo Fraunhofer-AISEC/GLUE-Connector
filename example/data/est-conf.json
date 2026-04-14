@@ -9,7 +9,7 @@
     "/pki/est-server-cert.pem",
     "/pki/ca-cert.pem"
   ],
-  "metadataCas": [
+  "rootCas": [
     "/pki/ca-cert.pem"
   ],
   "httpFolder": "/metadata",

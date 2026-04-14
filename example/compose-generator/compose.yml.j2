@@ -86,7 +86,7 @@ services:
   estserver:
     build:
       context: .
-      dockerfile: cmc.dockerfile
+      dockerfile: dockerfiles/cmc.dockerfile
     command:
       - |
         find /metadata-templates -maxdepth 1 -type f | while read -r path; do
