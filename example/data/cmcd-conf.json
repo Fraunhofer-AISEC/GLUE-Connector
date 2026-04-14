@@ -1,8 +1,10 @@
 {
     "cmcAddr": "/tmp/cmcd.sock",
-    "provisionMode": "est",
     "provisionAuth": [ "attestation" ],
-    "provisionAddr": "https://estserver:9000/",
+    "endorsementMode": "est",
+    "endorsementAddr": "https://estserver:9000/",
+    "enrollmentMode": "est",
+    "enrollmentAddr": "https://estserver:9000/",
     "metadata": [
         "file:///metadata"
     ],
@@ -17,13 +19,8 @@
     "cache": "/tmp/cmc-cache/",
     "peerCache": "/tmp/cmc-peer-cache",
     "measurementLogs": true,
-    "estTlsCas": [
+    "rootCas": [
         "/pki/ca-cert.pem"
     ],
-    "identityCas": [
-        "/pki/ca-cert.pem"
-    ],
-    "metadataCas": [
-        "/pki/ca-cert.pem"
-    ]
+    "tpmKeyAlg": "EC256"
 }
