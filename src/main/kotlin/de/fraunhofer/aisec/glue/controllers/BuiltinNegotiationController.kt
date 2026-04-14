@@ -49,8 +49,19 @@ open class BuiltinNegotiationController(
             val principal = call.principal<UserIdPrincipal>()
             val req = call.receive<ContractRequestMessage>()
 
-            val peerUrl = try { Url(req.callbackAddress) } catch (_: URLParserException) { throw BadRequestException("Invalid callback address") }
-            val negotiation = negotiationManager.createNegotiation(Negotiation.Role.PROVIDER, principal?.name, req.consumerPid, peerUrl)
+            val peerUrl =
+                try {
+                    Url(req.callbackAddress)
+                } catch (_: URLParserException) {
+                    throw BadRequestException("Invalid callback address")
+                }
+            val negotiation =
+                negotiationManager.createNegotiation(
+                    Negotiation.Role.PROVIDER,
+                    principal?.name,
+                    req.consumerPid,
+                    peerUrl,
+                )
 
             when (val resp = negotiation.submitMessage(req)) {
                 is ContractNegotiationError -> call.respond(HttpStatusCode.BadRequest, resp)
@@ -62,8 +73,19 @@ open class BuiltinNegotiationController(
             val principal = call.principal<UserIdPrincipal>()!!
             val req = call.receive<ContractOfferMessage>()
 
-            val peerUrl = try { Url(req.callbackAddress) } catch (_: URLParserException) { throw BadRequestException("Invalid callback address") }
-            val negotiation = negotiationManager.createNegotiation(Negotiation.Role.CONSUMER, principal.name, req.providerPid, peerUrl)
+            val peerUrl =
+                try {
+                    Url(req.callbackAddress)
+                } catch (_: URLParserException) {
+                    throw BadRequestException("Invalid callback address")
+                }
+            val negotiation =
+                negotiationManager.createNegotiation(
+                    Negotiation.Role.CONSUMER,
+                    principal.name,
+                    req.providerPid,
+                    peerUrl,
+                )
 
             when (val resp = negotiation.submitMessage(req)) {
                 is ContractNegotiationError -> call.respond(HttpStatusCode.BadRequest, resp)
@@ -93,7 +115,12 @@ open class BuiltinNegotiationController(
                     return@post
                 }
 
-                val negotiation = negotiationManager.getNegotiation(id, Negotiation.Role.PROVIDER, principal.name) ?: throw NotFoundException()
+                val negotiation =
+                    negotiationManager.getNegotiation(
+                        id,
+                        Negotiation.Role.PROVIDER,
+                        principal.name,
+                    ) ?: throw NotFoundException()
 
                 when (val resp = negotiation.submitMessage(req)) {
                     is ContractNegotiationError -> call.respond(HttpStatusCode.BadRequest, resp)
@@ -111,7 +138,12 @@ open class BuiltinNegotiationController(
                     return@post
                 }
 
-                val negotiation = negotiationManager.getNegotiation(id, Negotiation.Role.CONSUMER, principal.name) ?: throw NotFoundException()
+                val negotiation =
+                    negotiationManager.getNegotiation(
+                        id,
+                        Negotiation.Role.CONSUMER,
+                        principal.name,
+                    ) ?: throw NotFoundException()
 
                 when (val resp = negotiation.submitMessage(req)) {
                     is ContractNegotiationError -> call.respond(HttpStatusCode.BadRequest, resp)
@@ -132,7 +164,12 @@ open class BuiltinNegotiationController(
                             return@post
                         }
 
-                        val negotiation = negotiationManager.getNegotiation(id, Negotiation.Role.PROVIDER, principal?.name) ?: throw NotFoundException()
+                        val negotiation =
+                            negotiationManager.getNegotiation(
+                                id,
+                                Negotiation.Role.PROVIDER,
+                                principal?.name,
+                            ) ?: throw NotFoundException()
 
                         when (val resp = negotiation.submitMessage(req)) {
                             null -> call.respond(HttpStatusCode.OK)
@@ -145,7 +182,12 @@ open class BuiltinNegotiationController(
                             return@post
                         }
 
-                        val negotiation = negotiationManager.getNegotiation(id, Negotiation.Role.CONSUMER, principal?.name) ?: throw NotFoundException()
+                        val negotiation =
+                            negotiationManager.getNegotiation(
+                                id,
+                                Negotiation.Role.CONSUMER,
+                                principal?.name,
+                            ) ?: throw NotFoundException()
 
                         when (val resp = negotiation.submitMessage(req)) {
                             is ContractNegotiationError -> call.respond(HttpStatusCode.BadRequest, resp)
@@ -165,7 +207,12 @@ open class BuiltinNegotiationController(
                     return@post
                 }
 
-                val negotiation = negotiationManager.getNegotiation(id, Negotiation.Role.CONSUMER, principal?.name) ?: throw NotFoundException()
+                val negotiation =
+                    negotiationManager.getNegotiation(
+                        id,
+                        Negotiation.Role.CONSUMER,
+                        principal?.name,
+                    ) ?: throw NotFoundException()
                 when (val resp = negotiation.submitMessage(req)) {
                     is ContractNegotiationError -> call.respond(HttpStatusCode.BadRequest, resp)
                     else -> call.respond(HttpStatusCode.OK)
@@ -182,7 +229,12 @@ open class BuiltinNegotiationController(
                     return@post
                 }
 
-                val negotiation = negotiationManager.getNegotiation(id, Negotiation.Role.PROVIDER, principal?.name) ?: throw NotFoundException()
+                val negotiation =
+                    negotiationManager.getNegotiation(
+                        id,
+                        Negotiation.Role.PROVIDER,
+                        principal?.name,
+                    ) ?: throw NotFoundException()
                 when (val resp = negotiation.submitMessage(req)) {
                     is ContractNegotiationError -> call.respond(HttpStatusCode.BadRequest, resp)
                     else -> call.respond(HttpStatusCode.OK)
@@ -197,7 +249,10 @@ open class BuiltinNegotiationController(
                 val negotiation = negotiationManager.getNegotiation(id, null, principal?.name) ?: throw NotFoundException()
 
                 // One of the IDs has to match depending on the role of the found negotiation.
-                if ((id != req.providerPid && negotiation.role == Negotiation.Role.CONSUMER) || (id != req.consumerPid && negotiation.role == Negotiation.Role.PROVIDER)) {
+                if (
+                    (id != req.providerPid && negotiation.role == Negotiation.Role.CONSUMER) ||
+                    (id != req.consumerPid && negotiation.role == Negotiation.Role.PROVIDER)
+                ) {
                     call.respond(HttpStatusCode.BadRequest)
                     return@post
                 }

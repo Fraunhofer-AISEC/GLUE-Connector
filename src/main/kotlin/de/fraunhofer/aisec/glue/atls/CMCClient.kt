@@ -90,10 +90,11 @@ class CMCClient(
             LOG.atError {
                 message = "Failed to communicate with the CMC"
                 cause = e
-                payload = mapOf(
-                    "requestType" to T::class.simpleName,
-                    "cmcAddress" to cmcAddress
-                )
+                payload =
+                    mapOf(
+                        "requestType" to T::class.simpleName,
+                        "cmcAddress" to cmcAddress,
+                    )
             }
 
             throw e
@@ -150,15 +151,20 @@ class CMCClient(
         dnsNames: List<String>,
         ipAddresses: List<String>,
         type: TLSKeyType = TLSKeyType.SOFTWARE,
-        alg: TLSKeyAlg = TLSKeyAlg.EC256
+        alg: TLSKeyAlg = TLSKeyAlg.EC256,
     ): String {
-        val req = TLSCreateRequest(VERSION, keyConfig = TLSCreateRequest.KeyConfig(
-            type = type.representation,
-            alg = alg.representation,
-            cn = cn,
-            dnsNames = dnsNames,
-            ipAddresses = ipAddresses,
-        ))
+        val req =
+            TLSCreateRequest(
+                VERSION,
+                keyConfig =
+                    TLSCreateRequest.KeyConfig(
+                        type = type.representation,
+                        alg = alg.representation,
+                        cn = cn,
+                        dnsNames = dnsNames,
+                        ipAddresses = ipAddresses,
+                    ),
+            )
         return when (val resp = sendCmcRequest(req)) {
             is TLSCreateResponse -> resp.keyId ?: throw IllegalStateException("CMC did not return a key ID")
             is SocketError -> throw IllegalStateException("Received error from CMC: ${resp.msg}")
@@ -193,7 +199,9 @@ class CMCClient(
                 hashAlg = hashType.string,
             )
         when (val resp = sendCmcRequest(req)) {
-            is TLSSignResponse -> return Base64.decode(resp.signedContent ?: throw IllegalStateException("No signed data received from CMC"))
+            is TLSSignResponse -> return Base64.decode(
+                resp.signedContent ?: throw IllegalStateException("No signed data received from CMC"),
+            )
             is SocketError -> throw IllegalStateException("Received error from CMC: ${resp.msg}")
             else -> throw IllegalStateException("Unexpected response type ${resp::class.qualifiedName}")
         }

@@ -28,11 +28,14 @@ class PipelineManager(
     private val pipelines = mutableMapOf<String, ContainerPipeline>()
     private val pipelineMutex = Mutex()
     private val atlsConfig = config.getConfig(::AtlsConfig)
-    private val connectorConfig =  config.getConfig(::ConnectorConfig)
+    private val connectorConfig = config.getConfig(::ConnectorConfig)
 
     private fun createPipelineName(): String = generateSequence { Random.nextBytes(8).hexEncode() }.first { n -> !pipelines.contains(n) }
 
-    private fun createAtlsContainer(proxyConfig: GlueAtlsProxyConfiguration, keyId: String): AugmentedGlueContainer {
+    private fun createAtlsContainer(
+        proxyConfig: GlueAtlsProxyConfiguration,
+        keyId: String,
+    ): AugmentedGlueContainer {
         return AugmentedGlueContainer(
             GlueContainer(
                 atlsConfig.proxyContainer,
@@ -68,7 +71,10 @@ class PipelineManager(
     /**
      * Augment the container pipeline object by properly configuring all ATLS proxy images
      */
-    private suspend fun augmentPipelineSpec(originalSpec: GlueContainerPipeline, keyId: String?): List<AugmentedGlueContainer> {
+    private suspend fun augmentPipelineSpec(
+        originalSpec: GlueContainerPipeline,
+        keyId: String?,
+    ): List<AugmentedGlueContainer> {
         val augmentedSpec = mutableListOf<AugmentedGlueContainer>()
         if (atlsConfig.enabled) {
             originalSpec.atlsProxyIn?.let {
@@ -100,19 +106,21 @@ class PipelineManager(
         pipelineMutex.withLock {
             val name = createPipelineName()
 
-            val keyId = if (atlsConfig.enabled) {
-                // This determines if the public URL must be added to the pipeline cert as ip address or dns name
-                val hostnameIsIp = runCatching { IPv4Address.parse(connectorConfig.publicUrl.host) }.isSuccess
-                val (dnsNames, ipAddresses) = if (hostnameIsIp) {
-                    Pair(listOf<String>(), listOf(connectorConfig.publicUrl.host))
-                } else {
-                    Pair(listOf(connectorConfig.publicUrl.host), listOf())
-                }
+            val keyId =
+                if (atlsConfig.enabled) {
+                    // This determines if the public URL must be added to the pipeline cert as ip address or dns name
+                    val hostnameIsIp = runCatching { IPv4Address.parse(connectorConfig.publicUrl.host) }.isSuccess
+                    val (dnsNames, ipAddresses) =
+                        if (hostnameIsIp) {
+                            Pair(listOf<String>(), listOf(connectorConfig.publicUrl.host))
+                        } else {
+                            Pair(listOf(connectorConfig.publicUrl.host), listOf())
+                        }
 
-                cmcClient.tlsKey(name, dnsNames, ipAddresses)
-            } else {
-                null
-            }
+                    cmcClient.tlsKey(name, dnsNames, ipAddresses)
+                } else {
+                    null
+                }
 
             val augmentedSpec = augmentPipelineSpec(pipelineSpec, keyId)
 
