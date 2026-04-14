@@ -1,5 +1,6 @@
 package de.fraunhofer.aisec.glue
 
+import de.fraunhofer.aisec.glue.atls.CMCClient
 import de.fraunhofer.aisec.glue.config.ConfigManager
 import de.fraunhofer.aisec.glue.controllers.PipelineController
 import de.fraunhofer.aisec.glue.docker.DockerClient
@@ -75,7 +76,11 @@ class PipelineTest {
 
             val mockRemotePipelineManager = mockk<RemotePipelineManager>()
 
-            val pipelineManager = PipelineManager(mockRemotePipelineManager, mockBackend, ConfigManager(MapApplicationConfig()))
+            val mockCmcClient = mockk<CMCClient>()
+            coEvery { mockCmcClient.tlsKey(any(), any(), any(), any(), any()) } returns "test-key"
+
+            val pipelineManager =
+                PipelineManager(mockRemotePipelineManager, mockBackend, mockCmcClient, ConfigManager(MapApplicationConfig()))
 
             val pipeline = pipelineManager.createPipeline(getTestContainers(), "testContract", "testTarget")
 
@@ -128,9 +133,13 @@ class PipelineTest {
             coEvery { mockBackend.getConnectorIp(any()) } returns "127.0.0.1"
             every { mockPipeline.name } answers { capturedName.captured }
 
+            val mockCmcClient = mockk<CMCClient>()
+            coEvery { mockCmcClient.tlsKey(any(), any(), any(), any(), any()) } returns "test-key"
+
             val mockRemotePipelineManager = mockk<RemotePipelineManager>()
             val dataStore = DataStore(objectMapper)
-            val pipelineManager = PipelineManager(mockRemotePipelineManager, mockBackend, ConfigManager(MapApplicationConfig()))
+            val pipelineManager =
+                PipelineManager(mockRemotePipelineManager, mockBackend, mockCmcClient, ConfigManager(MapApplicationConfig()))
             val policyEngine = PolicyEngine(pipelineManager)
             val pipelineController = PipelineController(dataStore, pipelineManager, policyEngine)
 
@@ -206,10 +215,17 @@ class PipelineTest {
                     ConfigManager(
                         MapApplicationConfig(
                             "docker.publicHostname" to (System.getenv("DOCKER_HOSTNAME") ?: InetAddress.getLocalHost().hostAddress),
+                            // We don't have a CMC in the CI, so don't attempt to spawn aTLS proxies
+                            "atls.enabled" to "false",
                         ),
                     )
                 val dockerBackend = DockerBackend(objectMapper, dockerClient, configManager)
-                val pipelineManager = PipelineManager(remotePipelineManager, dockerBackend, ConfigManager(MapApplicationConfig()))
+
+                val mockCmcClient = mockk<CMCClient>()
+                coEvery { mockCmcClient.tlsKey(any(), any(), any(), any(), any()) } returns "test-key"
+
+                val pipelineManager =
+                    PipelineManager(remotePipelineManager, dockerBackend, mockCmcClient, ConfigManager(MapApplicationConfig()))
 
                 LOG.info { "Test setup complete" }
 
