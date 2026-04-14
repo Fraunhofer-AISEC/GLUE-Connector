@@ -170,13 +170,20 @@ class DockerClient(internal val httpClient: HttpClient, private val baseUrl: Url
                 message = "Attempting to pull the image from image registry"
                 payload = mapOf("imageName" to name)
             }
-            httpClient.post(endpoint("images/create")) {
-                parameter("fromImage", name)
-                System.getenv("REGISTRY_AUTH_TOKEN")?.let {
-                    header("X-Registry-Auth", it)
+            try {
+                httpClient.post(endpoint("images/create")) {
+                    parameter("fromImage", name)
+                    System.getenv("REGISTRY_AUTH_TOKEN")?.let {
+                        header("X-Registry-Auth", it)
+                    }
+                }
+            } catch (e: ClientRequestException) {
+                LOG.atWarn {
+                    message = "Failed to pull image, will try local image"
+                    payload = mapOf("imageName" to name)
+                    cause = e
                 }
             }
-
             return Image(this@DockerClient, name)
         }
 
