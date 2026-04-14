@@ -40,6 +40,8 @@ type atlsProxyConfig struct {
 	CaCertificates string `json:"http://fhg.de/glue/caCertificates"`
 	// The connections this instance of the ATLS proxy should handle
 	ProxyEndpoints []proxyEndpoint `json:"http://fhg.de/glue/proxyEndpoint"`
+	// The key ID to access the CMC TLS signing key with
+	KeyId string `json:"http://fhg.de/glue/keyId"`
 }
 
 func parseConfig() (config, atlsProxyConfig, error) {

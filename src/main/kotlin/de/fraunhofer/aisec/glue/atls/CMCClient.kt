@@ -109,9 +109,9 @@ class CMCClient(
         cached: List<String>? = null,
     ): CMCReport {
         val encodedNonce = Base64.encode(nonce)
-        val req = AttestationRequest(VERSION, encodedNonce, cached)
+        val req = AttestationRequest(VERSION, nonce = encodedNonce, cached = cached)
         when (val resp = sendCmcRequest(req)) {
-            is AttestationResponse -> return CMCReport(resp.report, resp.metadata, resp.cacheMisses)
+            is AttestationResponse -> return CMCReport(resp.report!!, null, null)
             is SocketError -> throw IllegalStateException("Received error from CMC: ${resp.msg}")
             else -> throw IllegalStateException("Unexpected response type ${resp::class.qualifiedName}")
         }
@@ -128,31 +128,52 @@ class CMCClient(
         peer: String? = null,
     ): Boolean {
         val encodedNonce = Base64.encode(nonce)
-        val req = VerificationRequest(VERSION, encodedNonce, report, metadata, peer, cacheMisses)
+        val req = VerificationRequest(VERSION, nonce = encodedNonce, report = report, peer = peer)
         when (val resp = sendCmcRequest(req)) {
-            is VerificationResponse -> return resp.result.summary.status == "success"
+            is VerificationResponse -> return resp.result?.summary?.status == "success"
             is SocketError -> throw IllegalStateException("Received error from CMC: ${resp.msg}")
             else -> throw IllegalStateException("Unexpected response type ${resp::class.qualifiedName}")
         }
     }
 
     suspend fun fetchPeerCache(cacheKey: String): List<String> {
-        val req = PeerCacheRequest(VERSION, cacheKey)
+        val req = PeerCacheRequest(VERSION, peer = cacheKey)
         when (val resp = sendCmcRequest(req)) {
-            is PeerCacheResponse -> return resp.cache
+            is PeerCacheResponse -> return resp.cache ?: emptyList()
             is SocketError -> throw IllegalStateException("Received error from CMC: ${resp.msg}")
             else -> throw IllegalStateException("Unexpected response type ${resp::class.qualifiedName}")
         }
     }
 
-    suspend fun tlsCerts(): List<X509Certificate> {
-        val req = TLSCertRequest(VERSION)
+    suspend fun tlsKey(
+        cn: String,
+        dnsNames: List<String>,
+        ipAddresses: List<String>,
+        type: TLSKeyType = TLSKeyType.SOFTWARE,
+        alg: TLSKeyAlg = TLSKeyAlg.EC256
+    ): String {
+        val req = TLSCreateRequest(VERSION, keyConfig = TLSCreateRequest.KeyConfig(
+            type = type.representation,
+            alg = alg.representation,
+            cn = cn,
+            dnsNames = dnsNames,
+            ipAddresses = ipAddresses,
+        ))
+        return when (val resp = sendCmcRequest(req)) {
+            is TLSCreateResponse -> resp.keyId ?: throw IllegalStateException("CMC did not return a key ID")
+            is SocketError -> throw IllegalStateException("Received error from CMC: ${resp.msg}")
+            else -> throw IllegalStateException("Unexpected response type ${resp::class.qualifiedName}")
+        }
+    }
+
+    suspend fun tlsCerts(keyId: String? = null): List<X509Certificate> {
+        val req = TLSCertRequest(VERSION, keyId = keyId)
         when (val resp = sendCmcRequest(req)) {
             is TLSCertResponse -> {
                 val decoder = PEMDecoder.of()
-                return resp.certificate.map(Base64::decode).map { pem ->
+                return resp.certificate?.map(Base64::decode)?.map { pem ->
                     decoder.decode(pem.inputStream(), X509Certificate::class.java)
-                }
+                } ?: emptyList()
             }
             is SocketError -> throw IllegalStateException("Received error from CMC: ${resp.msg}")
             else -> throw IllegalStateException("Unexpected response type ${resp::class.qualifiedName}")
@@ -162,16 +183,17 @@ class CMCClient(
     suspend fun tlsSign(
         content: ByteArray,
         hashType: HashType,
+        keyId: String? = null,
     ): ByteArray {
         val req =
             TLSSignRequest(
                 VERSION,
-                Base64.encode(content),
-                hashType.string,
-                TLSSignRequest.PssOpts(0),
+                keyId = keyId,
+                content = Base64.encode(content),
+                hashAlg = hashType.string,
             )
         when (val resp = sendCmcRequest(req)) {
-            is TLSSignResponse -> return Base64.decode(resp.signedContent)
+            is TLSSignResponse -> return Base64.decode(resp.signedContent ?: throw IllegalStateException("No signed data received from CMC"))
             is SocketError -> throw IllegalStateException("Received error from CMC: ${resp.msg}")
             else -> throw IllegalStateException("Unexpected response type ${resp::class.qualifiedName}")
         }
@@ -200,17 +222,32 @@ class CMCClient(
         BLAKE2B_512("BLAKE2B-512"),
     }
 
+    enum class TLSKeyType(val representation: TLSCreateRequest.Type) {
+        TPM(TLSCreateRequest.Type.tpm),
+        SOFTWARE(TLSCreateRequest.Type.sw),
+        SNP(TLSCreateRequest.Type.snp),
+    }
+
+    enum class TLSKeyAlg(val representation: TLSCreateRequest.Alg) {
+        EC256(TLSCreateRequest.Alg.EC256),
+        EC384(TLSCreateRequest.Alg.EC384),
+        EC521(TLSCreateRequest.Alg.EC521),
+        RSA2048(TLSCreateRequest.Alg.RSA2048),
+        RSA4096(TLSCreateRequest.Alg.RSA4096),
+    }
+
     companion object {
-        private const val VERSION = "1.3.0"
+        private const val VERSION = "1.4.0"
 
         private val CMC_REQUEST_LOOKUP =
             mapOf(
                 AttestationRequest::class to 1,
                 VerificationRequest::class to 2,
-                TLSSignRequest::class to 3,
-                TLSCertRequest::class to 4,
-                PeerCacheRequest::class to 5,
-                MeasureRequest::class to 6,
+                TLSCreateRequest::class to 3,
+                TLSSignRequest::class to 4,
+                TLSCertRequest::class to 5,
+                PeerCacheRequest::class to 6,
+                MeasureRequest::class to 7,
             )
 
         private val CMC_RESPONSE_LOOKUP =
@@ -218,10 +255,11 @@ class CMCClient(
                 0 to SocketError::class,
                 1 to AttestationResponse::class,
                 2 to VerificationResponse::class,
-                3 to TLSSignResponse::class,
-                4 to TLSCertResponse::class,
-                5 to PeerCacheResponse::class,
-                6 to MeasureResponse::class,
+                3 to TLSCreateResponse::class,
+                4 to TLSSignResponse::class,
+                5 to TLSCertResponse::class,
+                6 to PeerCacheResponse::class,
+                7 to MeasureResponse::class,
             )
 
         private val LOG = KotlinLogging.logger {}

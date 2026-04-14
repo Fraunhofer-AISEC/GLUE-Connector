@@ -76,6 +76,11 @@ func (sp *ServerProxy) handleConnection(clientConn net.Conn) {
 
 // listen accepts ATLS connections and forwards them to the next container
 func (sp *ServerProxy) listen() error {
+	serializer, err := attestationreport.NewJsonSerializer()
+	if err != nil {
+		return fmt.Errorf("could not create a json serializer: %w", err)
+	}
+
 	listener, err := attestedtls.Listen(
 		"tcp",
 		serverListenAddr,
@@ -84,8 +89,9 @@ func (sp *ServerProxy) listen() error {
 		attestedtls.WithAttest(attestedtls.Attest_Mutual),
 		attestedtls.WithCmcApi("socket"),
 		attestedtls.WithMtls(true),
-		attestedtls.WithApiSerializer(attestationreport.JsonSerializer{}),
-		attestedtls.WithResultCb(func(result *attestationreport.VerificationResult) {
+		attestedtls.WithSerializer(serializer),
+		attestedtls.WithKeyId(sp.proxyConfig.KeyId),
+		attestedtls.WithResultCb(func(result *attestationreport.AttestationResult) {
 			switch result.Summary.Status {
 			case attestationreport.StatusSuccess:
 				slog.Info("SUCCESS: Verification for Prover %v (%v)", result.Prover, result.Created)
@@ -148,11 +154,16 @@ func serverMain(config config, proxyConfig atlsProxyConfig) error {
 func createServerTLSConfig(proxyConfig atlsProxyConfig) (*tls.Config, error) {
 	caCerts := x509.NewCertPool()
 	caCerts.AppendCertsFromPEM([]byte(proxyConfig.CaCertificates))
+	serializer, err := attestationreport.NewJsonSerializer()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create a json serializer: %w", err)
+	}
 
 	serverCert, err := attestedtls.GetCert(
 		attestedtls.WithCmcAddr(proxyConfig.CmcAddress),
 		attestedtls.WithCmcApi("socket"),
-		attestedtls.WithApiSerializer(attestationreport.JsonSerializer{}),
+		attestedtls.WithSerializer(serializer),
+		attestedtls.WithKeyId(proxyConfig.KeyId),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get the server certificate from the CMC: %w", err)
