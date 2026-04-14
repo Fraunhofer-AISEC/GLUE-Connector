@@ -39,6 +39,7 @@ import io.ktor.server.testing.*
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
+import kotlinx.coroutines.*
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineName
@@ -47,7 +48,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.*
 import kotlinx.coroutines.test.runTest
 import org.slf4j.event.Level
 import java.io.File
@@ -123,7 +123,13 @@ class NegotiationTest {
                     offer = exampleOffer,
                 )
 
-            val negotiation = negotiationManager.createNegotiation(Negotiation.Role.PROVIDER, null, contractRequest.consumerPid, Url("https://consumer"))
+            val negotiation =
+                negotiationManager.createNegotiation(
+                    Negotiation.Role.PROVIDER,
+                    null,
+                    contractRequest.consumerPid,
+                    Url("https://consumer"),
+                )
 
             val stateMachineObserver =
                 StateMachineObserver(
@@ -205,7 +211,13 @@ class NegotiationTest {
                     offer = exampleOffer,
                 )
 
-            val negotiation = negotiationManager.createNegotiation(Negotiation.Role.CONSUMER, null, contractOffer.providerPid, Url("https://provider"))
+            val negotiation =
+                negotiationManager.createNegotiation(
+                    Negotiation.Role.CONSUMER,
+                    null,
+                    contractOffer.providerPid,
+                    Url("https://provider"),
+                )
 
             val stateMachineObserver =
                 StateMachineObserver(
@@ -312,7 +324,8 @@ class NegotiationTest {
                     }
                 }
             val dataStore = DataStore(objectMapper)
-            val configManager = ConfigManager(MapApplicationConfig("connector.identity" to "https://test-connector.local", "connector.edcMode" to "none"))
+            val configManager =
+                ConfigManager(MapApplicationConfig("connector.identity" to "https://test-connector.local", "connector.edcMode" to "none"))
             val negotiationManager =
                 BuiltinNegotiationManager(
                     httpClient,
@@ -410,7 +423,8 @@ class NegotiationTest {
                 }
             val dataStore = mockDataStore()
 
-            val configManager = ConfigManager(MapApplicationConfig("connector.identity" to "https://test-connector.local", "connector.edcMode" to "none"))
+            val configManager =
+                ConfigManager(MapApplicationConfig("connector.identity" to "https://test-connector.local", "connector.edcMode" to "none"))
             val negotiationManager =
                 BuiltinNegotiationManager(
                     httpClient,

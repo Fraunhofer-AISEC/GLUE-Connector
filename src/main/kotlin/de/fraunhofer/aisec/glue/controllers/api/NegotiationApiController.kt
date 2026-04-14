@@ -49,11 +49,12 @@ class NegotiationApiController(
                     // TODO: The peer field from the request should probably be some sort of internal ID from which
                     //  the url and protocol version is derived.
                     //  For not, it is just the URL with some simple parsing.
-                    val peerUrl = if (req.peer.contains("://")) {
-                        req.peer
-                    } else {
-                        "http://${req.peer}"
-                    }
+                    val peerUrl =
+                        if (req.peer.contains("://")) {
+                            req.peer
+                        } else {
+                            "http://${req.peer}"
+                        }
 
                     val negotiation = negotiationManager.startNegotiation(peerUrl, req.contractRequest)
 
@@ -88,23 +89,28 @@ class NegotiationApiController(
                         }
                     }
 
-                    call.respond(HttpStatusCode.Created, NegotiationInfoResponse(
-                        id = negotiation.id,
-                        role = negotiation.role,
-                        peer = negotiation.peerIdentity ?: "unknown",
-                        state = negotiation.state,
-                    ))
+                    call.respond(
+                        HttpStatusCode.Created,
+                        NegotiationInfoResponse(
+                            id = negotiation.id,
+                            role = negotiation.role,
+                            peer = negotiation.peerIdentity ?: "unknown",
+                            state = negotiation.state,
+                        ),
+                    )
                 }
 
                 get("{id}") {
                     val id = call.parameters.getOrFail<String>("id")
                     val negotiation = negotiationManager.getNegotiation(id) ?: throw NotFoundException()
-                    call.respond(NegotiationInfoResponse(
-                        id = negotiation.id,
-                        role = negotiation.role,
-                        peer = negotiation.peerIdentity ?: "unknown",
-                        state = negotiation.state,
-                    ))
+                    call.respond(
+                        NegotiationInfoResponse(
+                            id = negotiation.id,
+                            role = negotiation.role,
+                            peer = negotiation.peerIdentity ?: "unknown",
+                            state = negotiation.state,
+                        ),
+                    )
                 }
 
                 delete {

@@ -37,15 +37,15 @@ class EdcClientCompatTransformationTest {
         runTest {
             val client =
                 httpClient { request ->
-                        val payload = objectMapper.readValue(request.body.toByteArray(), Payload::class.java)
-                        assertEquals("transformed", payload.value)
+                    val payload = objectMapper.readValue(request.body.toByteArray(), Payload::class.java)
+                    assertEquals("transformed", payload.value)
 
-                        respond(
-                            content = "",
-                            status = HttpStatusCode.OK,
-                            headers = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
-                        )
-                    }
+                    respond(
+                        content = "",
+                        status = HttpStatusCode.OK,
+                        headers = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+                    )
+                }
 
             client.post("https://example.com/test") {
                 contentType(ContentType.Application.Json)
@@ -57,34 +57,37 @@ class EdcClientCompatTransformationTest {
         }
 
     @Test
-    fun `skips transformation for the tc server identifier`() = runTest {
-        val client =
-            httpClient { request ->
-                if (request.method == HttpMethod.Head) {
-                    return@httpClient respond(
+    fun `skips transformation for the tc server identifier`() =
+        runTest {
+            val client =
+                httpClient { request ->
+                    if (request.method == HttpMethod.Head) {
+                        return@httpClient respond(
+                            content = "",
+                            status = HttpStatusCode.NoContent,
+                            headers =
+                                headers {
+                                    append(HttpHeaders.Server, Constants.TC_USER_AGENT)
+                                },
+                        )
+                    }
+
+                    val payload = objectMapper.readValue(request.body.toByteArray(), Payload::class.java)
+                    assertEquals("original", payload.value)
+
+                    respond(
                         content = "",
-                        status = HttpStatusCode.NoContent,
-                        headers = headers {
-                            append(HttpHeaders.Server, Constants.TC_USER_AGENT)
-                        })
+                        status = HttpStatusCode.OK,
+                        headers = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+                    )
                 }
 
-                val payload = objectMapper.readValue(request.body.toByteArray(), Payload::class.java)
-                assertEquals("original", payload.value)
-
-                respond(
-                    content = "",
-                    status = HttpStatusCode.OK,
-                    headers = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
-                )
+            client.post("https://example.com/test") {
+                contentType(ContentType.Application.Json)
+                setBody(Payload("original"))
+                attributes.put(EdcCompatPeerEndpointAttribute, "https://example.com")
             }
 
-        client.post("https://example.com/test") {
-            contentType(ContentType.Application.Json)
-            setBody(Payload("original"))
-            attributes.put(EdcCompatPeerEndpointAttribute, "https://example.com")
+            client.close()
         }
-
-        client.close()
-    }
 }
