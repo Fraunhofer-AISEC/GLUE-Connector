@@ -18,6 +18,7 @@ class CMCPrivateKey(
     internal val cmcClient: CMCClient,
     private val certificate: X509Certificate,
     internal val dispatcher: CoroutineDispatcher,
+    internal val keyId: String,
 ) : PrivateKey {
     /**
      * Returns the algorithm name from the associated certificate's public key.

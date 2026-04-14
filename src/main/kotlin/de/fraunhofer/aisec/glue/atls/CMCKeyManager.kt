@@ -22,15 +22,16 @@ import javax.net.ssl.X509ExtendedKeyManager
 class CMCKeyManager(
     private val cmcClient: CMCClient,
     private val dispatcher: CoroutineDispatcher,
+    private val keyId: String,
 ) : X509ExtendedKeyManager() {
     private val certificateChain: Array<X509Certificate> by lazy {
         runBlocking(dispatcher) {
-            cmcClient.tlsCerts().toTypedArray()
+            cmcClient.tlsCerts(keyId).toTypedArray()
         }
     }
 
     private val privateKey: CMCPrivateKey by lazy {
-        CMCPrivateKey(cmcClient, certificateChain[0], dispatcher)
+        CMCPrivateKey(cmcClient, certificateChain[0], dispatcher, keyId)
     }
 
     /**
