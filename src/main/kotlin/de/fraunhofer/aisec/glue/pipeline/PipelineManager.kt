@@ -1,7 +1,9 @@
 package de.fraunhofer.aisec.glue.pipeline
 
 import de.fraunhofer.aisec.glue.Utils.hexEncode
+import de.fraunhofer.aisec.glue.atls.CMCClient
 import de.fraunhofer.aisec.glue.config.ConfigManager
+import de.fraunhofer.aisec.glue.config.ConnectorConfig
 import de.fraunhofer.aisec.glue.pipeline.atls.AtlsConfig
 import de.fraunhofer.aisec.glue.pipeline.atls.AtlsParameter
 import de.fraunhofer.iosb.odrl.glue.GlueAtlsProxyConfiguration
@@ -20,15 +22,17 @@ import kotlin.random.Random
 class PipelineManager(
     private val remoteManager: RemotePipelineManager,
     private val backend: Backend,
+    private val cmcClient: CMCClient,
     config: ConfigManager,
 ) {
     private val pipelines = mutableMapOf<String, ContainerPipeline>()
     private val pipelineMutex = Mutex()
     private val atlsConfig = config.getConfig(::AtlsConfig)
+    private val connectorConfig =  config.getConfig(::ConnectorConfig)
 
     private fun createPipelineName(): String = generateSequence { Random.nextBytes(8).hexEncode() }.first { n -> !pipelines.contains(n) }
 
-    private fun createAtlsContainer(proxyConfig: GlueAtlsProxyConfiguration): AugmentedGlueContainer {
+    private fun createAtlsContainer(proxyConfig: GlueAtlsProxyConfiguration, keyId: String): AugmentedGlueContainer {
         return AugmentedGlueContainer(
             GlueContainer(
                 atlsConfig.proxyContainer,
@@ -46,6 +50,7 @@ class PipelineManager(
                             },
                         caCertificate = File(atlsConfig.caCertPath).readText(),
                         proxyEndpoint = proxyConfig.proxyEndpoint,
+                        keyId = keyId,
                     ),
                 ),
             ),
@@ -64,7 +69,7 @@ class PipelineManager(
     /**
      * Augment the container pipeline object by properly configuring all ATLS proxy images
      */
-    private fun augmentPipelineSpec(originalSpec: GlueContainerPipeline): List<AugmentedGlueContainer> {
+    private suspend fun augmentPipelineSpec(originalSpec: GlueContainerPipeline, keyId: String?): List<AugmentedGlueContainer> {
         val augmentedSpec = mutableListOf<AugmentedGlueContainer>()
         if (atlsConfig.enabled) {
             originalSpec.atlsProxyIn?.let {
@@ -72,7 +77,7 @@ class PipelineManager(
                     message = "Adding ATLS input proxy container"
                     payload = mapOf("atlsProxyIn" to it)
                 }
-                augmentedSpec += createAtlsContainer(it)
+                augmentedSpec += createAtlsContainer(it, keyId!!)
             }
         }
         originalSpec.container.forEach { augmentedSpec += AugmentedGlueContainer(it, emptyMap()) }
@@ -82,7 +87,7 @@ class PipelineManager(
                     message = "Adding ATLS output proxy container"
                     payload = mapOf("atlsProxyOut" to it)
                 }
-                augmentedSpec += createAtlsContainer(it)
+                augmentedSpec += createAtlsContainer(it, keyId!!)
             }
         }
         return augmentedSpec
@@ -94,9 +99,25 @@ class PipelineManager(
         targetId: String,
     ): ContainerPipeline =
         pipelineMutex.withLock {
-            val augmentedSpec = augmentPipelineSpec(pipelineSpec)
-
             val name = createPipelineName()
+
+            val keyId = if (atlsConfig.enabled) {
+                // This determines if the public URL must be added to the pipeline cert as ip address or dns name
+                val hostnameIsIp = runCatching { IPv4Address.parse(connectorConfig.publicUrl.host) }.isSuccess
+                val (dnsNames, ipAddresses) = if (hostnameIsIp) {
+                    Pair(listOf<String>(), listOf(connectorConfig.publicUrl.host))
+                } else {
+                    Pair(listOf(connectorConfig.publicUrl.host), listOf())
+                }
+
+                // TODO: Determine when we can use a hardware key type
+                cmcClient.tlsKey(name, dnsNames, ipAddresses)
+            } else {
+                null
+            }
+
+            val augmentedSpec = augmentPipelineSpec(pipelineSpec, keyId)
+
             val pipeline = backend.createPipeline(name, augmentedSpec, contractId, targetId)
 
             try {

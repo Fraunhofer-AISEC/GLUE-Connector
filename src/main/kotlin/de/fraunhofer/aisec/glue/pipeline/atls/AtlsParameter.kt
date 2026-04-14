@@ -21,6 +21,8 @@ class AtlsParameter(
     @param:JsonProperty("http://fhg.de/glue/proxyEndpoint")
     @param:JsonSetter(nulls = Nulls.AS_EMPTY)
     val proxyEndpoint: List<GlueAtlsProxyEndpoint>? = null,
+    @param:JsonProperty("http://fhg.de/glue/keyId")
+    val keyId: String,
     value: GlueValue? = null,
 ) : GlueParameter(value) {
     override fun equals(other: Any?): Boolean {
@@ -34,6 +36,7 @@ class AtlsParameter(
         if (cmcAddress != other.cmcAddress) return false
         if (caCertificate != other.caCertificate) return false
         if (proxyEndpoint != other.proxyEndpoint) return false
+        if (keyId != other.keyId) return false
 
         return true
     }
@@ -44,6 +47,7 @@ class AtlsParameter(
         result = 31 * result + cmcAddress.hashCode()
         result = 31 * result + caCertificate.hashCode()
         result = 31 * result + proxyEndpoint.hashCode()
+        result = 31 * result + keyId.hashCode()
         return result
     }
 
@@ -52,6 +56,6 @@ class AtlsParameter(
             caCertificate.truncate(
                 16,
             )
-        }, proxyConnections=$proxyEndpoint)"
+        }, proxyConnections=$proxyEndpoint), keyId=$keyId"
     }
 }

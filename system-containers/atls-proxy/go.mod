@@ -3,16 +3,16 @@ module atls-proxy
 go 1.25.0
 
 require (
-	github.com/Fraunhofer-AISEC/cmc v0.9.8-0.20260311171329-d670b8866e89
+	github.com/Fraunhofer-AISEC/cmc v0.9.8
 	golang.org/x/sync v0.20.0
 )
 
 require (
-	github.com/Fraunhofer-AISEC/go-attestation v0.5.2-0.20241227162048-d0a5b66c0bb6 // indirect
+	github.com/Fraunhofer-AISEC/go-attestation v0.5.2-0.20260210211708-363bbf015efe // indirect
 	github.com/dsnet/golib/memfile v1.0.0 // indirect
-	github.com/edgelesssys/ego v1.8.1 // indirect
-	github.com/fxamacker/cbor/v2 v2.9.0 // indirect
-	github.com/go-jose/go-jose/v4 v4.1.3 // indirect
+	github.com/edgelesssys/ego v1.9.0 // indirect
+	github.com/fxamacker/cbor/v2 v2.9.1 // indirect
+	github.com/go-jose/go-jose/v4 v4.1.4 // indirect
 	github.com/google/certificate-transparency-go v1.3.3 // indirect
 	github.com/google/go-configfs-tsm v0.3.3 // indirect
 	github.com/google/go-eventlog v0.0.2 // indirect
@@ -22,12 +22,12 @@ require (
 	github.com/google/go-tspi v0.3.0 // indirect
 	github.com/google/logger v1.1.2 // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	github.com/mattn/go-sqlite3 v1.14.34 // indirect
+	github.com/mattn/go-sqlite3 v1.14.42 // indirect
 	github.com/opencontainers/runtime-spec v1.3.0 // indirect
 	github.com/pion/dtls/v3 v3.1.2 // indirect
 	github.com/pion/logging v0.2.4 // indirect
 	github.com/pion/transport/v4 v4.0.1 // indirect
-	github.com/plgd-dev/go-coap/v3 v3.4.2 // indirect
+	github.com/plgd-dev/go-coap/v3 v3.5.1 // indirect
 	github.com/robertkrimen/otto v0.5.1 // indirect
 	github.com/sirupsen/logrus v1.9.4 // indirect
 	github.com/veraison/go-cose v1.3.0 // indirect
@@ -35,13 +35,13 @@ require (
 	go.mozilla.org/pkcs7 v0.9.0 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/crypto v0.49.0 // indirect
-	golang.org/x/exp v0.0.0-20260218203240-3dfff04db8fa // indirect
-	golang.org/x/net v0.52.0 // indirect
-	golang.org/x/sys v0.42.0 // indirect
-	golang.org/x/text v0.35.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260311181403-84a4fc48630c // indirect
-	google.golang.org/grpc v1.79.2 // indirect
+	golang.org/x/crypto v0.50.0 // indirect
+	golang.org/x/exp v0.0.0-20260410095643-746e56fc9e2f // indirect
+	golang.org/x/net v0.53.0 // indirect
+	golang.org/x/sys v0.43.0 // indirect
+	golang.org/x/text v0.36.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260414002931-afd174a4e478 // indirect
+	google.golang.org/grpc v1.80.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/sourcemap.v1 v1.0.5 // indirect
 	gopkg.in/square/go-jose.v2 v2.6.0 // indirect
