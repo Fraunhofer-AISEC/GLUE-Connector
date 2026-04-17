@@ -3,23 +3,21 @@ module atls-proxy
 go 1.25.0
 
 require (
-	github.com/Fraunhofer-AISEC/cmc v0.9.8
+	github.com/Fraunhofer-AISEC/cmc v0.9.9-0.20260417180632-9acd193569a9
 	golang.org/x/sync v0.20.0
 )
 
 require (
-	github.com/Fraunhofer-AISEC/go-attestation v0.5.2-0.20260210211708-363bbf015efe // indirect
 	github.com/dsnet/golib/memfile v1.0.0 // indirect
 	github.com/edgelesssys/ego v1.9.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.1 // indirect
 	github.com/go-jose/go-jose/v4 v4.1.4 // indirect
-	github.com/google/certificate-transparency-go v1.3.3 // indirect
+	github.com/google/go-attestation v0.6.0 // indirect
 	github.com/google/go-configfs-tsm v0.3.3 // indirect
 	github.com/google/go-eventlog v0.0.2 // indirect
 	github.com/google/go-sev-guest v0.14.1 // indirect
 	github.com/google/go-tdx-guest v0.3.2-0.20250131194449-460f94c01da7 // indirect
 	github.com/google/go-tpm v0.9.8 // indirect
-	github.com/google/go-tspi v0.3.0 // indirect
 	github.com/google/logger v1.1.2 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/mattn/go-sqlite3 v1.14.42 // indirect
@@ -44,5 +42,4 @@ require (
 	google.golang.org/grpc v1.80.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/sourcemap.v1 v1.0.5 // indirect
-	gopkg.in/square/go-jose.v2 v2.6.0 // indirect
 )
