@@ -58,6 +58,9 @@
         },
         "intelCollateral": {
           "$ref": "#/$defs/IntelCollateral"
+        },
+        "purl": {
+          "type": "string"
         }
       },
       "type": "object"
