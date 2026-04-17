@@ -14,7 +14,10 @@
           "$ref": "#/$defs/Result"
         },
         "prover": {
-          "type": "string"
+          "$ref": "#/$defs/Endpoint"
+        },
+        "verifier": {
+          "$ref": "#/$defs/Endpoint"
         },
         "created": {
           "type": "string"
@@ -133,6 +136,9 @@
         },
         "intelCollateral": {
           "$ref": "#/$defs/IntelCollateral"
+        },
+        "purl": {
+          "type": "string"
         }
       },
       "type": "object"
@@ -182,6 +188,12 @@
         },
         "ctrDetails": {
           "$ref": "#/$defs/CtrData"
+        },
+        "purl": {
+          "type": "string"
+        },
+        "hashAlg": {
+          "type": "string"
         }
       },
       "type": "object"
@@ -293,6 +305,20 @@
           "type": "array"
         },
         "optionaldata": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "Endpoint": {
+      "properties": {
+        "hostname": {
+          "type": "string"
+        },
+        "ip": {
+          "type": "string"
+        },
+        "peerId": {
           "type": "string"
         }
       },
