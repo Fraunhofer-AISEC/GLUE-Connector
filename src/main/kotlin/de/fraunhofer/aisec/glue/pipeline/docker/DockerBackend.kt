@@ -105,7 +105,7 @@ class DockerBackend(
         for (augmentedGlueContainer in pipelineDef) {
             val glueContainer = augmentedGlueContainer.base
             val expectedHash = glueContainer.hash
-            val imageToCheck = dockerClient.images.createByPull(glueContainer.image)
+            val imageToCheck = dockerClient.images.get(glueContainer.image)
             val inspectResponse = imageToCheck.inspect()
             val idHash = inspectResponse.id
             val repoDigests = inspectResponse.repoDigests?.map { it.split("@").last() }
