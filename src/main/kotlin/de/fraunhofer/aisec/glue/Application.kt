@@ -1,5 +1,9 @@
 package de.fraunhofer.aisec.glue
 
+import com.apicatalog.jsonld.loader.FileLoader
+import com.apicatalog.jsonld.loader.HttpLoader
+import com.apicatalog.jsonld.loader.LRUDocumentCache
+import com.apicatalog.jsonld.loader.SchemeRouter
 import com.fasterxml.jackson.core.JsonFactoryBuilder
 import com.fasterxml.jackson.core.StreamReadFeature
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -14,6 +18,7 @@ import de.fraunhofer.aisec.glue.controllers.api.PipelineApiController
 import de.fraunhofer.aisec.glue.controllers.api.RemotePipelineApiController
 import de.fraunhofer.aisec.glue.controllers.internal.ContainerInterfaceController
 import de.fraunhofer.aisec.glue.docker.DockerClient
+import de.fraunhofer.aisec.glue.jsonld.FileSystemDocumentCache
 import de.fraunhofer.aisec.glue.logging.LogbackObjectMapperInjector
 import de.fraunhofer.aisec.glue.negotiation.NegotiationManager
 import de.fraunhofer.aisec.glue.negotiation.builtin.BuiltinNegotiationManager
@@ -54,6 +59,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import org.kodein.di.*
 import java.net.ConnectException
+import java.nio.file.Path
 import kotlin.math.pow
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation as ClientContentNegotiation
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation as ServerContentNegotiation
@@ -135,15 +141,24 @@ val defaultDependencies by DI.Module {
         }
     bind<OdrlParser>() with
         singleton {
+            val cacheHome = System.getenv("XDG_CACHE_HOME") ?: "${System.getProperty("user.home")}/.cache"
+            val jsonLdCacheDir = Path.of(cacheHome, "glue", "jsonld")
+            val mapper =
+                ObjectMapper(
+                    JsonFactoryBuilder().enable(StreamReadFeature.INCLUDE_SOURCE_IN_LOCATION)
+                        .build(),
+                ).apply {
+                    registerSubtypes(AtlsParameter::class.java)
+                }
+            val jsonLdLoader = FileSystemDocumentCache(LRUDocumentCache(HttpLoader.defaultInstance(), 120), jsonLdCacheDir, mapper)
             OdrlParser(
-                mapper =
-                    ObjectMapper(
-                        JsonFactoryBuilder().enable(StreamReadFeature.INCLUDE_SOURCE_IN_LOCATION)
-                            .build(),
-                    ).apply {
-                        registerSubtypes(AtlsParameter::class.java)
-                    },
+                mapper = mapper,
                 compactSerialization = true,
+                documentLoader =
+                    SchemeRouter().set("https", jsonLdLoader).set("http", jsonLdLoader).set(
+                        "file",
+                        FileLoader(),
+                    ),
             )
         }
     bind<ObjectMapper>() with singleton { instance<OdrlParser>().mapper }
