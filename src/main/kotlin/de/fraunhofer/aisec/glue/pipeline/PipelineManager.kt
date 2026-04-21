@@ -9,6 +9,8 @@ import de.fraunhofer.iosb.odrl.glue.GlueContainer
 import de.fraunhofer.iosb.odrl.glue.GlueContainerPipeline
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ktor.network.sockets.*
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.io.File
@@ -103,14 +105,18 @@ class PipelineManager(
                     val current = containerInfo[i]
                     val next = containerInfo.getOrNull(i + 1)?.name
 
-                    pipeline.injectConfig(
-                        i,
-                        ContainerConfig(
-                            controller = backend.getConnectorIp(current),
-                            nextContainer = next,
-                            parameters = augmentedSpec[i].base.parameter,
-                        ),
-                    )
+                    coroutineScope {
+                        launch {
+                            pipeline.injectConfig(
+                                i,
+                                ContainerConfig(
+                                    controller = backend.getConnectorIp(current),
+                                    nextContainer = next,
+                                    parameters = augmentedSpec[i].base.parameter,
+                                ),
+                            )
+                        }
+                    }
                 }
 
                 pipeline.start()
