@@ -16,6 +16,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.time.Duration.Companion.milliseconds
 
 class DockerContainerPipeline internal constructor(
     name: String,
@@ -39,7 +40,7 @@ class DockerContainerPipeline internal constructor(
 
     private suspend fun stopContainer(container: Container) {
         try {
-            withTimeout(5000) {
+            withTimeout(5000.milliseconds) {
                 container.stop()
             }
         } catch (_: TimeoutCancellationException) {
@@ -161,9 +162,10 @@ class DockerContainerPipeline internal constructor(
         }
     }
 
-    override suspend fun getContainerInfo(): List<ContainerInfo> {
-        return containers.indices.map { getContainerInfo(it) }
-    }
+    override suspend fun getContainerInfo(): List<ContainerInfo> =
+        coroutineScope {
+            containers.indices.map { async { getContainerInfo(it) } }.awaitAll()
+        }
 
     override suspend fun injectConfig(
         index: Int,

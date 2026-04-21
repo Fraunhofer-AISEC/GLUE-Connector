@@ -15,9 +15,13 @@ import de.fraunhofer.aisec.glue.pipeline.ContainerPipeline
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ktor.server.config.*
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import java.net.Inet4Address
 import java.net.InetAddress
+import java.util.concurrent.ConcurrentLinkedQueue
 import kotlin.experimental.or
 
 class DockerBackend(
@@ -50,6 +54,18 @@ class DockerBackend(
             // No container
             null
         }*/
+    }
+
+    private suspend fun<T, R> mapParallel(input: List<T>, close: suspend (R) -> Unit, map: suspend (Int, T) -> R): List<R> {
+        val completed = ConcurrentLinkedQueue<R>()
+        try {
+            return coroutineScope {
+                input.mapIndexed { index, item -> async { map(index, item).also(completed::add) } }.awaitAll()
+            }
+        } catch (t: Throwable) {
+            completed.forEach { runCatching { close(it) }.onFailure(t::addSuppressed) }
+            throw t
+        }
     }
 
     private suspend fun convertPipeline(
@@ -117,21 +133,9 @@ class DockerBackend(
         id: String,
         containerSpecs: List<ContainerCreateRequest>,
     ): List<Container> {
-        val containers = mutableListOf<Container>()
-
-        try {
-            // We need to add the containers one by one so all existing containers are freed correctly on exception
-            for ((i, cs) in containerSpecs.withIndex()) {
-                val name = "pipeline-$id-$i"
-                val container = dockerClient.containers.create(name, cs)
-                containers.add(container)
-            }
-        } catch (e: Exception) {
-            containers.forEach { c -> c.runCatching { remove() } }
-            throw e
+        return mapParallel(containerSpecs, Container::remove) { index, item ->
+            dockerClient.containers.create("pipeline-$id-$index", item)
         }
-
-        return containers
     }
 
     private suspend fun linkContainers(
@@ -147,62 +151,42 @@ class DockerBackend(
         } else {
             containers.windowed(2)
         }
-        val networks = mutableListOf<Network>()
 
-        try {
-            for ((i, c) in containerPairs.withIndex()) {
-                val name = "pipeline-$id-net-$i"
+        // Pre-allocate subnets sequentially — the iterator is not thread-safe
+        val linkRequests =
+            containerPairs.mapIndexed { i, c ->
                 val subnet = subnets.next()
                 val subnetCidr = "${subnet.hostAddress}/$subnetLen"
                 val gateway =
                     withContext(Dispatchers.IO) {
                         Inet4Address.getByAddress(subnet.address.also { a -> a[3] = a[3] or 1 })
                     }.hostAddress
-                val network =
-                    dockerClient.networks.create(
-                        NetworkCreateRequest(
-                            name = name,
-                            ipam =
-                                IPAM(
-                                    config =
-                                        listOf(
-                                            IPAMConfig(
-                                                subnet = subnetCidr,
-                                                gateway = gateway,
-                                            ),
-                                        ),
-                                ),
-                            labels =
-                                mapOf(
-                                    "de.fraunhofer.aisec.glue.pipeline.id" to id,
-                                    "de.fraunhofer.aisec.glue.pipeline.contract" to contractId,
-                                    "de.fraunhofer.aisec.glue.pipeline.target" to targetId,
-                                ),
+                NetworkCreateRequest(
+                    name = "pipeline-$id-net-$i",
+                    ipam = IPAM(config = listOf(IPAMConfig(subnet = subnetCidr, gateway = gateway))),
+                    labels =
+                        mapOf(
+                            "de.fraunhofer.aisec.glue.pipeline.id" to id,
+                            "de.fraunhofer.aisec.glue.pipeline.contract" to contractId,
+                            "de.fraunhofer.aisec.glue.pipeline.target" to targetId,
                         ),
-                    )
-
-                networks.add(network)
-                c.forEach { network.connect(it) }
-                // We always want to have the controller reachable
-                selfContainer?.let { self -> network.connect(self) }
+                ) to c
             }
-        } catch (e: Exception) {
-            networks.forEach { n -> n.runCatching { remove() } }
-            throw e
-        }
 
-        return networks
+        return mapParallel(linkRequests, Network::remove) { _, item ->
+            val (request, containers) = item
+            val network = dockerClient.networks.create(request)
+            try {
+                containers.forEach { network.connect(it) }
+                // We always want to have the controller reachable
+                selfContainer?.let { network.connect(it) }
+                return@mapParallel network
+            } catch (e: Throwable) {
+                network.remove()
+                throw e
+            }
+        }
     }
-
-    /*private suspend fun connectController(id: String, containers: List<Container>, networks: List<Network>) {
-        if (selfContainer != null) {
-            // When we are running in a container, we just need to connect up to the link networks.
-            // In the special case where there is only one container, we don't have a link network and need to fall back
-            // to the non-dockerized behaviour.
-            networks.forEach { net -> net.connect(selfContainer!!) }
-            if ()
-        }
-    }*/
 
     override suspend fun createPipeline(
         id: String,
