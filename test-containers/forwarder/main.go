@@ -113,7 +113,7 @@ func negotiateAndProxy(conn net.Conn, coordinator string, destination string) {
 }
 
 type restParameter struct {
-    Type string `json:"@type"`
+    Type string `json:"type"`
     HttpUrl string `json:"http://fhg.de/glue/httpUrl"`
 }
 
