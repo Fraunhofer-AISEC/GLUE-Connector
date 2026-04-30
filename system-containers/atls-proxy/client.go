@@ -34,7 +34,7 @@ type ClientProxy struct {
 // negotiateWithCoordinator triggers the follow-up negotiation with the next connector in the pipeline
 func (cp *ClientProxy) negotiateWithCoordinator() error {
 	coordinatorUrl := fmt.Sprintf(
-		"http://%s:8080/coordinator/negotiate?destination=http://%s&startPipeline=true",
+		"http://%s:8080/coordinator/negotiate?destination=%s&startPipeline=true",
 		cp.config.Controller,
 		cp.connectionConfig.NextEndpoint,
 	)
