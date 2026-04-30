@@ -1,0 +1,8 @@
+{
+  "atls": false,
+  "components": [
+    {"name": "initiator"},
+    {"name": "intermediary"},
+    {"name": "destination"}
+  ]
+}
