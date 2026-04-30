@@ -19,6 +19,12 @@ require() {
 
 require curl jq jo envsubst docker
 
+peer_proto="https"
+if [[ "$1" == "--no-atls" ]]; then
+  peer_proto="http"
+  shift
+fi
+
 if (( $# != 3 )); then
   echo "Usage: $0 <local connector> <remote connector> <policy path>" >&2
   exit 1
@@ -102,7 +108,7 @@ local_pipeline_def="$(envsubst <<<'{
 }')"
 
 echo "Starting the contract negotiation..."
-negotiation_req="$(jo peer="https://$remote_connector:8444" contractRequest="$policy_content" localPipeline="$local_pipeline_def")"
+negotiation_req="$(jo peer="$peer_proto://$remote_connector:8444" contractRequest="$policy_content" localPipeline="$local_pipeline_def")"
 negotiation_id=$(curl -v -X POST "${common_curl_opts[@]}" -d "$negotiation_req" "http://$local_connector_ip:8080/api/v1.0/negotiations" | jq -r ".id")
 
 echo "Awaiting negotiation completion..."

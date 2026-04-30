@@ -1,5 +1,4 @@
 services:
-
   #
   # Services for the initiator
   #
@@ -13,6 +12,7 @@ services:
       - ./pki:/pki:ro
     env_file: .env
     command:
+      - -P:atls.enabled=true
       - -P:atls.cmcAddress=unix:/tmp/cmcd.sock
       - -P:atls.caCertPath=/pki/ca-cert.pem
       - -P:connector.identity=https://initiator
@@ -91,6 +91,7 @@ services:
       - ./pki:/pki:ro
     env_file: .env
     command:
+      - -P:atls.enabled=true
       - -P:atls.cmcAddress=unix:/tmp/cmcd.sock
       - -P:atls.caCertPath=/pki/ca-cert.pem
       - -P:connector.identity=https://intermediary
@@ -169,6 +170,7 @@ services:
       - ./pki:/pki:ro
     env_file: .env
     command:
+      - -P:atls.enabled=true
       - -P:atls.cmcAddress=unix:/tmp/cmcd.sock
       - -P:atls.caCertPath=/pki/ca-cert.pem
       - -P:connector.identity=https://destination
@@ -234,7 +236,6 @@ services:
       - destination-tmp:/tmp
       - ./data:/data
 
-
   #
   # Infrastructure
   #
@@ -268,25 +269,21 @@ services:
       - metadata:/metadata
 
 volumes:
-
   initiator-tmp:
     driver: local
     driver_opts:
       type: tmpfs
       device: tmpfs
-
   intermediary-tmp:
     driver: local
     driver_opts:
       type: tmpfs
       device: tmpfs
-
   destination-tmp:
     driver: local
     driver_opts:
       type: tmpfs
       device: tmpfs
-
   metadata:
     driver: local
     driver_opts:

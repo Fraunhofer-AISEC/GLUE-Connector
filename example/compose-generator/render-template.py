@@ -40,7 +40,9 @@ def main():
         template_content = sys.stdin.read()
         env = Environment(
             undefined=StrictUndefined,
-            autoescape=select_autoescape()
+            autoescape=select_autoescape(),
+            trim_blocks=True,
+            lstrip_blocks=True,
         )
         env.filters.update(jinja2.filters.FILTERS)
         template = env.from_string(template_content)
@@ -53,7 +55,9 @@ def main():
         env = Environment(
             loader=FileSystemLoader(template_path.parent),
             undefined=StrictUndefined,
-            autoescape=select_autoescape()
+            autoescape=select_autoescape(),
+            trim_blocks=True,
+            lstrip_blocks=True,
         )
         env.filters.update(jinja2.filters.FILTERS)
         template = env.get_template(template_path.name)
