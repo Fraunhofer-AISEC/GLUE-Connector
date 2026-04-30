@@ -148,10 +148,13 @@ func main() {
 	    }
 
         if decodedParam.Type != "http://fhg.de/glue/RestParameter" {
+            log.Printf("Discarding unused parameter %s", decodedParam.Type)
             continue
         }
 
+        log.Printf("Setting next hop address to %s", nextHop)
         nextHop = decodedParam.HttpUrl
+        break
 	}
 
 	listener, err := net.Listen("tcp", "0.0.0.0:8080")
