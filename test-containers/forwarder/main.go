@@ -152,7 +152,7 @@ func main() {
             continue
         }
 
-        log.Printf("Setting next hop address to %s", nextHop)
+        log.Printf("Setting next hop address to %s", decodedParam.HttpUrl)
         nextHop = decodedParam.HttpUrl
         break
 	}
