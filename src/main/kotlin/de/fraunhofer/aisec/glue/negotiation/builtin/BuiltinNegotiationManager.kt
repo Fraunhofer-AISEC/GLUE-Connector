@@ -316,7 +316,7 @@ open class BuiltinNegotiationManager(
 
             dataStore.updateNegotiation(data)
 
-            if (data.state == NegotiationState.FINALIZED || data.state == NegotiationState.TERMINATED) {
+            if (data.state == NegotiationState.FINALIZED) {
                 assert(data.contract != null && data.contract is OdrlAgreement)
                 dataStore.addContract(data.contract as OdrlAgreement)
             }
