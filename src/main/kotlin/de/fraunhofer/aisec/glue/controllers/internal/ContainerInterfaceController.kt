@@ -3,6 +3,7 @@ package de.fraunhofer.aisec.glue.controllers.internal
 import com.fasterxml.jackson.databind.JsonNode
 import de.fraunhofer.aisec.glue.DataStore
 import de.fraunhofer.aisec.glue.controllers.Controller
+import de.fraunhofer.aisec.glue.models.api.RemotePipelineStatusResponse
 import de.fraunhofer.aisec.glue.negotiation.NegotiationManager
 import de.fraunhofer.aisec.glue.negotiation.toOffer
 import de.fraunhofer.aisec.glue.pipeline.PipelineManager
@@ -73,8 +74,7 @@ class ContainerInterfaceController(
             // Unless otherwise specified, the followup pipeline is started immediately.
             post("/negotiate") {
                 val destination = call.queryParameters.getOrFail("destination")
-                // TODO: What happens if `startPipeline` is set to "false"? Is the flow meaningful and sound then?
-                val startPipeline = call.queryParameters["startPipeline"]?.toBoolean() ?: true
+                val action = call.queryParameters["action"] ?: OdrlIdentifiers.DISTRIBUTE
 
                 val callingAddress = call.request.local.remoteAddress
                 val callingPipeline =
@@ -86,7 +86,7 @@ class ContainerInterfaceController(
                                 mapOf(
                                     "origin" to callingAddress,
                                     "destination" to destination,
-                                    "startPipeline" to startPipeline,
+                                    "action" to action,
                                 )
                         }
                         call.respond(HttpStatusCode.Forbidden)
@@ -99,7 +99,7 @@ class ContainerInterfaceController(
                         mapOf(
                             "origin" to callingAddress,
                             "destination" to destination,
-                            "startPipeline" to startPipeline,
+                            "action" to action,
                             "callingPipeline" to callingPipeline.name,
                         )
                 }
@@ -114,7 +114,7 @@ class ContainerInterfaceController(
                             mapOf(
                                 "origin" to callingAddress,
                                 "destination" to destination,
-                                "startPipeline" to startPipeline,
+                                "action" to action,
                                 "callingPipeline" to callingPipeline.name,
                             )
                     }
@@ -149,7 +149,7 @@ class ContainerInterfaceController(
                                     mapOf(
                                         "origin" to callingAddress,
                                         "destination" to destination,
-                                        "startPipeline" to startPipeline,
+                                        "action" to action,
                                         "callingPipeline" to callingPipeline.name,
                                         "followingContract" to c.uid,
                                     )
@@ -176,7 +176,7 @@ class ContainerInterfaceController(
                                         mapOf(
                                             "origin" to callingAddress,
                                             "destination" to destination,
-                                            "startPipeline" to startPipeline,
+                                            "action" to action,
                                             "callingPipeline" to callingPipeline.name,
                                         )
                                 }
@@ -211,7 +211,7 @@ class ContainerInterfaceController(
                                 mapOf(
                                     "origin" to callingAddress,
                                     "destination" to destination,
-                                    "startPipeline" to startPipeline,
+                                    "action" to action,
                                     "callingPipeline" to callingPipeline.name,
                                     "offer" to convertedNextPolicy,
                                 )
@@ -228,13 +228,12 @@ class ContainerInterfaceController(
                         mapOf(
                             "origin" to callingAddress,
                             "destination" to destination,
-                            "startPipeline" to startPipeline,
+                            "action" to action,
                             "callingPipeline" to callingPipeline.name,
                             "contract" to followingContract,
                         )
                 }
 
-                if (startPipeline) {
                     val remotePipeline =
                         remotePipelineManager.getOrCreate(
                             Url("$remotePeerProtocol://$destinationHost"),
@@ -243,10 +242,7 @@ class ContainerInterfaceController(
                         )
                     callingPipeline.addRemotePipeline(remotePipeline)
 
-                    // TODO: Unify format with the normal pipeline API (needs to be rewritten in forwarder)
-                    // TODO: How is this information ever reaching the caller if pipeline was already active or `startPipeline` was "false"?
-                    call.respond(remotePipeline.ports.map { p -> mapOf("endpoint" to p.hostAddress, "protocol" to p.protocol.uppercase()) })
-                }
+                    call.respond(RemotePipelineStatusResponse(remotePipeline.peer.toString(), remotePipeline.id, remotePipeline.remoteId, remotePipeline.ports))
             }
         }
     }
