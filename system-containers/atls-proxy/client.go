@@ -1,128 +1,128 @@
 package main
 
 import (
-	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"net"
 	"net/http"
+	"net/url"
+	"slices"
+	"strconv"
 	"sync"
-	"time"
 
 	"github.com/Fraunhofer-AISEC/cmc/attestationreport"
 	"github.com/Fraunhofer-AISEC/cmc/attestedtls"
-	"golang.org/x/sync/errgroup"
 )
 
-// ClientProxy manages a single client-side proxy connection
-type ClientProxy struct {
-	ctx              context.Context
-	config           config
-	proxyConfig      atlsProxyConfig
-	connectionConfig proxyEndpoint
-	tlsConfig        *tls.Config
-
-	// For triggering the follow-up negotiation
-	setupOnce sync.Once
-	peerAddr  string
-	setupErr  error
+type http2Conn struct {
+	r io.ReadCloser
+	w http.ResponseWriter
 }
 
-// negotiateWithCoordinator triggers the follow-up negotiation with the next connector in the pipeline
-func (cp *ClientProxy) negotiateWithCoordinator() error {
+func (c *http2Conn) Read(b []byte) (int, error) {
+	return c.r.Read(b)
+}
+
+func (c *http2Conn) Write(b []byte) (int, error) {
+	return c.w.Write(b)
+}
+
+func (c *http2Conn) Close() error {
+	return c.r.Close()
+}
+
+type containerPort struct {
+	ContainerPort uint16 `json:"containerPort"`
+	HostAddress   string `json:"hostAddress"`
+	Protocol      string `json:"protocol"`
+}
+
+type remotePipelineStatus struct {
+	Id       string          `json:"id"`
+	RemoteId string          `json:"remoteId"`
+	Peer     string          `json:"peer"`
+	Ports    []containerPort `json:"ports"`
+}
+
+type client struct {
+	config      config
+	proxyConfig atlsProxyConfig
+
+	tlsConfig *tls.Config
+	dial      func(string) (net.Conn, error)
+}
+
+func (c *client) selectPeerEndpoint(ports []containerPort, selected string) (string, error) {
+	var index int
+	if selected != "" {
+		selectedInt, err := strconv.ParseUint(selected, 10, 16)
+		if err != nil {
+			return "", fmt.Errorf("could not parse selected port: %w", err)
+		}
+
+		index = slices.IndexFunc(ports, func(port containerPort) bool {
+			return port.ContainerPort == uint16(selectedInt)
+		})
+	} else {
+		index = slices.IndexFunc(ports, func(port containerPort) bool {
+			return port.Protocol == "tcp"
+		})
+	}
+
+	if index == -1 {
+		return "", fmt.Errorf("could not find an appropriate container port")
+	}
+
+	return ports[index].HostAddress, nil
+}
+
+func (c *client) negotiateContract(destination string, action string, port string) (string, error) {
+	var actionFragment string
+	if action != "" {
+		actionFragment = fmt.Sprintf("&action=%s", url.QueryEscape(action))
+	}
+
 	coordinatorUrl := fmt.Sprintf(
-		"http://%s:8080/coordinator/negotiate?destination=%s&startPipeline=true",
-		cp.config.Controller,
-		cp.connectionConfig.NextEndpoint,
+		"http://%s:8080/coordinator/negotiate?destination=%s%s",
+		c.config.Controller,
+		url.QueryEscape(destination),
+		actionFragment,
 	)
 
 	resp, err := http.Post(coordinatorUrl, "application/json", nil)
 	if err != nil {
-		return fmt.Errorf("error contacting the coordinator: %w", err)
+		return "", fmt.Errorf("error contacting the coordinator: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return fmt.Errorf("got error response from coordinator: %s", resp.Status)
+		return "", fmt.Errorf("got error response from coordinator: %s", resp.Status)
 	}
 
-	var endpoints []struct {
-		Endpoint string `json:"endpoint"`
-		Protocol string `json:"protocol"`
+	var pipeline remotePipelineStatus
+	if err := json.NewDecoder(resp.Body).Decode(&pipeline); err != nil {
+		return "", fmt.Errorf("could not decode the negotiation response from the coordinator: %w", err)
 	}
 
-	if err := json.NewDecoder(resp.Body).Decode(&endpoints); err != nil {
-		return fmt.Errorf("could not decode the negotiation response from the coordinator: %w", err)
-	}
-
-	peerAddr := cp.selectPeerEndpoint(endpoints)
-	if peerAddr == "" {
-		return fmt.Errorf("the coordinator did not return any suitable port mapping for the next pipeline")
-	}
-
-	cp.peerAddr = peerAddr
-	return nil
+	return c.selectPeerEndpoint(pipeline.Ports, port)
 }
 
-// selectPeerEndpoint chooses the best endpoint from the coordinator response
-// Prefers port 8080/TCP, then falls back to the first available TCP endpoint
-func (cp *ClientProxy) selectPeerEndpoint(endpoints []struct {
-	Endpoint string `json:"endpoint"`
-	Protocol string `json:"protocol"`
-}) string {
-	var fallback string
-
-	for _, endpoint := range endpoints {
-		_, port, err := net.SplitHostPort(endpoint.Endpoint)
-		if err != nil {
-			slog.Warn("Received invalid endpoint from coordinator", "endpoint", endpoint.Endpoint)
-			continue
-		}
-
-		if endpoint.Protocol == "TCP" {
-			if port == "8080" {
-				return endpoint.Endpoint
-			}
-			if fallback == "" {
-				fallback = endpoint.Endpoint
-			}
-		}
-	}
-
-	return fallback
-}
-
-// ensureSetup makes sure that the follow-up negotiation is performed once
-func (cp *ClientProxy) ensureSetup() error {
-	cp.setupOnce.Do(func() {
-		cp.setupErr = cp.negotiateWithCoordinator()
-	})
-	return cp.setupErr
-}
-
-// handleConnection processes a single client connection by establishing an ATLS connection to the peer
-func (cp *ClientProxy) handleConnection(clientConn net.Conn) {
-	defer clientConn.Close()
-
-	if err := cp.ensureSetup(); err != nil {
-		slog.Error("Failed to setup connection", "error", err)
-		return
-	}
-
+func (c *client) dialAtls(peerAddr string) (net.Conn, error) {
 	serializer, err := attestationreport.NewJsonSerializer()
 	if err != nil {
 		slog.Error("Failed to set up connection", "error", fmt.Errorf("could not create a json serializer: %w", err))
-		return
+		return nil, err
 	}
 
-	atlsConn, err := attestedtls.Dial(
+	return attestedtls.Dial(
 		"tcp",
-		cp.peerAddr,
-		cp.tlsConfig,
-		attestedtls.WithCmcAddr(cp.proxyConfig.CmcAddress),
+		peerAddr,
+		c.tlsConfig,
+		attestedtls.WithCmcAddr(c.proxyConfig.CmcAddress),
 		attestedtls.WithAttest(attestedtls.Attest_Mutual),
 		attestedtls.WithCmcApi("socket"),
 		attestedtls.WithMtls(true),
@@ -130,84 +130,121 @@ func (cp *ClientProxy) handleConnection(clientConn net.Conn) {
 		attestedtls.WithResultCb(func(result *attestationreport.AttestationResult) {
 			switch result.Summary.Status {
 			case attestationreport.StatusSuccess:
-				slog.Info("SUCCESS: Verification for Prover %v (%v)", result.Prover, result.Created)
-			case attestationreport.StatusWarn:
-				slog.Warn("WARN: Verification for Prover %v (%v)", result.Prover, result.Created)
+				slog.Info("Verification for Prover", "prover", result.Prover, "created", result.Created, "status", result.Summary.Status)
 			default:
-				slog.Warn("FAILED: Verification for Prover %v (%v)", result.Prover, result.Created)
+				slog.Warn("Verification for Prover", "prover", result.Prover, "created", result.Created, "status", result.Summary.Status)
 				result.PrintErr()
 			}
 		}),
 	)
-	if err != nil {
-		slog.Error("Could not open connection to the peer", "error", err)
+}
+
+func (c *client) dialPlain(peerAddr string) (net.Conn, error) {
+	return net.Dial("tcp", peerAddr)
+}
+
+func (c *client) proxy(upstream, downstream io.ReadWriteCloser) {
+	var wg sync.WaitGroup
+	forward := func(from io.Reader, to io.Writer, direction string) {
+		defer wg.Done()
+		_, err := io.Copy(to, from)
+		if cw, ok := to.(interface{ CloseWrite() error }); ok {
+			cw.CloseWrite()
+		}
+		if err != nil {
+			slog.Error("Error forwarding data", "direction", direction, "error", err)
+		}
+	}
+
+	wg.Add(2)
+	go forward(upstream, downstream, "forward")
+	go forward(downstream, upstream, "backward")
+	wg.Wait()
+}
+
+func (c *client) httpHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodConnect {
+		http.Error(w, "This proxy only supports HTTP CONNECT requests", http.StatusMethodNotAllowed)
+		return
+	}
+	slog.Debug("Incoming HTTP CONNECT request", "source", r.RemoteAddr, "destination", r.URL)
+
+	if r.URL.Port() == "" {
+		http.Error(w, "No port provided", http.StatusBadRequest)
 		return
 	}
 
-	// Disable timeouts; the data apps should ensure that connections are cleaned up
-	clientConn.SetDeadline(time.Time{})
-	atlsConn.SetDeadline(time.Time{})
+	glueAction := r.Header.Get("X-GLUE-Action")
+	gluePort := r.Header.Get("X-GLUE-Port")
 
-	proxy(cp.ctx, clientConn, atlsConn)
-}
-
-// listen accepts incoming connections and handles them
-func (cp *ClientProxy) listen() error {
-	listenAddr := cp.connectionConfig.ListenEndpoint
-	listener, err := net.Listen("tcp", listenAddr)
+	peerAddr, err := c.negotiateContract(r.URL.Host, glueAction, gluePort)
 	if err != nil {
-		return fmt.Errorf("failed to listen for connections on %s: %w", listenAddr, err)
+		errString := fmt.Sprintf("Error in the control plane: %s", err)
+		http.Error(w, errString, http.StatusBadGateway)
 	}
-	defer listener.Close()
 
-	slog.Info("Listening for connections",
-		"listenAddress", listenAddr,
-		"nextConnector", cp.connectionConfig.NextEndpoint)
+	downstream, err := c.dial(peerAddr)
+	if err != nil {
+		errString := fmt.Sprintf("Could not dial the downstream connection: %s", err)
+		http.Error(w, errString, http.StatusBadGateway)
+	}
+	defer downstream.Close()
 
-	go func() {
-		<-cp.ctx.Done()
-		listener.Close()
-	}()
+	w.WriteHeader(http.StatusOK)
+	if f, ok := w.(http.Flusher); ok {
+		f.Flush()
+	}
 
-	for {
-		clientConn, err := listener.Accept()
+	var upstream io.ReadWriteCloser
+	if h, ok := w.(http.Hijacker); ok {
+		conn, buffered, err := h.Hijack()
 		if err != nil {
-			slog.Error("Failed to accept client connection",
-				"listenAddress", listenAddr,
-				"nextConnector", cp.connectionConfig.NextEndpoint,
-				"error", err)
-			continue
+			// We have already written the OK response to the caller, so we cannot do proper error reporting anymore
+			return
 		}
 
-		go cp.handleConnection(clientConn)
+		// The error can be ignored since we peek the exact length of the buffer
+		buf, _ := buffered.Reader.Peek(buffered.Reader.Buffered())
+		n, err := downstream.Write(buf)
+		if err != nil {
+			return
+		}
+		if n != len(buf) {
+			return
+		}
+
+		upstream = conn
+	} else {
+		upstream = &http2Conn{
+			r: r.Body,
+			w: w,
+		}
 	}
+	defer upstream.Close()
+
+	c.proxy(upstream, downstream)
 }
 
 // clientMain is the entry point for client-mode ATLS proxy
 // It creates a listener for each configured connection that accepts incoming connections
 // and establishes ATLS connections to the next hop after coordinator negotiation
 func clientMain(config config, proxyConfig atlsProxyConfig) error {
-	group, ctx := errgroup.WithContext(context.Background())
-
 	tlsConfig, err := createClientTLSConfig(proxyConfig)
 	if err != nil {
 		return err
 	}
 
-	slog.Info("Starting client listeners", "count", len(proxyConfig.ProxyEndpoints))
+	client := client{
+		config:      config,
+		proxyConfig: proxyConfig,
 
-	for _, connConfig := range proxyConfig.ProxyEndpoints {
-		proxy := &ClientProxy{
-			ctx:              ctx,
-			config:           config,
-			proxyConfig:      proxyConfig,
-			connectionConfig: connConfig,
-			tlsConfig:        tlsConfig,
-		}
-		group.Go(proxy.listen)
+		tlsConfig: tlsConfig,
 	}
 
-	return group.Wait()
+	client.dial = client.dialAtls
+
+	slog.Info("Accepting HTTP CONNECT requests", "address", "0.0.0.0:8080")
+	return http.ListenAndServe("0.0.0.0:8080", http.HandlerFunc(client.httpHandler))
 }
 
 // createClientTLSConfig initializes the TLS configuration for client connections

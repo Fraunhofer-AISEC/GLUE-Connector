@@ -1,7 +1,7 @@
 package de.fraunhofer.aisec.glue.pipeline
 
 data class ContainerPipelineInfo(
-    val name: String,
+    val id: String,
     val contractId: String,
     val targetId: String,
     val backend: String,
@@ -15,7 +15,7 @@ data class ContainerPipelineInfo(
                     ?: "Unknown"
 
             return ContainerPipelineInfo(
-                name = pipeline.name,
+                id = pipeline.name,
                 contractId = pipeline.contractId,
                 targetId = pipeline.targetId,
                 backend = backend,
