@@ -229,19 +229,23 @@ func (c *client) httpHandler(w http.ResponseWriter, r *http.Request) {
 // It creates a listener for each configured connection that accepts incoming connections
 // and establishes ATLS connections to the next hop after coordinator negotiation
 func clientMain(config config, proxyConfig atlsProxyConfig) error {
-	tlsConfig, err := createClientTLSConfig(proxyConfig)
-	if err != nil {
-		return err
-	}
 
 	client := client{
 		config:      config,
 		proxyConfig: proxyConfig,
-
-		tlsConfig: tlsConfig,
 	}
 
-	client.dial = client.dialAtls
+	if proxyConfig.Enabled {
+		tlsConfig, err := createClientTLSConfig(proxyConfig)
+		if err != nil {
+			return err
+		}
+
+		client.tlsConfig = tlsConfig
+		client.dial = client.dialAtls
+	} else {
+		client.dial = client.dialPlain
+	}
 
 	slog.Info("Accepting HTTP CONNECT requests", "address", "0.0.0.0:8080")
 	return http.ListenAndServe("0.0.0.0:8080", http.HandlerFunc(client.httpHandler))

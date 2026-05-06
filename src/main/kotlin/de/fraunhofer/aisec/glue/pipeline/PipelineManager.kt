@@ -43,6 +43,7 @@ class PipelineManager(
                 true,
                 listOf(
                     AtlsParameter(
+                        enabled = atlsConfig.enabled,
                         mode = proxyConfig.proxyMode,
                         cmcAddress =
                             atlsConfig.cmcAddress.let {
@@ -77,24 +78,21 @@ class PipelineManager(
         keyId: String?,
     ): List<AugmentedGlueContainer> {
         val augmentedSpec = mutableListOf<AugmentedGlueContainer>()
-        if (atlsConfig.enabled) {
-            originalSpec.atlsProxyIn?.let {
-                LOG.atDebug {
-                    message = "Adding ATLS input proxy container"
-                    payload = mapOf("atlsProxyIn" to it)
-                }
-                augmentedSpec += createAtlsContainer(it, keyId!!)
+
+        originalSpec.atlsProxyIn?.let {
+            LOG.atDebug {
+                message = "Adding ATLS input proxy container"
+                payload = mapOf("atlsProxyIn" to it)
             }
+            augmentedSpec += createAtlsContainer(it, keyId ?: "placeholder")
         }
         originalSpec.container.forEach { augmentedSpec += AugmentedGlueContainer(it, emptyMap()) }
-        if (atlsConfig.enabled) {
-            originalSpec.atlsProxyOut?.let {
-                LOG.atDebug {
-                    message = "Adding ATLS output proxy container"
-                    payload = mapOf("atlsProxyOut" to it)
-                }
-                augmentedSpec += createAtlsContainer(it, keyId!!)
+        originalSpec.atlsProxyOut?.let {
+            LOG.atDebug {
+                message = "Adding ATLS output proxy container"
+                payload = mapOf("atlsProxyOut" to it)
             }
+            augmentedSpec += createAtlsContainer(it, keyId ?: "placeholder")
         }
         return augmentedSpec
     }

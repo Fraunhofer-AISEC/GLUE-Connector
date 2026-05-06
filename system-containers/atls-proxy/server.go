@@ -81,34 +81,37 @@ func (sp *ServerProxy) listen() error {
 		return fmt.Errorf("could not create a json serializer: %w", err)
 	}
 
-	listener, err := attestedtls.Listen(
-		"tcp",
-		serverListenAddr,
-		sp.tlsConfig,
-		attestedtls.WithCmcAddr(sp.proxyConfig.CmcAddress),
-		attestedtls.WithAttest(attestedtls.Attest_Mutual),
-		attestedtls.WithCmcApi("socket"),
-		attestedtls.WithMtls(true),
-		attestedtls.WithSerializer(serializer),
-		attestedtls.WithKeyId(sp.proxyConfig.KeyId),
-		attestedtls.WithResultCb(func(result *attestationreport.AttestationResult) {
-			switch result.Summary.Status {
-			case attestationreport.StatusSuccess:
-				slog.Info("SUCCESS: Verification for Prover %v (%v)", result.Prover, result.Created)
-			case attestationreport.StatusWarn:
-				slog.Warn("WARN: Verification for Prover %v (%v)", result.Prover, result.Created)
-			default:
-				slog.Warn("FAILED: Verification for Prover %v (%v)", result.Prover, result.Created)
-				result.PrintErr()
-			}
-		}),
-	)
+	var listener net.Listener
+	if sp.proxyConfig.Enabled {
+		listener, err = attestedtls.Listen(
+			"tcp",
+			serverListenAddr,
+			sp.tlsConfig,
+			attestedtls.WithCmcAddr(sp.proxyConfig.CmcAddress),
+			attestedtls.WithAttest(attestedtls.Attest_Mutual),
+			attestedtls.WithCmcApi("socket"),
+			attestedtls.WithMtls(true),
+			attestedtls.WithSerializer(serializer),
+			attestedtls.WithKeyId(sp.proxyConfig.KeyId),
+			attestedtls.WithResultCb(func(result *attestationreport.AttestationResult) {
+				switch result.Summary.Status {
+				case attestationreport.StatusSuccess:
+					slog.Info("Verification for Prover", "prover", result.Prover, "created", result.Created, "status", result.Summary.Status)
+				default:
+					slog.Warn("Verification for Prover", "prover", result.Prover, "created", result.Created, "status", result.Summary.Status)
+					result.PrintErr()
+				}
+			}),
+		)
+	} else {
+		listener, err = net.Listen("tcp", serverListenAddr)
+	}
 	if err != nil {
 		return fmt.Errorf("failed to listen for ATLS connections on %s: %w", serverListenAddr, err)
 	}
 	defer listener.Close()
 
-	slog.Info("Listening for ATLS connections",
+	slog.Info("Listening for connections",
 		"listenAddress", serverListenAddr,
 		"nextHop", sp.config.NextContainer)
 
@@ -134,17 +137,20 @@ func (sp *ServerProxy) listen() error {
 // serverMain is the entry point for server-mode ATLS proxy
 // It accepts ATLS connections and forwards them to the next container
 func serverMain(config config, proxyConfig atlsProxyConfig) error {
-	tlsConfig, err := createServerTLSConfig(proxyConfig)
-	if err != nil {
-		return err
-	}
-
 	proxy := &ServerProxy{
 		ctx:         context.Background(),
 		config:      config,
 		proxyConfig: proxyConfig,
-		tlsConfig:   tlsConfig,
 		nextAddr:    fmt.Sprintf("%s:%d", config.NextContainer, nextContainerPort),
+	}
+
+	if proxyConfig.Enabled {
+		tlsConfig, err := createServerTLSConfig(proxyConfig)
+		if err != nil {
+			return err
+		}
+
+		proxy.tlsConfig = tlsConfig
 	}
 
 	return proxy.listen()
