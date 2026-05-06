@@ -29,16 +29,17 @@ class AtlsManager(
 
     override val keyManager: X509ExtendedKeyManager by lazy {
         Security.addProvider(CMCProvider())
-        val keyId = runBlocking(dispatcher) {
-            val hostnameIsIp = runCatching { IPv4Address.parse(connectorConfig.publicUrl.host) }.isSuccess
-            val (dnsNames, ipAddresses) =
-                if (hostnameIsIp) {
-                    Pair(listOf<String>(), listOf(connectorConfig.publicUrl.host))
-                } else {
-                    Pair(listOf(connectorConfig.publicUrl.host), listOf())
-                }
-            cmcClient.tlsKey(connectorConfig.publicUrl.host, dnsNames, ipAddresses)
-        }
+        val keyId =
+            runBlocking(dispatcher) {
+                val hostnameIsIp = runCatching { IPv4Address.parse(connectorConfig.publicUrl.host) }.isSuccess
+                val (dnsNames, ipAddresses) =
+                    if (hostnameIsIp) {
+                        Pair(listOf<String>(), listOf(connectorConfig.publicUrl.host))
+                    } else {
+                        Pair(listOf(connectorConfig.publicUrl.host), listOf())
+                    }
+                cmcClient.tlsKey(connectorConfig.publicUrl.host, dnsNames, ipAddresses)
+            }
         CMCKeyManager(cmcClient, dispatcher, keyId)
     }
 

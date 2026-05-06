@@ -126,11 +126,12 @@ class ContainerInterfaceController(
                 // TODO: Maybe pull this out into its own function?
 
                 // We default to port 8444 if the caller specifies no port
-                val destinationHost = if (destination.contains(":")) {
-                    destination
-                } else {
-                    "$destination:8444"
-                }
+                val destinationHost =
+                    if (destination.contains(":")) {
+                        destination
+                    } else {
+                        "$destination:8444"
+                    }
 
                 // Check if we already have a follow-up contract that matches this target
                 val contractCandidates =
@@ -234,15 +235,22 @@ class ContainerInterfaceController(
                         )
                 }
 
-                    val remotePipeline =
-                        remotePipelineManager.getOrCreate(
-                            Url("$remotePeerProtocol://$destinationHost"),
-                            followingContract.uid.toString(),
-                            callingPipeline.targetId,
-                        )
-                    callingPipeline.addRemotePipeline(remotePipeline)
+                val remotePipeline =
+                    remotePipelineManager.getOrCreate(
+                        Url("$remotePeerProtocol://$destinationHost"),
+                        followingContract.uid.toString(),
+                        callingPipeline.targetId,
+                    )
+                callingPipeline.addRemotePipeline(remotePipeline)
 
-                    call.respond(RemotePipelineStatusResponse(remotePipeline.peer.toString(), remotePipeline.id, remotePipeline.remoteId, remotePipeline.ports))
+                call.respond(
+                    RemotePipelineStatusResponse(
+                        remotePipeline.peer.toString(),
+                        remotePipeline.id,
+                        remotePipeline.remoteId,
+                        remotePipeline.ports,
+                    ),
+                )
             }
         }
     }
