@@ -12,6 +12,8 @@ import de.fraunhofer.iosb.odrl.glue.GlueValue
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type", defaultImpl = AtlsParameter::class)
 @JsonTypeName("http://fhg.de/glue/internal/AtlsProxyConfiguration")
 class AtlsParameter(
+    @param:JsonProperty("http://fhg.de/glue/enabled")
+    val enabled: Boolean,
     @param:JsonProperty("http://fhg.de/glue/mode")
     val mode: String,
     @param:JsonProperty("http://fhg.de/glue/cmcAddress")
@@ -32,6 +34,7 @@ class AtlsParameter(
 
         other as AtlsParameter
 
+        if (enabled != other.enabled) return false
         if (mode != other.mode) return false
         if (cmcAddress != other.cmcAddress) return false
         if (caCertificate != other.caCertificate) return false
