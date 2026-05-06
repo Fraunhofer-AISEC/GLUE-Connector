@@ -28,18 +28,18 @@ data class BuiltinNegotiationData(
     override fun toString(): String {
         val contractString = if (contract != null) "(...)" else "null"
         return "BuiltinNegotiationData(" +
-                "id=$id, " +
-                "role=$role, " +
-                "peer=$peer, " +
-                "peerPid=$peerPid, " +
-                "startTimestamp=$startTimestamp, " +
-                "state=$state, " +
-                "callbackUrl=$callbackUrl, " +
-                "peerUrl=$peerUrl, " +
-                "contract=$contractString, " +
-                "failureReason=$failureReason, " +
-                "lastReceivedMessage=$lastReceivedMessage, " +
-                "nextSentMessage=$nextSentMessage" +
-                ")"
+            "id=$id, " +
+            "role=$role, " +
+            "peer=$peer, " +
+            "peerPid=$peerPid, " +
+            "startTimestamp=$startTimestamp, " +
+            "state=$state, " +
+            "callbackUrl=$callbackUrl, " +
+            "peerUrl=$peerUrl, " +
+            "contract=$contractString, " +
+            "failureReason=$failureReason, " +
+            "lastReceivedMessage=$lastReceivedMessage, " +
+            "nextSentMessage=$nextSentMessage" +
+            ")"
     }
 }
