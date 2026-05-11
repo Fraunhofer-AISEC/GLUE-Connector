@@ -7,10 +7,12 @@ import com.apicatalog.jsonld.document.RdfDocument
 import com.apicatalog.jsonld.http.media.MediaType
 import com.apicatalog.jsonld.loader.DocumentLoader
 import com.apicatalog.jsonld.loader.DocumentLoaderOptions
+import com.apicatalog.rdf.Rdf
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.io.IOException
+import java.io.StringWriter
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
@@ -95,7 +97,11 @@ class FileSystemDocumentCache(
         val content =
             when (document) {
                 is JsonDocument -> document.jsonContent.orElseThrow().toString()
-                is RdfDocument -> document.rdfContent.orElseThrow().toString()
+                is RdfDocument ->  {
+                    val buffer = StringWriter()
+                    Rdf.createWriter(document.contentType, buffer).write(document.rdfContent.orElseThrow())
+                    buffer.toString()
+                }
                 else -> throw IllegalStateException("Unsupported document type: ${document::class.simpleName}")
             }
         val wrapper =
