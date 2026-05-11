@@ -9,7 +9,6 @@ import com.apicatalog.jsonld.loader.DocumentLoader
 import com.apicatalog.jsonld.loader.DocumentLoaderOptions
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
-import de.fraunhofer.aisec.glue.Utils.hexEncode
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.io.IOException
 import java.net.URI
@@ -66,7 +65,7 @@ class FileSystemDocumentCache(
             MessageDigest
                 .getInstance("SHA-1")
                 .digest(url.toString().toByteArray())
-                .hexEncode()
+                .toHexString()
         return "$hash.json"
     }
 

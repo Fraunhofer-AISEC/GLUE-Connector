@@ -150,7 +150,7 @@ val defaultDependencies by DI.Module {
                 ).apply {
                     registerSubtypes(AtlsParameter::class.java)
                 }
-            val jsonLdLoader = FileSystemDocumentCache(LRUDocumentCache(HttpLoader.defaultInstance(), 120), jsonLdCacheDir, mapper)
+            val jsonLdLoader = LRUDocumentCache(FileSystemDocumentCache(HttpLoader.defaultInstance(), jsonLdCacheDir, mapper), 120)
             OdrlParser(
                 mapper = mapper,
                 compactSerialization = true,
