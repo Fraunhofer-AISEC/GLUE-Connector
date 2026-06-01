@@ -6,7 +6,7 @@ data class RemotePipelineStatusResponse(
     /** The name of the peer connector this pipeline is running on */
     val peer: String,
     /** The local ID of the remote pipeline */
-    val id: String,
+    val localId: String,
     val remoteId: String,
     val ports: List<ContainerPort>,
 )

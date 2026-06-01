@@ -41,17 +41,9 @@ func proxy(conn net.Conn, proxyAddress string) {
 	log.Printf("Connection between %s and %s closed", conn.RemoteAddr().String(), proxyAddress)
 }
 
-type containerPort struct {
-	ContainerPort uint16 `json:"containerPort"`
-	HostAddress   string `json:"hostAddress"`
-	Protocol      string `json:"protocol"`
-}
-
-type remotePipelineStatus struct {
-	Id       string          `json:"id"`
-	RemoteId string          `json:"remoteId"`
-	Peer     string          `json:"peer"`
-	Ports    []containerPort `json:"ports"`
+type pipelinePort struct {
+	Endpoint string `json:"endpoint"`
+	Protocol string `json:"protocol"`
 }
 
 func negotiateAndProxy(conn net.Conn, coordinator string, destination string) {
@@ -97,17 +89,17 @@ func negotiateAndProxy(conn net.Conn, coordinator string, destination string) {
 	// We get back all of the ports opened by the remote pipeline
 	// Look for one that we want
 
-	var pipeline remotePipelineStatus
-	err = json.NewDecoder(resp.Body).Decode(&pipeline)
+	var ports []pipelinePort
+	err = json.NewDecoder(resp.Body).Decode(&ports)
 	if err != nil {
 		log.Printf("Could not decode negotiation json object: %s", err)
 		return
 	}
 
 	var endpoint string
-	for _, port := range pipeline.Ports {
-		if port.Protocol == "tcp" {
-			endpoint = port.HostAddress
+	for _, port := range ports {
+		if port.Protocol == "TCP" {
+			endpoint = port.Endpoint
 		}
 	}
 
@@ -121,8 +113,8 @@ func negotiateAndProxy(conn net.Conn, coordinator string, destination string) {
 }
 
 type restParameter struct {
-	Type    string `json:"type"`
-	HttpUrl string `json:"http://fhg.de/glue/httpUrl"`
+    Type string `json:"type"`
+    HttpUrl string `json:"http://fhg.de/glue/httpUrl"`
 }
 
 type config struct {
@@ -149,20 +141,20 @@ func main() {
 
 	var nextHop string
 	for _, param := range config.Parameters {
-		var decodedParam restParameter
-		err := json.Unmarshal(param, &decodedParam)
-		if err != nil {
-			log.Fatalf("Could not deserialize config param: %s", err)
-		}
+	    var decodedParam restParameter
+	    err := json.Unmarshal(param, &decodedParam)
+	    if err != nil {
+	        log.Fatalf("Could not deserialize config param: %s", err)
+	    }
 
-		if decodedParam.Type != "http://fhg.de/glue/RestParameter" {
-			log.Printf("Discarding unused parameter %s", decodedParam.Type)
-			continue
-		}
+        if decodedParam.Type != "http://fhg.de/glue/RestParameter" {
+            log.Printf("Discarding unused parameter %s", decodedParam.Type)
+            continue
+        }
 
-		log.Printf("Setting next hop address to %s", decodedParam.HttpUrl)
-		nextHop = decodedParam.HttpUrl
-		break
+        log.Printf("Setting next hop address to %s", decodedParam.HttpUrl)
+        nextHop = decodedParam.HttpUrl
+        break
 	}
 
 	listener, err := net.Listen("tcp", "0.0.0.0:8080")
