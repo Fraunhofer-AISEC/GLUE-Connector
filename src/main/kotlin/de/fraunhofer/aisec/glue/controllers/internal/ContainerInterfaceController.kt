@@ -3,7 +3,6 @@ package de.fraunhofer.aisec.glue.controllers.internal
 import com.fasterxml.jackson.databind.JsonNode
 import de.fraunhofer.aisec.glue.DataStore
 import de.fraunhofer.aisec.glue.controllers.Controller
-import de.fraunhofer.aisec.glue.models.api.RemotePipelineStatusResponse
 import de.fraunhofer.aisec.glue.negotiation.NegotiationManager
 import de.fraunhofer.aisec.glue.negotiation.toOffer
 import de.fraunhofer.aisec.glue.pipeline.PipelineManager
@@ -71,7 +70,7 @@ class ContainerInterfaceController(
             // Unless otherwise specified, the followup pipeline is started immediately.
             post("/negotiate") {
                 val destination = call.queryParameters.getOrFail("destination")
-                val action = call.queryParameters["action"] ?: OdrlIdentifiers.DISTRIBUTE
+                val startPipeline = call.queryParameters["startPipeline"]?.toBoolean() ?: true
 
                 val callingAddress = call.request.local.remoteAddress
                 val callingPipeline =
@@ -83,7 +82,7 @@ class ContainerInterfaceController(
                                 mapOf(
                                     "origin" to callingAddress,
                                     "destination" to destination,
-                                    "action" to action,
+                                    "startPipeline" to startPipeline,
                                 )
                         }
                         call.respond(HttpStatusCode.Forbidden)
@@ -96,7 +95,7 @@ class ContainerInterfaceController(
                         mapOf(
                             "origin" to callingAddress,
                             "destination" to destination,
-                            "action" to action,
+                            "startPipeline" to startPipeline,
                             "callingPipeline" to callingPipeline.name,
                         )
                 }
@@ -110,7 +109,7 @@ class ContainerInterfaceController(
                             mapOf(
                                 "origin" to callingAddress,
                                 "destination" to destination,
-                                "action" to action,
+                                "startPipeline" to startPipeline,
                                 "callingPipeline" to callingPipeline.name,
                             )
                     }
@@ -121,12 +120,11 @@ class ContainerInterfaceController(
                 // Now we're done with verifying parameters and we can start with the actual negotiation
 
                 // We default to port 8444 if the caller specifies no port
-                val destinationHost =
-                    if (destination.contains(":")) {
-                        destination
-                    } else {
-                        "$destination:8444"
-                    }
+                val destinationHost = if (destination.contains(":")) {
+                    destination
+                } else {
+                    "$destination:8444"
+                }
 
                 // Check if we already have a follow-up contract that matches this target
                 val contractCandidates =
@@ -142,7 +140,7 @@ class ContainerInterfaceController(
                                     mapOf(
                                         "origin" to callingAddress,
                                         "destination" to destination,
-                                        "action" to action,
+                                        "startPipeline" to startPipeline,
                                         "callingPipeline" to callingPipeline.name,
                                         "followingContract" to c.uid,
                                     )
@@ -168,7 +166,7 @@ class ContainerInterfaceController(
                                         mapOf(
                                             "origin" to callingAddress,
                                             "destination" to destination,
-                                            "action" to action,
+                                            "startPipeline" to startPipeline,
                                             "callingPipeline" to callingPipeline.name,
                                         )
                                 }
@@ -201,7 +199,7 @@ class ContainerInterfaceController(
                                 mapOf(
                                     "origin" to callingAddress,
                                     "destination" to destination,
-                                    "action" to action,
+                                    "startPipeline" to startPipeline,
                                     "callingPipeline" to callingPipeline.name,
                                     "offer" to convertedNextPolicy,
                                 )
@@ -218,28 +216,23 @@ class ContainerInterfaceController(
                         mapOf(
                             "origin" to callingAddress,
                             "destination" to destination,
-                            "action" to action,
+                            "startPipeline" to startPipeline,
                             "callingPipeline" to callingPipeline.name,
                             "contract" to followingContract,
                         )
                 }
 
-                val remotePipeline =
-                    remotePipelineManager.getOrCreate(
-                        Url("$remotePeerProtocol://$destinationHost"),
-                        followingContract.uid.toString(),
-                        callingPipeline.targetId,
-                    )
-                callingPipeline.addRemotePipeline(remotePipeline)
+                if (startPipeline) {
+                    val remotePipeline =
+                        remotePipelineManager.getOrCreate(
+                            Url("$remotePeerProtocol://$destinationHost"),
+                            followingContract.uid.toString(),
+                            callingPipeline.targetId,
+                        )
+                    callingPipeline.addRemotePipeline(remotePipeline)
 
-                call.respond(
-                    RemotePipelineStatusResponse(
-                        remotePipeline.peer.toString(),
-                        remotePipeline.id,
-                        remotePipeline.remoteId,
-                        remotePipeline.ports,
-                    ),
-                )
+                    call.respond(remotePipeline.ports.map { p -> mapOf("endpoint" to p.hostAddress, "protocol" to p.protocol.uppercase()) })
+                }
             }
         }
     }
