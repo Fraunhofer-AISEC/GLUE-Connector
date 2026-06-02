@@ -17,7 +17,7 @@ class AtlsConfig(rawConfig: ApplicationConfig) : Config(rawConfig) {
     // TODO: This value MUST NOT be configurable externally in a production environment!
     val proxyHash by withDefault(
         stringProp(),
-        "sha256:ea0ffc24a3dc58455489f1c885244709d518aedfcbec965229b0f9191aa578ef",
+        "sha256:7788679ef9ec5b5c50347ca2b863a23ce57c68f11960072ec2bb6579de751f7b",
     )
 
     // TODO: Move to somewhere appropriate - values are appropriate for the connector VMs
