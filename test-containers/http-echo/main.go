@@ -4,12 +4,14 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 )
 
 func echo(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Handling request from %s", r.RemoteAddr)
 
-	_, _ = io.Copy(w, r.Body)
+	reader := io.TeeReader(r.Body, os.Stdout)
+	_, _ = io.Copy(w, reader)
 }
 
 func main() {
