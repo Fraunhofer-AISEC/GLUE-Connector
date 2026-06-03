@@ -30,14 +30,9 @@ if (( $# != 3 )); then
   exit 1
 fi
 
-local_connector_name="$1"
+local_connector_ip="$1"
 remote_connector="$2"
 policy="$3"
-
-# As the connectors are running in containers, we cannot rely on DNS to resolve their names.
-# If we for some reason want to use DNS in the future (e.g. for TLS), we may need to deploy a "user agent" container and use docker exec to run the script.
-# Alternatively, we can just rely on the UI when its done.
-local_connector_ip="$(docker inspect -f '{{ .NetworkSettings.Networks.example_default.IPAddress }}' "example-$local_connector_name-connector-1")"
 
 common_curl_opts=(
   -sS
@@ -62,7 +57,7 @@ pull_and_get_hash() {
     # Export the digest with the provided variable name
     export "$var_name"="$image_digest"
 
-    printf "Found digest of %s:\n%s\n" "$image" "$image_digest"
+    printf "Found digest of %s:\n%s\n" "$image" "$image_digest" >&2
 }
 
 # Pull images and get their hashes
@@ -71,7 +66,7 @@ pull_and_get_hash "proxy" "PROXY_HASH"
 pull_and_get_hash "forwarder" "FORWARDER_HASH"
 pull_and_get_hash "atls-proxy" "ATLS_PROXY_HASH"
 
-echo "Waiting for local connector at http://$local_connector_ip:8080 to become available..."
+echo "Waiting for local connector at http://$local_connector_ip:8080 to become available..." >&2
 until curl -sS "http://$local_connector_ip:8080" > /dev/null 2>&1; do sleep 0.1; done
 
 # Prepare CA certificate for insertion. Temporary workaround until we use app config for this.
@@ -105,11 +100,11 @@ local_pipeline_def="$(envsubst <<<'{
   ]
 }')"
 
-echo "Starting the contract negotiation..."
+echo "Starting the contract negotiation..." >&2
 negotiation_req="$(jo peer="$peer_proto://$remote_connector:8444" contractRequest="$policy_content" localPipeline="$local_pipeline_def")"
 negotiation_id=$(curl -v -X POST "${common_curl_opts[@]}" -d "$negotiation_req" "http://$local_connector_ip:8080/api/v1.0/negotiations" | jq -r ".id")
 
-echo "Awaiting negotiation completion..."
+echo "Awaiting negotiation completion..." >&2
 while true; do
   negotiation_state="$(curl "${common_curl_opts[@]}" "http://$local_connector_ip:8080/api/v1.0/negotiations/$negotiation_id" | jq -r ".state")"
   case "$negotiation_state" in
@@ -117,14 +112,14 @@ while true; do
       break
       ;;
     TERMINATED)
-      echo "Negotiation was terminated with an error"
+      echo "Negotiation was terminated with an error" >&2
       exit 1
       ;;
   esac
   sleep 1s
 done
 
-echo "Requesting local pipelines..."
+echo "Requesting local pipelines..." >&2
 while (( "$(curl "${common_curl_opts[@]}" "http://$local_connector_ip:8080/api/v1.0/pipelines" | jq "length")" == 0 )); do
     sleep 1
 done
@@ -135,17 +130,5 @@ pipeline="$(curl "${common_curl_opts[@]}" "http://$local_connector_ip:8080/api/v
 pipeline_id="$(jq -r '.id' <<< "$pipeline")"
 pipeline_port="$(jq -r '.["containers"][0]["ports"][0]["hostAddress"]' <<< "$pipeline")"
 
-# Wait for the user to interrupt and then stop the pipeline
-stop_pipeline() {
-  echo "Stopping pipeline"
-  curl -X DELETE "${common_curl_opts[@]}" "http://$local_connector_ip:8080/api/v1.0/pipelines/$pipeline_id"
-  exit 0
-}
-
-trap stop_pipeline INT
-echo "Container pipeline running on $pipeline_port (Press CTRL-C to stop)"
-
-# This may not be the most elegant solution but it keeps the script responsive to both CTRL-C and injected SIGINTs
-while true; do
-  sleep 0.1s
-done
+echo "Container pipeline running on $pipeline_port" >&2
+echo "$pipeline_id $pipeline_port"
