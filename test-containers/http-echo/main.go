@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"io"
 	"log"
 	"net/http"
@@ -9,10 +10,16 @@ import (
 
 func echo(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Handling request from %s", r.RemoteAddr)
+	http.NewResponseController(w).EnableFullDuplex()
 
-	reader := io.TeeReader(r.Body, os.Stdout)
-	if _, err := io.Copy(w, reader); err != nil {
-		log.Printf("failed to copy request body: %v", err)
+	var body bytes.Buffer
+	if _, err := io.Copy(&body, io.TeeReader(r.Body, os.Stdout)); err != nil {
+		log.Printf("failed to read request body: %v", err)
+		return
+	}
+
+	if _, err := io.Copy(w, &body); err != nil {
+		log.Printf("failed to write response body: %v", err)
 	}
 }
 
