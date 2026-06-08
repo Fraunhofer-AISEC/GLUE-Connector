@@ -18,6 +18,12 @@ func echo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// If the last byte in the buffer is not a newline character, print one anyway to get the
+	// stdout buffer displayed.
+	if body.Bytes()[body.Len()-1] != '\n' {
+		os.Stdout.Write([]byte("\n"))
+	}
+
 	if _, err := io.Copy(w, &body); err != nil {
 		log.Printf("failed to write response body: %v", err)
 	}
