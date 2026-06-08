@@ -7,29 +7,13 @@ import (
 	"os"
 )
 
-type fileFlushWriter struct {
-	file *os.File
-}
-
-func (w *fileFlushWriter) Write(buf []byte) (int, error) {
-	n, err := w.file.Write(buf)
-	if err != nil {
-		return 0, err
-	}
-
-	err = w.file.Sync()
-	if err != nil {
-		return 0, err
-	}
-
-	return n, err
-}
-
 func echo(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Handling request from %s", r.RemoteAddr)
 
-	reader := io.TeeReader(r.Body, &fileFlushWriter{os.Stdout})
-	_, _ = io.Copy(w, reader)
+	reader := io.TeeReader(r.Body, os.Stdout)
+	if _, err := io.Copy(w, reader); err != nil {
+		log.Printf("failed to copy request body: %v", err)
+	}
 }
 
 func main() {
