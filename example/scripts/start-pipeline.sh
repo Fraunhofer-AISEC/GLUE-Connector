@@ -46,7 +46,7 @@ pull_and_get_hash() {
     local image_name="$1"
     local var_name="$2"
 
-    local image_path="${REGISTRY}/${image_name}:latest"
+    local image_path="${REGISTRY}/${image_name}:running-example"
     # shellcheck disable=SC2155
     local image=$(docker pull -q "$image_path")
 
@@ -93,7 +93,7 @@ local_pipeline_def="$(envsubst <<<'{
   "http://fhg.de/glue/container": [
     {
       "@type": "http://fhg.de/glue/Container",
-      "http://fhg.de/glue/image": "container-registry.gitlab.cc-asp.fraunhofer.de/ccit-glue/usage-control/container-pipeline/proxy:latest",
+      "http://fhg.de/glue/image": "container-registry.gitlab.cc-asp.fraunhofer.de/ccit-glue/usage-control/container-pipeline/proxy:running-example",
       "http://fhg.de/glue/hash": "${PROXY_HASH}",
       "http://fhg.de/glue/allowNetwork": true
     }

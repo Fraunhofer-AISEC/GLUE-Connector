@@ -143,7 +143,8 @@ initial_container_ip="$(docker inspect -f '{{ .NetworkSettings.Networks.example_
 common_curl_opts=(-sS --fail -H "Content-Type: application/json")
 
 info Starting pipeline deployment
-read -r pipeline_id pipeline_port < <(./scripts/start-pipeline.sh "$($insecure && echo "--no-atls")" "${initial_container_ip}" "${intermediary_host}" "${policy_file}")
+start_pipeline_output="$(./scripts/start-pipeline.sh "$($insecure && echo "--no-atls")" "${initial_container_ip}" "${intermediary_host}" "${policy_file}")"
+read -r pipeline_id pipeline_port < <(echo "$start_pipeline_output")
 
 stop_pipeline() {
   info "Stopping pipeline"
@@ -160,12 +161,16 @@ example_data=">>=======================================================<<
 ||    |_| |_|\___|_|_|\___/   \____|_____\___/|_____|    ||
 ||                                                       ||
 >>=======================================================<<
+
+A full data pipeline is now established.
+You can send more data through the pipeline by sending HTTP
+requests to <http://${pipeline_port}/echo>.
 "
 
 info "Sending input data, this may take some time"
 curl -sS --fail -d "$example_data" "http://${pipeline_port}/echo" >/dev/null &
 
-echo_container_image="container-registry.gitlab.cc-asp.fraunhofer.de/ccit-glue/usage-control/container-pipeline/http-echo:latest"
+echo_container_image="container-registry.gitlab.cc-asp.fraunhofer.de/ccit-glue/usage-control/container-pipeline/http-echo:running-example"
 iteration=0
 while true; do
   echo_container_id="$(docker exec "example-${final_host}-docker-1" docker ps --filter "ancestor=$echo_container_image" --format "{{ .ID }}" | head -n1)"
