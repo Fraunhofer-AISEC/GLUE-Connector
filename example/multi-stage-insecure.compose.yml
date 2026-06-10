@@ -4,7 +4,7 @@ services:
   #
 
   initiator-connector:
-    image: container-pipeline:1.0-SNAPSHOT
+    image: container-pipeline:latest
     hostname: initiator
     volumes:
       - initiator-tmp:/tmp
@@ -15,6 +15,9 @@ services:
       - -P:atls.enabled=false
       - -P:atls.cmcAddress=unix:/tmp/cmcd.sock
       - -P:atls.caCertPath=/pki/ca-cert.pem
+      - -P:atls.proxyContainer=registry:5000/atls-proxy:latest
+      # TODO: Can we somehow determine this hash dynamically (e.g. waiting for docker in some init script)?
+      - -P:atls.proxyHash=sha256:fffc65b6de46688c6fd05f847d4246488a6fbeefb2fa684785a18aa244f2a6e4
       - -P:connector.identity=http://initiator
       - -P:connector.publicUrl=http://initiator:8444
     environment:
@@ -23,15 +26,23 @@ services:
       DOCKER_HOST: "unix:///tmp/docker.sock"
       JAVA_TOOL_OPTIONS: "-agentlib:jdwp=transport=dt_socket,address=*:5005,server=y,suspend=n"
       PUBLIC_URL: "http://initiator:8444"
+    depends_on:
+      image-loader:
+        condition: service_completed_successfully
 
   initiator-docker:
     image: docker:29-dind
     privileged: true
+    init: true
     volumes:
       - initiator-tmp:/tmp
     environment:
       DOCKER_HOST: "unix:///tmp/docker.sock"
-    init: true
+    command:
+      - --insecure-registry=registry:5000
+    depends_on:
+      image-loader:
+        condition: service_completed_successfully
     network_mode: service:initiator-connector
 
   #
@@ -39,7 +50,7 @@ services:
   #
 
   intermediary-connector:
-    image: container-pipeline:1.0-SNAPSHOT
+    image: container-pipeline:latest
     hostname: intermediary
     volumes:
       - intermediary-tmp:/tmp
@@ -50,6 +61,9 @@ services:
       - -P:atls.enabled=false
       - -P:atls.cmcAddress=unix:/tmp/cmcd.sock
       - -P:atls.caCertPath=/pki/ca-cert.pem
+      - -P:atls.proxyContainer=registry:5000/atls-proxy:latest
+      # TODO: Can we somehow determine this hash dynamically (e.g. waiting for docker in some init script)?
+      - -P:atls.proxyHash=sha256:fffc65b6de46688c6fd05f847d4246488a6fbeefb2fa684785a18aa244f2a6e4
       - -P:connector.identity=http://intermediary
       - -P:connector.publicUrl=http://intermediary:8444
     environment:
@@ -58,15 +72,23 @@ services:
       DOCKER_HOST: "unix:///tmp/docker.sock"
       JAVA_TOOL_OPTIONS: "-agentlib:jdwp=transport=dt_socket,address=*:5005,server=y,suspend=n"
       PUBLIC_URL: "http://intermediary:8444"
+    depends_on:
+      image-loader:
+        condition: service_completed_successfully
 
   intermediary-docker:
     image: docker:29-dind
     privileged: true
+    init: true
     volumes:
       - intermediary-tmp:/tmp
     environment:
       DOCKER_HOST: "unix:///tmp/docker.sock"
-    init: true
+    command:
+      - --insecure-registry=registry:5000
+    depends_on:
+      image-loader:
+        condition: service_completed_successfully
     network_mode: service:intermediary-connector
 
   #
@@ -74,7 +96,7 @@ services:
   #
 
   destination-connector:
-    image: container-pipeline:1.0-SNAPSHOT
+    image: container-pipeline:latest
     hostname: destination
     volumes:
       - destination-tmp:/tmp
@@ -85,6 +107,9 @@ services:
       - -P:atls.enabled=false
       - -P:atls.cmcAddress=unix:/tmp/cmcd.sock
       - -P:atls.caCertPath=/pki/ca-cert.pem
+      - -P:atls.proxyContainer=registry:5000/atls-proxy:latest
+      # TODO: Can we somehow determine this hash dynamically (e.g. waiting for docker in some init script)?
+      - -P:atls.proxyHash=sha256:fffc65b6de46688c6fd05f847d4246488a6fbeefb2fa684785a18aa244f2a6e4
       - -P:connector.identity=http://destination
       - -P:connector.publicUrl=http://destination:8444
     environment:
@@ -93,16 +118,51 @@ services:
       DOCKER_HOST: "unix:///tmp/docker.sock"
       JAVA_TOOL_OPTIONS: "-agentlib:jdwp=transport=dt_socket,address=*:5005,server=y,suspend=n"
       PUBLIC_URL: "http://destination:8444"
+    depends_on:
+      image-loader:
+        condition: service_completed_successfully
 
   destination-docker:
     image: docker:29-dind
     privileged: true
+    init: true
     volumes:
       - destination-tmp:/tmp
     environment:
       DOCKER_HOST: "unix:///tmp/docker.sock"
-    init: true
+    command:
+      - --insecure-registry=registry:5000
+    depends_on:
+      image-loader:
+        condition: service_completed_successfully
     network_mode: service:destination-connector
+
+
+  #
+  # Infrastructure
+  #
+
+  registry:
+    image: registry:3
+    ports:
+      - "5000:5000"
+
+  image-loader:
+    image: quay.io/skopeo/stable:latest
+    depends_on:
+      - registry
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -eu
+
+        for image in /images/*.tar; do
+          [ -e "$$image" ] || continue
+          image_name="$$(basename "$${image}" .tar)"
+          skopeo copy --dest-tls-verify=false "docker-archive:$$image" "docker://registry:5000/$${image_name}:latest"
+        done
+    volumes:
+      - ./images:/images:ro
 
 
 volumes:

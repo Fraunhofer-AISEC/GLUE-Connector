@@ -39,6 +39,7 @@ print_help() {
           printf "Options:\n"
           printf "  --insecure        Disable aTLS support\n"
           printf "  --regenerate-pki  Generate new certificates\n"
+          printf "  --refetch-images  Re-fetch all container images from the registry\n"
           printf "  --build           Rebuild all container images\n"
           printf "  --initial         The name of the initial container (default: initiator)\n"
           printf "  --intermediary    The name of the first contract recipient container (default: intermediary)\n"
@@ -55,17 +56,20 @@ defer() {
 }
 
 _run_deferred() {
+    set +e
     for (( i=${#_defer_handlers[@]}-1; i>=0; i-- )); do
-        eval "${_defer_handlers[$i]}"
+      eval "${_defer_handlers[$i]}"
     done
+    set -e
 }
 trap _run_deferred EXIT
 
 
-require curl jq zstd docker
+require curl jq zstd docker skopeo
 
 insecure=false
 regenerate_pki=false
+refetch_images=false
 build=false
 # TODO: It would be cleaner to mark this in the compose.yml files somehow
 initial_host=initiator
@@ -79,6 +83,9 @@ while [[ $# -gt 0 ]]; do
         ;;
       --regenerate-pki)
         regenerate_pki=true
+        ;;
+      --refetch-images)
+        refetch_images=true
         ;;
       --build)
         build=true
@@ -122,6 +129,17 @@ fi
 if [ ! -d pki ] || ${regenerate_pki}; then
     info "Generating new PKI certificates"
     ./scripts/generate-pki.sh
+fi
+
+if [ ! -d images ] || ${refetch_images}; then
+    info "Preparing example image archives"
+    ./scripts/prepare-images.sh
+fi
+
+connector_image="container-pipeline:latest"
+if ! docker image inspect "${connector_image}" >/dev/null 2>&1; then
+    info "Loading connector image into local docker daemon"
+    skopeo copy --insecure-policy "docker-archive:images/container-pipeline.tar" "docker-daemon:${connector_image}"
 fi
 
 if ${build}; then
@@ -173,7 +191,7 @@ requests to <http://${pipeline_port}/echo>.
 info "Sending input data, this may take some time"
 curl -sS --fail -d "$example_data" "http://${pipeline_port}/echo" >/dev/null &
 
-echo_container_image="container-registry.gitlab.cc-asp.fraunhofer.de/ccit-glue/usage-control/container-pipeline/http-echo:running-example"
+echo_container_image="registry:5000/http-echo:latest"
 iteration=0
 while true; do
   echo_container_id="$(docker exec "example-${final_host}-docker-1" docker ps --filter "ancestor=$echo_container_image" --format "{{ .ID }}" | head -n1)"

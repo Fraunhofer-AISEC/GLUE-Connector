@@ -38,7 +38,7 @@
                 "glue:container": [
                   {
                     "@type": "http://fhg.de/glue/Container",
-                    "glue:image": "container-registry.gitlab.cc-asp.fraunhofer.de/ccit-glue/usage-control/container-pipeline/proxy:running-example",
+                    "glue:image": "registry:5000/proxy:latest",
                     "glue:hash": "${PROXY_HASH}",
                     "glue:allowNetwork": false
                   }
@@ -91,7 +91,7 @@
                                 "glue:container": [
                                   {
                                     "@type": "http://fhg.de/glue/Container",
-                                    "glue:image": "container-registry.gitlab.cc-asp.fraunhofer.de/ccit-glue/usage-control/container-pipeline/proxy:running-example",
+                                    "glue:image": "registry:5000/proxy:latest",
                                     "glue:hash": "${PROXY_HASH}",
                                     "glue:parameter": {
                                       "@type": "http://fhg.de/glue/RestParameter",
@@ -102,7 +102,7 @@
                                   },
                                   {
                                     "@type": "http://fhg.de/glue/Container",
-                                    "glue:image": "container-registry.gitlab.cc-asp.fraunhofer.de/ccit-glue/usage-control/container-pipeline/http-echo:running-example",
+                                    "glue:image": "registry:5000/http-echo:latest",
                                     "glue:hash": "${HTTP_ECHO_HASH}",
                                     "glue:parameter": {
                                       "@type": "http://fhg.de/glue/RestParameter",

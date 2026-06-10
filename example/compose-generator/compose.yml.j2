@@ -6,7 +6,7 @@ services:
   #
 
   {{ component.name }}-connector:
-    image: container-pipeline:1.0-SNAPSHOT
+    image: container-pipeline:latest
     hostname: {{ component.name }}
     volumes:
       - {{ component.name }}-tmp:/tmp
@@ -17,6 +17,9 @@ services:
       - -P:atls.enabled={{ "true" if atls else "false" }}
       - -P:atls.cmcAddress=unix:/tmp/cmcd.sock
       - -P:atls.caCertPath=/pki/ca-cert.pem
+      - -P:atls.proxyContainer=registry:5000/atls-proxy:latest
+      # TODO: Can we somehow determine this hash dynamically (e.g. waiting for docker in some init script)?
+      - -P:atls.proxyHash=sha256:fffc65b6de46688c6fd05f847d4246488a6fbeefb2fa684785a18aa244f2a6e4
       - -P:connector.identity={{ http_proto }}://{{ component.name }}
       - -P:connector.publicUrl={{ http_proto }}://{{ component.name }}:8444
     environment:
@@ -25,15 +28,23 @@ services:
       DOCKER_HOST: "unix:///tmp/docker.sock"
       JAVA_TOOL_OPTIONS: "-agentlib:jdwp=transport=dt_socket,address=*:5005,server=y,suspend=n"
       PUBLIC_URL: "{{ http_proto }}://{{ component.name }}:8444"
+    depends_on:
+      image-loader:
+        condition: service_completed_successfully
 
   {{ component.name }}-docker:
     image: docker:29-dind
     privileged: true
+    init: true
     volumes:
       - {{ component.name }}-tmp:/tmp
     environment:
       DOCKER_HOST: "unix:///tmp/docker.sock"
-    init: true
+    command:
+      - --insecure-registry=registry:5000
+    depends_on:
+      image-loader:
+        condition: service_completed_successfully
     network_mode: service:{{ component.name }}-connector
 
   {% if atls %}
@@ -83,11 +94,34 @@ services:
 
   {% endif %}
 {% endfor %}
-{% if atls %}
+
   #
   # Infrastructure
   #
 
+  registry:
+    image: registry:3
+    ports:
+      - "5000:5000"
+
+  image-loader:
+    image: quay.io/skopeo/stable:latest
+    depends_on:
+      - registry
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -eu
+
+        for image in /images/*.tar; do
+          [ -e "$$image" ] || continue
+          image_name="$$(basename "$${image}" .tar)"
+          skopeo copy --dest-tls-verify=false "docker-archive:$$image" "docker://registry:5000/$${image_name}:latest"
+        done
+    volumes:
+      - ./images:/images:ro
+
+{% if atls %}
   estserver:
     build:
       context: .
