@@ -8,7 +8,7 @@ data-plane messages over attested TLS.
 
 ## Dependencies
 
-In addition to the requirements for building the GLUE connector itself, the examples require docker compose, openssl, jq, jo, envsubst, and curl.
+In addition to the requirements for building the GLUE connector itself, the examples require docker compose, openssl, jq, jo, envsubst, curl, and skopeo.
 
 ### Debian-based systems
 
@@ -16,19 +16,19 @@ In addition to the requirements for building the GLUE connector itself, the exam
 > The installation command assumes that the [official docker repository](https://docs.docker.com/engine/install/debian/#install-using-the-repository) is configured.
 
 ```shell
-apt install openjdk-25-jdk docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin openssl jq jo gettext-base curl
+apt install openjdk-25-jdk docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin openssl jq jo gettext-base curl skopeo
 ```
 
 ### Arch Linux
 
 ```shell
-pacman -S jdk25-openjdk docker docker-buildx docker-compose openssl jq jo gettext curl
+pacman -S jdk25-openjdk docker docker-buildx docker-compose openssl jq jo gettext curl skopeo
 ```
 
 ### Nix Shell
 
 ```shell
-nix-shell -p jdk25 docker docker-buildx docker-compose openssl jq jo gettext curl
+nix-shell -p jdk25 docker docker-buildx docker-compose openssl jq jo gettext curl skopeo
 ```
 
 ## Setup

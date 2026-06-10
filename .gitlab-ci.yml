@@ -3,6 +3,7 @@ image: eclipse-temurin:25
 stages:
   - build
   - test
+  - bundle
 
 before_script:
 #  - echo `pwd` # debug
@@ -93,6 +94,26 @@ podman-atls-proxy:
     CONTEXT_DIR: $CI_PROJECT_DIR/system-containers/atls-proxy
     DOCKERFILE: system-containers/atls-proxy/Dockerfile
     DOCKER_IMAGE: $CI_REGISTRY_IMAGE/atls-proxy
+
+example_bundle:
+  stage: bundle
+  image: container-registry.gitlab.cc-asp.fraunhofer.de/ccit-glue/usage-control/container-pipeline/ci-example-bundle:latest
+  before_script:
+    - skopeo login --username "$CI_REGISTRY_USER" --password "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+  script:
+    - cd example
+    - ./scripts/generate-pki.sh
+    - SOURCE_TAG="$CI_PIPELINE_ID" SOURCE_REGISTRY="$CI_REGISTRY_IMAGE" ./scripts/prepare-images.sh
+    - cd ..
+    - cp -a example example-bundle
+    - rm -rf example-bundle/compose-generator
+  artifacts:
+    when: on_success
+    paths:
+      - example-bundle
+  when: manual
+  tags:
+    - munich-glue-local
 
 container_test:
   variables:

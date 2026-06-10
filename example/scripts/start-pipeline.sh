@@ -17,7 +17,7 @@ require() {
   fi
 }
 
-require curl jq jo envsubst docker
+require curl jq jo envsubst skopeo
 
 peer_proto="https"
 if [[ "$1" == "--no-atls" ]]; then
@@ -40,31 +40,23 @@ common_curl_opts=(
   -H "Content-Type: application/json"
 )
 
-REGISTRY="container-registry.gitlab.cc-asp.fraunhofer.de/ccit-glue/usage-control/container-pipeline"
-
-pull_and_get_hash() {
+get_hash() {
     local image_name="$1"
     local var_name="$2"
+    local image_ref="localhost:5000/${image_name}:latest"
+    local image_hash
+    image_hash=$(skopeo inspect --tls-verify=false "docker://${image_ref}" | jq -r '.Digest')
 
-    local image_path="${REGISTRY}/${image_name}:running-example"
-    # shellcheck disable=SC2155
-    local image=$(docker pull -q "$image_path")
+    # Export the hash with the provided variable name
+    export "${var_name}"="${image_hash}"
 
-    # Get the canonical digest from the registry (manifest list)
-    # shellcheck disable=SC2155
-    local image_digest=$(docker inspect --format='{{index .RepoDigests 0}}' "$image_path" | cut -d'@' -f2)
-
-    # Export the digest with the provided variable name
-    export "$var_name"="$image_digest"
-
-    printf "Found digest of %s:\n%s\n" "$image" "$image_digest" >&2
+    printf "Found digest of %s:\n%s\n" "${image_ref}" "${image_hash}" >&2
 }
 
-# Pull images and get their hashes
-pull_and_get_hash "http-echo" "HTTP_ECHO_HASH"
-pull_and_get_hash "proxy" "PROXY_HASH"
-pull_and_get_hash "forwarder" "FORWARDER_HASH"
-pull_and_get_hash "atls-proxy" "ATLS_PROXY_HASH"
+# Read image hashes from local archives
+get_hash "http-echo" "HTTP_ECHO_HASH"
+get_hash "proxy" "PROXY_HASH"
+get_hash "atls-proxy" "ATLS_PROXY_HASH"
 
 echo "Waiting for local connector at http://$local_connector_ip:8080 to become available..." >&2
 until curl -sS "http://$local_connector_ip:8080" > /dev/null 2>&1; do sleep 0.1; done
@@ -93,7 +85,7 @@ local_pipeline_def="$(envsubst <<<'{
   "http://fhg.de/glue/container": [
     {
       "@type": "http://fhg.de/glue/Container",
-      "http://fhg.de/glue/image": "container-registry.gitlab.cc-asp.fraunhofer.de/ccit-glue/usage-control/container-pipeline/proxy:running-example",
+      "http://fhg.de/glue/image": "registry:5000/proxy:latest",
       "http://fhg.de/glue/hash": "${PROXY_HASH}",
       "http://fhg.de/glue/allowNetwork": true
     }
