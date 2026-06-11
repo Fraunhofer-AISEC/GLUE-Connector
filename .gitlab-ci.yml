@@ -109,7 +109,7 @@ example_bundle:
     paths:
       - example
     exclude:
-      - example/compose-generator
+      - "example/compose-generator/*"
   when: manual
   tags:
     - munich-glue-local
