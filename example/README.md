@@ -8,7 +8,7 @@ data-plane messages over attested TLS.
 
 ## Dependencies
 
-In addition to the requirements for building the GLUE connector itself, the examples require docker compose, openssl, jq, jo, envsubst, curl, and skopeo.
+Running the example requires docker compose, openssl, jq, jo, envsubst, curl, and skopeo.
 
 ### Debian-based systems
 
@@ -16,29 +16,38 @@ In addition to the requirements for building the GLUE connector itself, the exam
 > The installation command assumes that the [official docker repository](https://docs.docker.com/engine/install/debian/#install-using-the-repository) is configured.
 
 ```shell
-apt install openjdk-25-jdk docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin openssl jq jo gettext-base curl skopeo
+apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin openssl jq jo gettext-base curl skopeo
 ```
 
 ### Arch Linux
 
 ```shell
-pacman -S jdk25-openjdk docker docker-buildx docker-compose openssl jq jo gettext curl skopeo
+pacman -S docker docker-buildx docker-compose openssl jq jo gettext curl skopeo
 ```
 
 ### Nix Shell
 
 ```shell
-nix-shell -p jdk25 docker docker-buildx docker-compose openssl jq jo gettext curl skopeo
+nix-shell -p docker-client docker-buildx docker-compose openssl jq jo gettext curl skopeo
 ```
 
-## Setup
+## Usage
 
-1. Generate the CMC PKI infrastructure by running `./generate-pki.sh`.
-2. Build the connector docker image by running `./gradlew jibDockerBuild` in the parent directory.
-3. Run the desired example using docker compose with `docker compose -f <example>.compose.yml up`.
+The main entrypoint for the example is the `example.sh` script.
+It spins up all required connectors and supporting infrastructure with docker compose, initiates contract negotiation
+and establishes data pipelines.
 
-## Usage (multi-stage example)
+The script expects the name of the example to run as its first argument.
+Additional arguments can be passed to alter the behaviour of the script as follows:
 
-Initiate a contract negotiation between the first and second connector and spawn the first container pipeline using `./run-example.sh initial intermediary multi-stage-policy.json`.
-When the negotiation is finished, the script will print the IP address and port of the first, locally deployed pipeline.
-POSTing an HTTP request to the provided addresses `/echo` endpoint will trigger the creation of follow-up pipelines on the subsequent connectors, which will eventually echo the input data.
+```
+Usage: ./example.sh [Options] <example name>
+Options:
+  --insecure        Disable aTLS
+  --regenerate-pki  Generate new certificates
+  --refetch-images  Re-fetch all container images from the registry
+  --initial         The name of the initial container (default: initiator)
+  --intermediary    The name of the first contract recipient container (default: intermediary)
+  --initial         The name of the final container (default: destination)
+  --help            Show this message and exit
+```

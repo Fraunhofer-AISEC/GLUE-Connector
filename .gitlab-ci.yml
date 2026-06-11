@@ -104,13 +104,12 @@ example_bundle:
     - cd example
     - ./scripts/generate-pki.sh
     - SOURCE_TAG="$CI_PIPELINE_ID" SOURCE_REGISTRY="$CI_REGISTRY_IMAGE" ./scripts/prepare-images.sh
-    - cd ..
-    - cp -a example example-bundle
-    - rm -rf example-bundle/compose-generator
   artifacts:
     when: on_success
     paths:
-      - example-bundle
+      - example
+    exclude:
+      - example/compose-generator
   when: manual
   tags:
     - munich-glue-local
