@@ -40,7 +40,6 @@ print_help() {
           printf "  --insecure        Disable aTLS support\n"
           printf "  --regenerate-pki  Generate new certificates\n"
           printf "  --refetch-images  Re-fetch all container images from the registry\n"
-          printf "  --build           Rebuild all container images\n"
           printf "  --initial         The name of the initial container (default: initiator)\n"
           printf "  --intermediary    The name of the first contract recipient container (default: intermediary)\n"
           printf "  --initial         The name of the final container (default: destination)\n"
@@ -64,13 +63,9 @@ _run_deferred() {
 }
 trap _run_deferred EXIT
 
-
-require curl jq zstd docker skopeo
-
 insecure=false
 regenerate_pki=false
 refetch_images=false
-build=false
 initial_host=initiator
 intermediary_host=intermediary
 final_host=destination
@@ -85,9 +80,6 @@ while [[ $# -gt 0 ]]; do
         ;;
       --refetch-images)
         refetch_images=true
-        ;;
-      --build)
-        build=true
         ;;
       --initial)
         initial_host="$2"
@@ -112,6 +104,8 @@ while [[ $# -gt 0 ]]; do
     shift
 done
 
+require curl jq docker skopeo
+
 if [[ $# -eq 0 ]]; then
   print_help >&2
   exit 1
@@ -119,6 +113,7 @@ fi
 
 compose_file="$1$($insecure && echo "-insecure").compose.yml"
 policy_file="$1.policy.json"
+compose_project_name="example_$(echo "$1" | tr "-" "_")"
 
 if [ ! -f "${compose_file}" ] || [ ! -f "${policy_file}" ]; then
   echo "Example $1 does not exist" >&2
@@ -141,23 +136,17 @@ if ! docker image inspect "${connector_image}" >/dev/null 2>&1; then
     skopeo copy --insecure-policy "docker-archive:images/container-pipeline.tar" "docker-daemon:${connector_image}"
 fi
 
-if ${build}; then
-    info "Building container images"
-    (cd .. && ./gradlew jibDockerBuild)
-    docker compose -f "${compose_file}" build
-fi
-
 info "Starting docker compose environment"
 
-docker compose -f "${compose_file}" up -d
+docker compose -p "${compose_project_name}" -f "${compose_file}" up -d
 
 remove_compose() {
   info "Removing docker compose environment"
-  docker compose -f "${compose_file}" down -v
+  docker compose -p "${compose_project_name}" -f "${compose_file}" down -v
 }
 defer remove_compose
 
-initial_container_ip="$(docker inspect -f '{{ .NetworkSettings.Networks.example_default.IPAddress }}' "example-${initial_host}-connector-1")"
+initial_container_ip="$(docker inspect -f "{{ .NetworkSettings.Networks.${compose_project_name}_default.IPAddress }}" "${compose_project_name}-${initial_host}-connector-1")"
 common_curl_opts=(-sS --fail -H "Content-Type: application/json")
 
 info Starting pipeline deployment
@@ -170,19 +159,23 @@ stop_pipeline() {
 }
 defer stop_pipeline
 
-example_data=">>=======================================================<<
-||                                                       ||
-||     _   _      _ _          ____ _    _   _ _____     ||
-||    | | | | ___| | | ___    / ___| |  | | | | ____|    ||
-||    | |_| |/ _ \ | |/ _ \  | |  _| |  | | | |  _|      ||
-||    |  _  |  __/ | | (_) | | |_| | |__| |_| | |___     ||
-||    |_| |_|\___|_|_|\___/   \____|_____\___/|_____|    ||
-||                                                       ||
->>=======================================================<<
+example_data=">>======================================================<<
+||                                                      ||
+||    _____               _           _                 ||
+||   |_   _| __ _   _ ___| |_ ___  __| |                ||
+||     | || '__| | | / __| __/ _ \/ _\` |                ||
+||     | || |  | |_| \__ \ ||  __/ (_| |                ||
+||     |_||_|   \__,_|___/\__\___|\__,_|                ||
+||    / ___|___  _ __  _ __   ___  ___| |_ ___  _ __    ||
+||   | |   / _ \| '_ \| '_ \ / _ \/ __| __/ _ \| '__|   ||
+||   | |__| (_) | | | | | | |  __/ (__| || (_) | |      ||
+||    \____\___/|_| |_|_| |_|\___|\___|\__\___/|_|      ||
+||                                                      ||
+>>======================================================<<
 
 A full data pipeline is now established.
-You can send more data through the pipeline by sending HTTP
-requests to <http://${pipeline_port}/echo>.
+You can send more data through the pipeline by sending HTTP requests to
+<http://${pipeline_port}/echo> or stop the pipeline by pressing CTRL-C.
 "
 
 info "Sending input data, this may take some time"
@@ -191,7 +184,7 @@ curl -sS --fail -d "$example_data" "http://${pipeline_port}/echo" >/dev/null &
 echo_container_image="registry:5000/http-echo:latest"
 iteration=0
 while true; do
-  echo_container_id="$(docker exec "example-${final_host}-docker-1" docker ps --filter "ancestor=$echo_container_image" --format "{{ .ID }}" | head -n1)"
+  echo_container_id="$(docker exec "${compose_project_name}-${final_host}-docker-1" docker ps --filter "ancestor=$echo_container_image" --format "{{ .ID }}" | head -n1)"
 
   if [ -n "${echo_container_id}" ]; then
     break
@@ -212,6 +205,6 @@ done
 info "Attaching to the final connector in the pipeline"
 detail "Press CTRL-C to detach"
 
-docker exec "example-${final_host}-docker-1" docker logs -f "${echo_container_id}"
+docker exec "${compose_project_name}-${final_host}-docker-1" docker logs -f "${echo_container_id}"
 
 wait %1
