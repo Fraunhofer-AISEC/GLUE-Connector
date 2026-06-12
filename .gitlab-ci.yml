@@ -104,12 +104,12 @@ example_bundle:
     - cd example
     - ./scripts/generate-pki.sh
     - SOURCE_TAG="$CI_PIPELINE_ID" SOURCE_REGISTRY="$CI_REGISTRY_IMAGE" ./scripts/prepare-images.sh
+    - cd ..
+    - tar c --exclude .gitignore --exclude 'compose-generator*' example | zstd -8 > example.tar.zst
   artifacts:
     when: on_success
     paths:
-      - example
-    exclude:
-      - "example/compose-generator/*"
+      - example.tar.zst
   when: manual
   tags:
     - munich-glue-local

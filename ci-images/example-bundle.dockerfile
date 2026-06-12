@@ -9,4 +9,5 @@ RUN apt-get update \
         jo \
         openssl \
         skopeo \
+        zstd \
     && rm -rf /var/lib/apt/lists/*
