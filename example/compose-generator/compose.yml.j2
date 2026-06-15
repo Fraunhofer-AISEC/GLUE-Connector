@@ -66,7 +66,8 @@ services:
       - {{ component.name }}-tmp:/tmp
       - ./data:/data
       - ./pki:/pki:ro
-      - metadata:/metadata
+      - ./data:/sys/kernel/security:ro
+      - metadata:/metadata:ro
       - tpm-sysfs-hack:/sys/class/tpm/tpm0/
     # The connector and the cmc need to share one hostname in order to allow the connector to use the CMC's certificate
     network_mode: service:{{ component.name }}-connector
@@ -130,10 +131,11 @@ services:
         find /metadata-templates -maxdepth 1 -type f | while read -r path; do
           out_file="$$(basename "$$path")"
 
-          /opt/metasign -in "$${path}" \
-            -out "/metadata/$${out_file}" \
-            -keys /pki/est-signing-key.pem \
-            -x5cs "/pki/est-signing-cert.pem,/pki/ca-cert.pem"
+          /opt/metatool sign \
+            --in "$${path}" \
+            --out "/metadata/$${out_file}" \
+            --keys /pki/est-signing-key.pem \
+            --x5cs "/pki/est-signing-cert.pem,/pki/ca-cert.pem"
         done
 
         /opt/estserver -config /data/est-conf.json

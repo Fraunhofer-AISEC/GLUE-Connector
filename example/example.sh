@@ -9,21 +9,21 @@ BLUE='\033[34m'
 RESET='\033[0m'
 
 require() {
-    missing_progs=()
-    for prog in "$@"; do
-        if ! command -v "$prog" > /dev/null; then
-        missing_progs+=("$prog")
-        fi
-    done
-
-    if (( ${#missing_progs[@]} != 0 )); then
-        echo "The following programs are required but not in path: ${missing_progs[*]}" >&2
-        return 1
+  missing_progs=()
+  for prog in "$@"; do
+    if ! command -v "$prog" > /dev/null; then
+      missing_progs+=("$prog")
     fi
+  done
+
+  if (( ${#missing_progs[@]} != 0 )); then
+    echo "The following programs are required but not in path: ${missing_progs[*]}" >&2
+    return 1
+  fi
 }
 
 info() {
-    printf "${BOLD}${BLUE}==> ${RESET}${BOLD}%s${RESET}\n" "$*" >&2
+  printf "${BOLD}${BLUE}==> ${RESET}${BOLD}%s${RESET}\n" "$*" >&2
 }
 
 detail() {
@@ -36,14 +36,14 @@ error() {
 
 print_help() {
   printf "Usage: %s [Options] <example name>\n" "$0"
-          printf "Options:\n"
-          printf "  --insecure        Disable aTLS support\n"
-          printf "  --regenerate-pki  Generate new certificates\n"
-          printf "  --refetch-images  Re-fetch all container images from the registry\n"
-          printf "  --initial         The name of the initial container (default: initiator)\n"
-          printf "  --intermediary    The name of the first contract recipient container (default: intermediary)\n"
-          printf "  --initial         The name of the final container (default: destination)\n"
-          printf "  --help            Show this message and exit\n"
+  printf "Options:\n"
+  printf "  --insecure        Disable aTLS support\n"
+  printf "  --regenerate-pki  Generate new certificates\n"
+  printf "  --refetch-images  Re-fetch all container images from the registry\n"
+  printf "  --initial         The name of the initial container (default: initiator)\n"
+  printf "  --intermediary    The name of the first contract recipient container (default: intermediary)\n"
+  printf "  --initial         The name of the final container (default: destination)\n"
+  printf "  --help            Show this message and exit\n"
 }
 
 # Simple Go-style exit handler stack
@@ -51,15 +51,15 @@ print_help() {
 _defer_handlers=()
 
 defer() {
-    _defer_handlers+=("$*")
+  _defer_handlers+=("$*")
 }
 
 _run_deferred() {
-    set +e
-    for (( i=${#_defer_handlers[@]}-1; i>=0; i-- )); do
+  set +e
+  for (( i=${#_defer_handlers[@]}-1; i>=0; i-- )); do
       eval "${_defer_handlers[$i]}"
-    done
-    set -e
+  done
+  set -e
 }
 trap _run_deferred EXIT
 
@@ -71,37 +71,42 @@ intermediary_host=intermediary
 final_host=destination
 
 while [[ $# -gt 0 ]]; do
-    case $1 in
-      --insecure)
-        insecure=true
-        ;;
-      --regenerate-pki)
-        regenerate_pki=true
-        ;;
-      --refetch-images)
-        refetch_images=true
-        ;;
-      --initial)
-        initial_host="$2"
-        shift
-        ;;
-      --intermediary)
-        intermediary_host="$1"
-        shift
-        ;;
-      --final)
-        final_host="$2"
-        shift
-        ;;
-      --help)
-        print_help >&2
-        exit 0
-        ;;
-      *)
-        break
-        ;;
-    esac
-    shift
+  case $1 in
+    --insecure)
+      insecure=true
+      shift
+      ;;
+    --regenerate-pki)
+      regenerate_pki=true
+      shift
+      ;;
+    --refetch-images)
+      refetch_images=true
+      shift
+      ;;
+    --initial)
+      initial_host="$2"
+      shift
+      shift
+      ;;
+    --intermediary)
+      intermediary_host="$1"
+      shift
+      shift
+      ;;
+    --final)
+      final_host="$2"
+      shift
+      shift
+      ;;
+    --help)
+      print_help >&2
+      exit 0
+      ;;
+    *)
+      break
+      ;;
+  esac
 done
 
 require curl jq docker skopeo
@@ -111,7 +116,8 @@ if [[ $# -eq 0 ]]; then
   exit 1
 fi
 
-compose_file="$1$($insecure && echo "-insecure").compose.yml"
+# shellcheck disable=SC2015
+compose_file="$1$($insecure && echo "-insecure" || true).compose.yml"
 policy_file="$1.policy.json"
 compose_project_name="example_$(echo "$1" | tr "-" "_")"
 
@@ -138,7 +144,7 @@ fi
 
 info "Starting docker compose environment"
 
-docker compose -p "${compose_project_name}" -f "${compose_file}" up -d
+docker compose -p "${compose_project_name}" -f "${compose_file}" up -d --build
 
 remove_compose() {
   info "Removing docker compose environment"
@@ -150,7 +156,13 @@ initial_container_ip="$(docker inspect -f "{{ .NetworkSettings.Networks.${compos
 common_curl_opts=(-sS --fail -H "Content-Type: application/json")
 
 info Starting pipeline deployment
-start_pipeline_output="$(./scripts/start-pipeline.sh "$($insecure && echo "--no-atls")" "${initial_container_ip}" "${intermediary_host}" "${policy_file}")"
+start_pipeline_args=("${initial_container_ip}" "${intermediary_host}" "${policy_file}")
+
+if "$insecure"; then
+  start_pipeline_args=(--no-atls "${start_pipeline_args[@]}")
+fi
+
+start_pipeline_output="$(./scripts/start-pipeline.sh "${start_pipeline_args[@]}" )"
 read -r pipeline_id pipeline_port < <(echo "$start_pipeline_output")
 
 stop_pipeline() {
