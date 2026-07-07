@@ -169,3 +169,5 @@ volumes:
       device: tmpfs
   tpm-sysfs-hack: {}
 {% endif %}
+
+x-example-metadata: {{ metadata | to_yaml | nindent(2) }}
