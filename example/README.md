@@ -8,7 +8,7 @@ data-plane messages over attested TLS.
 
 ## Dependencies
 
-Running the example requires docker compose, openssl, jq, jo, envsubst, curl, and skopeo.
+Running the example requires docker compose, openssl, yq, jo, envsubst, curl, and skopeo.
 
 ### Debian-based systems
 
@@ -16,19 +16,19 @@ Running the example requires docker compose, openssl, jq, jo, envsubst, curl, an
 > The installation command assumes that the [official docker repository](https://docs.docker.com/engine/install/debian/#install-using-the-repository) is configured.
 
 ```shell
-apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin openssl jq jo gettext-base curl skopeo
+apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin openssl yq jo gettext-base curl skopeo
 ```
 
 ### Arch Linux
 
 ```shell
-pacman -S docker docker-buildx docker-compose openssl jq jo gettext curl skopeo
+pacman -S docker docker-buildx docker-compose openssl yq jo gettext curl skopeo
 ```
 
 ### Nix Shell
 
 ```shell
-nix-shell -p docker-client docker-buildx docker-compose openssl jq jo gettext curl skopeo
+nix-shell -p docker-client docker-buildx docker-compose openssl yq jo gettext curl skopeo
 ```
 
 ## Usage
@@ -46,9 +46,6 @@ Options:
   --insecure        Disable aTLS
   --regenerate-pki  Generate new certificates
   --refetch-images  Re-fetch all container images from the registry
-  --initial         The name of the initial container (default: initiator)
-  --intermediary    The name of the first contract recipient container (default: intermediary)
-  --initial         The name of the final container (default: destination)
   --help            Show this message and exit
 ```
 

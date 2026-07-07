@@ -17,7 +17,7 @@ require() {
   fi
 }
 
-require curl jq jo envsubst skopeo
+require curl yq jo envsubst skopeo
 
 peer_proto="https"
 if [[ "$1" == "--no-atls" ]]; then
@@ -45,7 +45,7 @@ get_hash() {
     local var_name="$2"
     local image_ref="localhost:5000/${image_name}:latest"
     local image_hash
-    image_hash=$(skopeo inspect --tls-verify=false "docker://${image_ref}" | jq -r '.Digest')
+    image_hash=$(skopeo inspect --tls-verify=false "docker://${image_ref}" | yq -r '.Digest')
 
     # Export the hash with the provided variable name
     export "${var_name}"="${image_hash}"
@@ -94,11 +94,11 @@ local_pipeline_def="$(envsubst <<<'{
 
 echo "Starting the contract negotiation..." >&2
 negotiation_req="$(jo peer="$peer_proto://$remote_connector:8444" contractRequest="$policy_content" localPipeline="$local_pipeline_def")"
-negotiation_id=$(curl -v -X POST "${common_curl_opts[@]}" -d "$negotiation_req" "http://$local_connector_ip:8080/api/v1.0/negotiations" | jq -r ".id")
+negotiation_id=$(curl -v -X POST "${common_curl_opts[@]}" -d "$negotiation_req" "http://$local_connector_ip:8080/api/v1.0/negotiations" | yq -r ".id")
 
 echo "Awaiting negotiation completion..." >&2
 while true; do
-  negotiation_state="$(curl "${common_curl_opts[@]}" "http://$local_connector_ip:8080/api/v1.0/negotiations/$negotiation_id" | jq -r ".state")"
+  negotiation_state="$(curl "${common_curl_opts[@]}" "http://$local_connector_ip:8080/api/v1.0/negotiations/$negotiation_id" | yq -r ".state")"
   case "$negotiation_state" in
     FINALIZED)
       break
@@ -112,15 +112,15 @@ while true; do
 done
 
 echo "Requesting local pipelines..." >&2
-while (( "$(curl "${common_curl_opts[@]}" "http://$local_connector_ip:8080/api/v1.0/pipelines" | jq "length")" == 0 )); do
+while (( "$(curl "${common_curl_opts[@]}" "http://$local_connector_ip:8080/api/v1.0/pipelines" | yq "length")" == 0 )); do
     sleep 1
 done
 
 # We once again only get the first pipeline for now.
-pipeline="$(curl "${common_curl_opts[@]}" "http://$local_connector_ip:8080/api/v1.0/pipelines" | jq '.[0]')"
+pipeline="$(curl "${common_curl_opts[@]}" "http://$local_connector_ip:8080/api/v1.0/pipelines" | yq '.[0]')"
 
-pipeline_id="$(jq -r '.id' <<< "$pipeline")"
-pipeline_port="$(jq -r '.["containers"][0]["ports"][0]["hostAddress"]' <<< "$pipeline")"
+pipeline_id="$(yq -r '.id' <<< "$pipeline")"
+pipeline_port="$(yq -r '.["containers"][0]["ports"][0]["hostAddress"]' <<< "$pipeline")"
 
 echo "Container pipeline running on $pipeline_port" >&2
 echo "$pipeline_id $pipeline_port"

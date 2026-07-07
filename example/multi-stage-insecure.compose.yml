@@ -178,3 +178,28 @@ volumes:
     driver_opts:
       type: tmpfs
       device: tmpfs
+
+x-example-metadata: 
+  initial-host: initiator
+  intermediary-host: intermediary
+  attach-to:
+  - host: destination
+    container: http-echo
+  example-data: |
+    >>======================================================<<
+    ||                                                      ||
+    ||    _____               _           _                 ||
+    ||   |_   _| __ _   _ ___| |_ ___  __| |                ||
+    ||     | || '__| | | / __| __/ _ \/ _` |                ||
+    ||     | || |  | |_| \__ \ ||  __/ (_| |                ||
+    ||     |_||_|   \__,_|___/\__\___|\__,_|                ||
+    ||    / ___|___  _ __  _ __   ___  ___| |_ ___  _ __    ||
+    ||   | |   / _ \| '_ \| '_ \ / _ \/ __| __/ _ \| '__|   ||
+    ||   | |__| (_) | | | | | | |  __/ (__| || (_) | |      ||
+    ||    \____\___/|_| |_|_| |_|\___|\___|\__\___/|_|      ||
+    ||                                                      ||
+    >>======================================================<<
+  
+    A full data pipeline is now established.
+    You can send more data through the pipeline by sending HTTP requests to
+    <http://%PIPELINE_PORT%/echo> or stop the pipeline by pressing CTRL-C.
