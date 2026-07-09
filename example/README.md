@@ -1,14 +1,14 @@
-# GLUE Connector Example
+# Trusted Connector Example
 
-This directory contains examples for the deployment of the GLUE connector.
-The examples consist of multiple instances of the connector and their supporting infrastructure deployed using docker compose.
-
-Currently, only the multi-stage example is available, which consists of three connectors that exchange control- and
-data-plane messages over attested TLS.
+This directory contains examples for the deployment of the Trusted Connector.
+The examples use docker compose to orchestrate the required components as containers.
 
 ## Dependencies
 
 Running the example requires docker compose, openssl, yq, jo, envsubst, curl, and skopeo.
+We assume that a docker daemon is already available and that you have access to it.
+[Podman](https://podman.io/) may also work, but we do not officially support it.
+In addition to the dependencies, the examples require that port `5000` is available on the host machine.
 
 ### Debian-based systems
 
@@ -31,25 +31,25 @@ pacman -S docker docker-buildx docker-compose openssl yq jo gettext curl skopeo
 nix-shell -p docker-client docker-buildx docker-compose openssl yq jo gettext curl skopeo
 ```
 
-## Usage
+## Running Examples
 
-The main entrypoint for the example is the `example.sh` script.
-It spins up all required connectors and supporting infrastructure with docker compose, initiates contract negotiation
-and establishes data pipelines.
+To demonstrate the different capabilities of the Trusted Connector, we provide a set of examples.
+Each example defines its own actors and policy that may deploy different pipeline configurations.
+To start an example, run `./example.sh <example>` or run `./example.sh --help` for more information on its complete
+functionality.
 
-The script expects the name of the example to run as its first argument.
-Additional arguments can be passed to alter the behaviour of the script as follows:
+**Basic Multi-Stage Example:** The multi-stage example showcases a data processing chain consisting of three connectors
+each running a separate processing pipeline.
+The first connector (*initiator*) negotiates a contract with the second connector (*intermediary*), which then performs
+a follow-up negotiation with the final connector (*destination*).
+The follow-up policy is defined statically in the initial policy without dynamic parameters.
+Run this example with `./example.sh multi-stage`.
 
-```
-Usage: ./example.sh [Options] <example name>
-Options:
-  --insecure        Disable aTLS
-  --regenerate-pki  Generate new certificates
-  --refetch-images  Re-fetch all container images from the registry
-  --help            Show this message and exit
-```
+## Example Internals
 
-## Example Structure
+This section provides a short overview of the example infrastructure's internal workings.
+It details how each connector is represented within the docker compose environment, what parts are included as
+infrastructure components and how the attestation is performed in the example.
 
 ### Connector Deployment
 
@@ -79,7 +79,3 @@ in the connector.
 It fetches these certificates via [Enrollment over Secure Transport (EST)](https://datatracker.ietf.org/doc/html/rfc7030)
 from the EST server.
 When using the `--insecure` flag, these containers are not used or created.
-
-### Example Workflow
-
-TODO: Explain what the scripts do
