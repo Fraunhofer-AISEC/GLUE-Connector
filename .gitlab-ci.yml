@@ -106,6 +106,8 @@ container_test:
     when: always
     paths:
       - build/reports/tests/test
+    reports:
+      junit: build/test-results/test/*
 
 after_script:
   - echo "End CI"
