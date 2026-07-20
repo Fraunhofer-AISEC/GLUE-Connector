@@ -70,7 +70,8 @@ class NegotiationApiController(
                             val pipeline =
                                 pipelineManager.createPipeline(
                                     req.localPipeline,
-                                    // TODO: Differentiate local pipelines from ones created by contracts
+                                    // TODO: Once identities are established, this pipeline needs to be owned by the
+                                    //  current connector.
                                     contract.uid.toString(),
                                     contract.permission[0].target!!.uid.toString(),
                                 )
