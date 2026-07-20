@@ -1,7 +1,9 @@
-FROM golang:1.25@sha256:294846130303560fa9cb1fcce26b0fb1c35007906abeac9419dce2fc13a07286 AS builder
+FROM --platform=$BUILDPLATFORM golang:1.26@sha256:3aff6657219a4d9c14e27fb1d8976c49c29fddb70ba835014f477e1c70636647 AS builder
+ARG TARGETPLATFORM
+ARG BUILDPLATFORM
 WORKDIR /src
 COPY . .
-RUN CGO_ENABLED=0 go build -trimpath -ldflags=-buildid= -tags nodefaults,socket,tpm,snp,sw .
+RUN CGO_ENABLED=0 GOOS=${TARGETPLATFORM%/*} GOARCH=${TARGETPLATFORM#*/} go build -trimpath -ldflags=-buildid= -tags nodefaults,socket,tpm,snp,sw .
 
 # Some dependency seems to need cgo enabled, let's hope the image is still reproducible
 FROM scratch
