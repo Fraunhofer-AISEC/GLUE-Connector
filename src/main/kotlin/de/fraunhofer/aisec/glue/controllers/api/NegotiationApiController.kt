@@ -67,6 +67,7 @@ class NegotiationApiController(
                             val pipeline =
                                 pipelineManager.createPipeline(
                                     req.localPipeline,
+                                    //  current connector.
                                     contract.uid.toString(),
                                     contract.permission[0].target!!.uid.toString(),
                                 )
