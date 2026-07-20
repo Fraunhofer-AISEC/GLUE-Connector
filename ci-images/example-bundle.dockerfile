@@ -10,4 +10,7 @@ RUN apt-get update \
         openssl \
         skopeo \
         zstd \
+	python3 \
+	python3-yaml \
+	python3-jinja2 \
     && rm -rf /var/lib/apt/lists/*
