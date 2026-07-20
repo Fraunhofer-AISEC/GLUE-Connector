@@ -108,7 +108,17 @@ application {
 
 jib {
     from {
-        image = "eclipse-temurin:25-jre"
+        image = "eclipse-temurin:25-jre@sha256:681c543d6f36c50f45e9b5226930a46203dcfa351d3670e9d0bdf0dabae53539"
+        platforms {
+            platform {
+                os = "linux"
+                architecture = "amd64"
+            }
+            platform {
+                os = "linux"
+                architecture = "arm64"
+            }
+        }
     }
     container {
         mainClass = "de.fraunhofer.aisec.glue.ApplicationKt"
