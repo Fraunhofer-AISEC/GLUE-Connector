@@ -31,7 +31,7 @@ copy_image() {
   local target_ref="${destination_registry}/${image_name}:latest"
   local tar_path="${out_dir}/${image_name}.tar"
 
-  skopeo copy --insecure-policy "$source_ref" "docker-archive:${tar_path}:${target_ref}"
+  skopeo copy --multi-arch all --insecure-policy "$source_ref" "oci-archive:${tar_path}:${target_ref}"
 }
 
 copy_image "container-pipeline"
