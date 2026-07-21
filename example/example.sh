@@ -124,10 +124,8 @@ if [ ! -d images ] || ${refetch_images}; then
 fi
 
 connector_image="container-pipeline:latest"
-if ! docker image inspect "${connector_image}" >/dev/null 2>&1; then
-    info "Loading connector image into local docker daemon"
-    skopeo copy --insecure-policy "docker-archive:images/container-pipeline.tar" "docker-daemon:${connector_image}"
-fi
+info "Loading connector image into local docker daemon"
+skopeo copy --insecure-policy "oci-archive:images/container-pipeline.tar" "docker-daemon:${connector_image}"
 
 info "Starting docker compose environment"
 
