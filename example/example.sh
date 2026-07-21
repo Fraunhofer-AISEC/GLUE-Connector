@@ -125,7 +125,7 @@ fi
 
 connector_image="container-pipeline:latest"
 info "Loading connector image into local docker daemon"
-skopeo copy --insecure-policy "oci-archive:images/container-pipeline.tar" "docker-daemon:${connector_image}"
+skopeo copy --insecure-policy --override-os linux "oci-archive:images/container-pipeline.tar" "docker-daemon:${connector_image}"
 
 info "Starting docker compose environment"
 
