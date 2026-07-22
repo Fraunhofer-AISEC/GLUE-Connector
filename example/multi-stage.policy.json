@@ -1,0 +1,130 @@
+{
+  "@context": {
+    "odrl": "http://www.w3.org/ns/odrl/2/",
+    "glue": "http://fhg.de/glue/"
+  },
+  "@type": "http://www.w3.org/ns/odrl/2/Offer",
+  "@id": "http://dataowner.com/policy:6163",
+  "odrl:permission": [
+    {
+      "odrl:target": "http://dataowner.com/document:1234",
+      "odrl:assigner": "http://dataowner.com/org",
+      "odrl:assignee": "http://dataconsumer.com/org",
+      "odrl:action": "http://www.w3.org/ns/odrl/2/use",
+      "odrl:duty": {
+        "odrl:action": {
+          "@id": "http://fhg.de/glue/deployPipeline",
+          "odrl:refinement": [
+            {
+              "odrl:leftOperand": "http://fhg.de/glue/containerPipeline",
+              "odrl:operator": "http://www.w3.org/ns/odrl/2/eq",
+              "odrl:rightOperand": {
+                "@type": "http://fhg.de/glue/ContainerPipeline",
+                "glue:atlsProxyIn": {
+                  "@type": "http://fhg.de/glue/AtlsProxyConfiguration",
+                  "glue:proxyMode": "server"
+                },
+                "glue:atlsProxyOut": {
+                  "@type": "http://fhg.de/glue/AtlsProxyConfiguration",
+                  "glue:proxyMode": "client",
+                  "glue:proxyEndpoint": [
+                    {
+                      "@type": "http://fhg.de/glue/AtlsProxyEndpoint",
+                      "glue:listenEndpoint": "0.0.0.0:8080",
+                      "glue:nextEndpoint": "destination:8444"
+                    }
+                  ]
+                },
+                "glue:container": [
+                  {
+                    "@type": "http://fhg.de/glue/Container",
+                    "glue:image": "registry:5000/proxy:latest",
+                    "glue:hash": "${PROXY_HASH}",
+                    "glue:allowNetwork": false
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }, {
+      "odrl:target": "http://dataowner.com/document:1234",
+      "odrl:assigner": "http://dataowner.com/org",
+      "odrl:assignee": "http://dataconsumer.com/org",
+      "odrl:action": "http://www.w3.org/ns/odrl/2/distribute",
+      "odrl:duty": {
+        "odrl:action": {
+          "@id": "http://www.w3.org/ns/odrl/2/nextPolicy",
+          "odrl:refinement": [
+            {
+              "odrl:leftOperand": "http://fhg.de/glue/policyTemplate",
+              "odrl:operator": "http://www.w3.org/ns/odrl/2/eq",
+              "odrl:rightOperand": {
+                "@type": "http://fhg.de/glue/Value",
+                "glue:json": {
+                  "@context": {
+                    "odrl": "http://www.w3.org/ns/odrl/2/",
+                    "glue": "http://fhg.de/glue/"
+                  },
+                  "@type": "http://www.w3.org/ns/odrl/2/Offer",
+                  "@id": "http://dataowner.com/policy:9876",
+                  "odrl:permission": [
+                    {
+                      "odrl:target": "http://dataowner.com/document:1234",
+                      "odrl:assigner": "http://dataowner.com/org",
+                      "odrl:assignee": "http://dataconsumer.com/org",
+                      "odrl:action": "http://www.w3.org/ns/odrl/2/use",
+                      "odrl:duty": {
+                        "odrl:action": {
+                          "@id": "http://fhg.de/glue/deployPipeline",
+                          "odrl:refinement": [
+                            {
+                              "odrl:leftOperand": "http://fhg.de/glue/containerPipeline",
+                              "odrl:operator": "http://www.w3.org/ns/odrl/2/eq",
+                              "odrl:rightOperand": {
+                                "@type": "http://fhg.de/glue/ContainerPipeline",
+                                "glue:atlsProxyIn": {
+                                  "@type": "http://fhg.de/glue/AtlsProxyConfiguration",
+                                  "glue:proxyMode": "server"
+                                },
+                                "glue:container": [
+                                  {
+                                    "@type": "http://fhg.de/glue/Container",
+                                    "glue:image": "registry:5000/proxy:latest",
+                                    "glue:hash": "${PROXY_HASH}",
+                                    "glue:parameter": {
+                                      "@type": "http://fhg.de/glue/RestParameter",
+                                      "glue:httpUrl": "http://0.0.0.0:1234/dockerEndpoint?key1=value1",
+                                      "glue:httpType": "GET"
+                                    },
+                                    "glue:allowNetwork": false
+                                  },
+                                  {
+                                    "@type": "http://fhg.de/glue/Container",
+                                    "glue:image": "registry:5000/http-echo:latest",
+                                    "glue:hash": "${HTTP_ECHO_HASH}",
+                                    "glue:parameter": {
+                                      "@type": "http://fhg.de/glue/RestParameter",
+                                      "glue:httpUrl": "http://0.0.0.0:1234/dockerEndpoint?key1=value1",
+                                      "glue:httpType": "GET"
+                                    },
+                                    "glue:allowNetwork": false
+                                  }
+                                ]
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

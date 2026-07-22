@@ -63,7 +63,7 @@ class CMCSignatureSpi(
 
         return try {
             runBlocking(key.dispatcher) {
-                key.cmcClient.tlsSign(data, hashType)
+                key.cmcClient.tlsSign(data, hashType, key.keyId)
             }
         } catch (e: Exception) {
             throw SignatureException("Failed to sign data with CMC", e)

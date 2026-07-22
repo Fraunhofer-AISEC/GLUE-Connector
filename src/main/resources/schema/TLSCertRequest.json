@@ -6,12 +6,12 @@
       "properties": {
         "version": {
           "type": "string"
+        },
+        "keyId": {
+          "type": "string"
         }
       },
-      "type": "object",
-      "required": [
-        "version"
-      ]
+      "type": "object"
     }
   }
 }

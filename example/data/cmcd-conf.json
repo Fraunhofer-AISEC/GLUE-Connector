@@ -1,0 +1,26 @@
+{
+    "cmcAddr": "/tmp/cmcd.sock",
+    "provisionAuth": [ "attestation" ],
+    "endorsementMode": "est",
+    "endorsementAddr": "https://estserver:9000/",
+    "enrollmentMode": "est",
+    "enrollmentAddr": "https://estserver:9000/",
+    "metadata": [
+        "file:///metadata"
+    ],
+    "drivers": [ "tpm" ],
+    "keyConfig": "EC256",
+    "hashAlg": "SHA256",
+    "api": "socket",
+    "policyEngine": "js",
+    "policyOverwrite": false,
+    "logLevel": "trace",
+    "storage": "/tmp/cmc-internal/",
+    "cache": "/tmp/cmc-cache/",
+    "peerCache": "/tmp/cmc-peer-cache",
+    "measurementLogs": true,
+    "rootCas": [
+        "/pki/ca-cert.pem"
+    ],
+    "tpmKeyAlg": "EC256"
+}

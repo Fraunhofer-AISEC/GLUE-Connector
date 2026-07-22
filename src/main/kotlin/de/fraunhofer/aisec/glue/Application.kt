@@ -8,6 +8,7 @@ import com.fasterxml.jackson.core.JsonFactoryBuilder
 import com.fasterxml.jackson.core.StreamReadFeature
 import com.fasterxml.jackson.databind.ObjectMapper
 import de.fraunhofer.aisec.glue.atls.AtlsManager
+import de.fraunhofer.aisec.glue.atls.CMCClient
 import de.fraunhofer.aisec.glue.atls.NettyAtlsHandshakeHandler
 import de.fraunhofer.aisec.glue.config.ConfigManager
 import de.fraunhofer.aisec.glue.config.ConnectorConfig
@@ -163,10 +164,14 @@ val defaultDependencies by DI.Module {
         }
     bind<ObjectMapper>() with singleton { instance<OdrlParser>().mapper }
     bind<DockerClient>() with singleton { DockerClient.fromEnv() }
+    bind<CMCClient>() with singleton {
+        val atlsConfig = instance<ConfigManager>().getConfig(::AtlsConfig)
+        CMCClient(atlsConfig.cmcAddress, instance(), Dispatchers.Default)
+    }
     bind<ContentConverter>() with singleton { JacksonConverter(instance()) }
     bind<RemotePipelineManager>() with singleton { RemotePipelineManager(instance(), instance()) }
     bind<Backend>() with singleton { DockerBackend(instance(), instance(), instance()) }
-    bind<PipelineManager>() with singleton { PipelineManager(instance(), instance(), instance()) }
+    bind<PipelineManager>() with singleton { PipelineManager(instance(), instance(), instance(), instance()) }
     bind<PolicyEngine>() with singleton { PolicyEngine(instance()) }
     bind<DataStore>() with singleton { DataStore(instance()) }
     bind<ConnectorConfig>() with singleton { instance<ConfigManager>().getConfig(::ConnectorConfig) }
@@ -226,7 +231,7 @@ val defaultDependencies by DI.Module {
             )
         }
     bind<CoroutineDispatcher>() with singleton { Dispatchers.IO }
-    bind<AtlsManager>() with singleton { AtlsManager(instance(), instance(), instance()) }
+    bind<AtlsManager>() with singleton { AtlsManager(instance(), instance(), instance(), instance()) }
     bind<NettyServer>() with
         singleton {
             val atlsConfig = instance<AtlsConfig>()

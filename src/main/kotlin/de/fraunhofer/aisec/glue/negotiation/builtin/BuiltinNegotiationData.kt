@@ -24,4 +24,22 @@ data class BuiltinNegotiationData(
     val lastReceivedMessage: String? = null,
     val nextSentMessage: Int = 0,
     //  If we want to keep the Negotiator interface, a reference to its implementation would be required here.
-)
+) {
+    override fun toString(): String {
+        val contractString = if (contract != null) "(...)" else "null"
+        return "BuiltinNegotiationData(" +
+            "id=$id, " +
+            "role=$role, " +
+            "peer=$peer, " +
+            "peerPid=$peerPid, " +
+            "startTimestamp=$startTimestamp, " +
+            "state=$state, " +
+            "callbackUrl=$callbackUrl, " +
+            "peerUrl=$peerUrl, " +
+            "contract=$contractString, " +
+            "failureReason=$failureReason, " +
+            "lastReceivedMessage=$lastReceivedMessage, " +
+            "nextSentMessage=$nextSentMessage" +
+            ")"
+    }
+}

@@ -3,8 +3,12 @@ package de.fraunhofer.aisec.glue.atls
 import com.fasterxml.jackson.databind.ObjectMapper
 import de.fraunhofer.aisec.glue.TlsManager
 import de.fraunhofer.aisec.glue.config.ConfigManager
+import de.fraunhofer.aisec.glue.config.ConnectorConfig
+import de.fraunhofer.aisec.glue.pipeline.IPv4Address
 import de.fraunhofer.aisec.glue.pipeline.atls.AtlsConfig
+import io.ktor.network.sockets.*
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.runBlocking
 import java.io.EOFException
 import java.io.File
 import java.security.KeyStore
@@ -16,16 +20,27 @@ import javax.net.ssl.*
 
 class AtlsManager(
     configManager: ConfigManager,
-    objectMapper: ObjectMapper,
-    dispatcher: CoroutineDispatcher,
+    private val objectMapper: ObjectMapper,
+    private val dispatcher: CoroutineDispatcher,
+    override val cmcClient: CMCClient,
 ) : TlsManager() {
     private val atlsConfig = configManager.getConfig(::AtlsConfig)
-
-    override val cmcClient = CMCClient(atlsConfig.cmcAddress, objectMapper, dispatcher)
+    private val connectorConfig = configManager.getConfig(::ConnectorConfig)
 
     override val keyManager: X509ExtendedKeyManager by lazy {
         Security.addProvider(CMCProvider())
-        CMCKeyManager(cmcClient, dispatcher)
+        val keyId =
+            runBlocking(dispatcher) {
+                val hostnameIsIp = runCatching { IPv4Address.parse(connectorConfig.publicUrl.host) }.isSuccess
+                val (dnsNames, ipAddresses) =
+                    if (hostnameIsIp) {
+                        Pair(listOf<String>(), listOf(connectorConfig.publicUrl.host))
+                    } else {
+                        Pair(listOf(connectorConfig.publicUrl.host), listOf())
+                    }
+                cmcClient.tlsKey(connectorConfig.publicUrl.host, dnsNames, ipAddresses)
+            }
+        CMCKeyManager(cmcClient, dispatcher, keyId)
     }
 
     override val trustManager: X509TrustManager by lazy {

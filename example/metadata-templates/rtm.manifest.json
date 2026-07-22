@@ -1,0 +1,17 @@
+{
+  "type": "Manifest",
+  "name": "de.example.rtm",
+  "version": "2026-03-23T12:00:00Z",
+  "validity": {
+    "notBefore": "2026-03-22T12:00:00Z",
+    "notAfter": "2126-03-23T12:00:00Z"
+  },
+  "description": "RTM Manifest",
+  "developerCommonName": "Example",
+  "baseLayers": [
+    "de.example.rtm"
+  ],
+  "certLevel": 3,
+  "caFingerprints": [],
+  "referenceValues": []
+}

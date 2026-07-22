@@ -1,0 +1,2 @@
+As the containers used are the same for all stages in all examples, we use a generator to create the docker compose files.
+The generator is invoked as `./render-template.py compose.yml.j2 <example>-values.json > ../<example>.compose.yml`.
