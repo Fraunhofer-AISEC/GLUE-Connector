@@ -57,7 +57,11 @@ class DockerBackend(
         }*/
     }
 
-    private suspend fun<T, R> mapParallel(input: List<T>, close: suspend (R) -> Unit, map: suspend (Int, T) -> R): List<R> {
+    private suspend fun <T, R> mapParallel(
+        input: List<T>,
+        close: suspend (R) -> Unit,
+        map: suspend (Int, T) -> R,
+    ): List<R> {
         val completed = ConcurrentLinkedQueue<R>()
         try {
             return coroutineScope {
@@ -105,7 +109,7 @@ class DockerBackend(
         for (augmentedGlueContainer in pipelineDef) {
             val glueContainer = augmentedGlueContainer.base
             val expectedHash = glueContainer.hash
-            val imageToCheck = dockerClient.images.createByPull(glueContainer.image)
+            val imageToCheck = dockerClient.images.get(glueContainer.image)
             val inspectResponse = imageToCheck.inspect()
             val idHash = inspectResponse.id
             val repoDigests = inspectResponse.repoDigests?.map { it.split("@").last() }
@@ -122,6 +126,16 @@ class DockerBackend(
                         )
                 }
                 continue
+            }
+
+            LOG.atWarn {
+                message = "Hash check failed."
+                payload = mapOf(
+                    "image" to glueContainer.image,
+                    "expectedDigest" to glueContainer.hash,
+                    "configDigest" to idHash,
+                    "repoDigests" to repoDigests,
+                )
             }
 
             throw Exception(
@@ -149,11 +163,12 @@ class DockerBackend(
     ): List<Network> {
         // windowed(2) yields no pairs for a single container, so use that as minimum to always
         // create at least one network (connecting the sole container and the gateway/controller).
-        val containerPairs = if (containers.size == 1) {
-            listOf(containers)
-        } else {
-            containers.windowed(2)
-        }
+        val containerPairs =
+            if (containers.size == 1) {
+                listOf(containers)
+            } else {
+                containers.windowed(2)
+            }
 
         // Pre-allocate subnets sequentially — the iterator is not thread-safe
         // TODO: Instead of arena allocating subnets, make sure to also reissue released subnets if available
@@ -260,10 +275,11 @@ class DockerBackend(
         return address ?: run {
             LOG.atError {
                 message = "No shared address found for container ${relativeTo.name}"
-                payload = mapOf(
-                    "container" to container,
-                    "containerNetworks" to containerNetworks
-                )
+                payload =
+                    mapOf(
+                        "container" to container,
+                        "containerNetworks" to containerNetworks,
+                    )
             }
             throw IllegalStateException("No shared address exists with container ${relativeTo.name}")
         }

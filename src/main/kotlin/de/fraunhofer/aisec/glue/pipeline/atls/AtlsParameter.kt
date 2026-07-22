@@ -12,6 +12,8 @@ import de.fraunhofer.iosb.odrl.glue.GlueValue
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type", defaultImpl = AtlsParameter::class)
 @JsonTypeName("http://fhg.de/glue/internal/AtlsProxyConfiguration")
 class AtlsParameter(
+    @param:JsonProperty("http://fhg.de/glue/enabled")
+    val enabled: Boolean,
     @param:JsonProperty("http://fhg.de/glue/mode")
     val mode: String,
     @param:JsonProperty("http://fhg.de/glue/cmcAddress")
@@ -21,6 +23,8 @@ class AtlsParameter(
     @param:JsonProperty("http://fhg.de/glue/proxyEndpoint")
     @param:JsonSetter(nulls = Nulls.AS_EMPTY)
     val proxyEndpoint: List<GlueAtlsProxyEndpoint>? = null,
+    @param:JsonProperty("http://fhg.de/glue/keyId")
+    val keyId: String,
     value: GlueValue? = null,
 ) : GlueParameter(value) {
     override fun equals(other: Any?): Boolean {
@@ -30,10 +34,12 @@ class AtlsParameter(
 
         other as AtlsParameter
 
+        if (enabled != other.enabled) return false
         if (mode != other.mode) return false
         if (cmcAddress != other.cmcAddress) return false
         if (caCertificate != other.caCertificate) return false
         if (proxyEndpoint != other.proxyEndpoint) return false
+        if (keyId != other.keyId) return false
 
         return true
     }
@@ -44,6 +50,7 @@ class AtlsParameter(
         result = 31 * result + cmcAddress.hashCode()
         result = 31 * result + caCertificate.hashCode()
         result = 31 * result + proxyEndpoint.hashCode()
+        result = 31 * result + keyId.hashCode()
         return result
     }
 
@@ -52,6 +59,6 @@ class AtlsParameter(
             caCertificate.truncate(
                 16,
             )
-        }, proxyConnections=$proxyEndpoint)"
+        }, proxyConnections=$proxyEndpoint), keyId=$keyId"
     }
 }

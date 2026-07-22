@@ -112,18 +112,21 @@ func negotiateAndProxy(conn net.Conn, coordinator string, destination string) {
 	proxy(conn, endpoint)
 }
 
+type restParameter struct {
+    Type string `json:"type"`
+    HttpUrl string `json:"http://fhg.de/glue/httpUrl"`
+}
+
 type config struct {
 	// Controller address
 	Controller string `json:"controller"`
 	// The address of the next controller
 	NextContainer string `json:"nextContainer"`
+	// Arbitrary parameters
+	Parameters []json.RawMessage `json:"parameters"`
 }
 
 func main() {
-	if len(os.Args) != 2 {
-		log.Fatalf("Usage: %s <destination url>", os.Args[0])
-	}
-
 	configFile, err := os.Open("/config.json")
 	if err != nil {
 		log.Fatalf("Could not open the config file: %s", err)
@@ -135,7 +138,24 @@ func main() {
 		log.Fatalf("Could not parse config: %s", err)
 	}
 	log.Printf("Config: %+v", config)
-	log.Printf("Next hop is at %s", os.Args[1])
+
+	var nextHop string
+	for _, param := range config.Parameters {
+	    var decodedParam restParameter
+	    err := json.Unmarshal(param, &decodedParam)
+	    if err != nil {
+	        log.Fatalf("Could not deserialize config param: %s", err)
+	    }
+
+        if decodedParam.Type != "http://fhg.de/glue/RestParameter" {
+            log.Printf("Discarding unused parameter %s", decodedParam.Type)
+            continue
+        }
+
+        log.Printf("Setting next hop address to %s", decodedParam.HttpUrl)
+        nextHop = decodedParam.HttpUrl
+        break
+	}
 
 	listener, err := net.Listen("tcp", "0.0.0.0:8080")
 	if err != nil {
@@ -151,6 +171,6 @@ func main() {
 
 		log.Printf("Accepted connection from %s", conn.RemoteAddr())
 
-		go negotiateAndProxy(conn, config.Controller, os.Args[1])
+		go negotiateAndProxy(conn, config.Controller, nextHop)
 	}
 }

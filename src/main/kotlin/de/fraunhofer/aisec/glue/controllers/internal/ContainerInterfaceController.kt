@@ -72,7 +72,6 @@ class ContainerInterfaceController(
             // second contract to be negotiated.
             // Unless otherwise specified, the followup pipeline is started immediately.
             post("/negotiate") {
-                // TODO: We should parse destination a bit. If it is an URI, convert it. If not, then we're good.
                 val destination = call.queryParameters.getOrFail("destination")
                 // TODO: What happens if `startPipeline` is set to "false"? Is the flow meaningful and sound then?
                 val startPipeline = call.queryParameters["startPipeline"]?.toBoolean() ?: true
@@ -126,14 +125,12 @@ class ContainerInterfaceController(
                 // Now we're done with verifying parameters and we can start with the actual negotiation
                 // TODO: Maybe pull this out into its own function?
 
-                // Split the destination address into usable parts
-                val destinationURI = URI(destination)
-                val destinationHost =
-                    if (destinationURI.port == -1) {
-                        "${destinationURI.host}:8444"
-                    } else {
-                        "${destinationURI.host}:${destinationURI.port}"
-                    }
+                // We default to port 8444 if the caller specifies no port
+                val destinationHost = if (destination.contains(":")) {
+                    destination
+                } else {
+                    "$destination:8444"
+                }
 
                 // Check if we already have a follow-up contract that matches this target
                 val contractCandidates =
@@ -188,7 +185,7 @@ class ContainerInterfaceController(
                             }
 
                         val nextPolicy =
-                            GlueValueProcessor().resolvePlaceholders(
+                            GlueValueProcessor(odrlParser.mapper).resolvePlaceholders(
                                 evaluation.nextPolicyTemplate
                                     ?: throw BadRequestException("The contract does not define an applicable follow-up policy"),
                             ) {

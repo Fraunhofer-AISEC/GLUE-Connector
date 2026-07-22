@@ -3,6 +3,7 @@ image: eclipse-temurin:25
 stages:
   - build
   - test
+  - bundle
 
 before_script:
 #  - echo `pwd` # debug
@@ -23,6 +24,16 @@ cache:
     - .gradle/wrapper
     - .gradle/caches
 
+jar_build:
+  stage: build
+  script: ./gradlew shadowJar
+  artifacts:
+    when: on_success
+    paths:
+      - build/libs/container-pipeline-all.jar
+  tags:
+    - munich-glue-local
+
 jib_container_pipeline_build:
   stage: build
   script:
@@ -41,9 +52,9 @@ jib_container_pipeline_build:
     - mkdir -p /etc/containers/registries.conf.d
     - echo 'unqualified-search-registries = ["docker.io"]' > /etc/containers/registries.conf.d/docker.conf
     - podman login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
-    - podman build --timestamp 0 -f $DOCKERFILE -t $DOCKER_IMAGE:$IMAGE_TAG -t $DOCKER_IMAGE:$CI_PIPELINE_ID $CONTEXT_DIR
-    - podman push $DOCKER_IMAGE:$IMAGE_TAG
-    - podman push $DOCKER_IMAGE:$CI_PIPELINE_ID
+    - podman build --platform linux/amd64,linux/arm64 --timestamp 0 -f $DOCKERFILE --manifest $DOCKER_IMAGE:$CI_PIPELINE_ID $CONTEXT_DIR
+    - podman manifest push $DOCKER_IMAGE:$CI_PIPELINE_ID docker://$DOCKER_IMAGE:$IMAGE_TAG
+    - podman manifest push $DOCKER_IMAGE:$CI_PIPELINE_ID docker://$DOCKER_IMAGE:$CI_PIPELINE_ID
   tags:
     - munich-glue-local
 
@@ -83,6 +94,32 @@ podman-atls-proxy:
     CONTEXT_DIR: $CI_PROJECT_DIR/system-containers/atls-proxy
     DOCKERFILE: system-containers/atls-proxy/Dockerfile
     DOCKER_IMAGE: $CI_REGISTRY_IMAGE/atls-proxy
+
+example_bundle:
+  stage: bundle
+  image: container-registry.gitlab.cc-asp.fraunhofer.de/ccit-glue/usage-control/container-pipeline/ci-example-bundle:latest
+  before_script:
+    - skopeo login --username "$CI_REGISTRY_USER" --password "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+  script:
+    - cd example
+    - ./scripts/generate-pki.sh
+    - SOURCE_TAG="$CI_PIPELINE_ID" SOURCE_REGISTRY="$CI_REGISTRY_IMAGE" ./scripts/prepare-images.sh
+    - |
+      pushd compose-generator
+      for values in *-values.yaml; do
+        ./render-template.py compose.yml.j2 "$values" > "../${values%-values.yaml}.compose.yml"
+        ./render-template.py --insecure compose.yml.j2 "$values" > "../${values%-values.yaml}-insecure.compose.yml"
+      done
+      popd
+    - cd ..
+    - tar c --exclude .gitignore --exclude 'compose-generator*' example | zstd -8 > example.tar.zst
+  artifacts:
+    when: on_success
+    paths:
+      - example.tar.zst
+  when: manual
+  tags:
+    - munich-glue-local
 
 container_test:
   variables:

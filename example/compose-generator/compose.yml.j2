@@ -1,0 +1,173 @@
+{% set http_proto = "https" if atls else "http" %}
+services:
+{% for component in components %}
+  #
+  # Services for the {{ component.name }}
+  #
+
+  {{ component.name }}-connector:
+    image: container-pipeline:latest
+    hostname: {{ component.name }}
+    volumes:
+      - {{ component.name }}-tmp:/tmp
+      - ./data:/data
+      - ./pki:/pki:ro
+    env_file: .env
+    command:
+      - -P:atls.enabled={{ "true" if atls else "false" }}
+      - -P:atls.cmcAddress=unix:/tmp/cmcd.sock
+      - -P:atls.caCertPath=/pki/ca-cert.pem
+      - -P:atls.proxyContainer=registry:5000/atls-proxy:latest
+      # TODO: Can we somehow determine this hash dynamically (e.g. waiting for docker in some init script)?
+      - -P:atls.proxyHash=sha256:bbd9aa651ec9f6f4d18c7c8527fdf52e3a2136f14e22c9121a01f74ce439e957
+      - -P:connector.identity={{ http_proto }}://{{ component.name }}
+      - -P:connector.publicUrl={{ http_proto }}://{{ component.name }}:8444
+    environment:
+      AUTH_USERNAME: "${AUTH_USERNAME}"
+      AUTH_PASSWORD: "${AUTH_PASSWORD}"
+      DOCKER_HOST: "unix:///tmp/docker.sock"
+      JAVA_TOOL_OPTIONS: "-agentlib:jdwp=transport=dt_socket,address=*:5005,server=y,suspend=n"
+      PUBLIC_URL: "{{ http_proto }}://{{ component.name }}:8444"
+    depends_on:
+      image-loader:
+        condition: service_completed_successfully
+
+  {{ component.name }}-docker:
+    image: docker:29-dind
+    privileged: true
+    init: true
+    volumes:
+      - {{ component.name }}-tmp:/tmp
+    environment:
+      DOCKER_HOST: "unix:///tmp/docker.sock"
+    command:
+      - --insecure-registry=registry:5000
+    depends_on:
+      image-loader:
+        condition: service_completed_successfully
+    network_mode: service:{{ component.name }}-connector
+
+  {% if atls %}
+  {{ component.name }}-cmc:
+    build:
+      context: .
+      dockerfile: dockerfiles/cmc.dockerfile
+    init: true
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        ln -s /tmp/tpm0 /dev/tpm0
+        /opt/cmcd -config /data/cmcd-conf.json
+    depends_on:
+      {{ component.name }}-swtpm:
+        condition: service_healthy
+      estserver:
+        condition: service_healthy
+    volumes:
+      - {{ component.name }}-tmp:/tmp
+      - ./data:/data
+      - ./pki:/pki:ro
+      - ./data:/sys/kernel/security:ro
+      - metadata:/metadata:ro
+      - tpm-sysfs-hack:/sys/class/tpm/tpm0/
+    # The connector and the cmc need to share one hostname in order to allow the connector to use the CMC's certificate
+    network_mode: service:{{ component.name }}-connector
+
+  {{ component.name }}-swtpm:
+    build:
+        context: .
+        dockerfile: dockerfiles/swtpm.dockerfile
+    init: true
+    command:
+      - |
+        mkdir /tmp/swtpm-state
+        swtpm_setup --tpm2 --tpmstate /tmp/swtpm-state --create-ek-cert
+        swtpm socket --tpm2 --tpmstate dir=/tmp/swtpm-state --server type=unixio,path=/tmp/tpm0 --flags not-need-init,startup-clear --log level=20
+    healthcheck:
+      test: ["CMD", "[", "-S", "/tmp/tpm0", "]"]
+      interval: 1s
+      timeout: 5s
+      retries: 10
+      start_period: 2s
+    volumes:
+      - {{ component.name }}-tmp:/tmp
+      - ./data:/data
+
+  {% endif %}
+{% endfor %}
+
+  #
+  # Infrastructure
+  #
+
+  registry:
+    image: registry:3
+    ports:
+      - "5000:5000"
+
+  image-loader:
+    image: quay.io/skopeo/stable:latest
+    depends_on:
+      - registry
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -eu
+
+        for image in /images/*.tar; do
+          [ -e "$$image" ] || continue
+          image_name="$$(basename "$${image}" .tar)"
+          skopeo copy --multi-arch all --dest-tls-verify=false "oci-archive:$$image" "docker://registry:5000/$${image_name}:latest"
+        done
+    volumes:
+      - ./images:/images:ro
+
+{% if atls %}
+  estserver:
+    build:
+      context: .
+      dockerfile: dockerfiles/cmc.dockerfile
+    command:
+      - |
+        find /metadata-templates -maxdepth 1 -type f | while read -r path; do
+          out_file="$$(basename "$$path")"
+
+          /opt/metatool sign \
+            --in "$${path}" \
+            --out "/metadata/$${out_file}" \
+            --keys /pki/est-signing-key.pem \
+            --x5cs "/pki/est-signing-cert.pem,/pki/ca-cert.pem"
+        done
+
+        /opt/estserver -config /data/est-conf.json
+    healthcheck:
+      test: ["CMD", "curl", "-k", "https://localhost:9000"]
+      interval: 1s
+      timeout: 5s
+      retries: 10
+      start_period: 2s
+    volumes:
+      - ./data:/data:ro
+      - ./pki:/pki:ro
+      - ./metadata-templates:/metadata-templates:ro
+      - metadata:/metadata
+{% endif %}
+
+volumes:
+{% for component in components %}
+  {{ component.name }}-tmp:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+{% endfor %}
+{% if atls %}
+  metadata:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+  tpm-sysfs-hack: {}
+{% endif %}
+
+x-example-metadata: {{ metadata | to_yaml | nindent(2) }}

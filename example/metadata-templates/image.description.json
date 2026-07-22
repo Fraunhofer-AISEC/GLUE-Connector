@@ -1,0 +1,22 @@
+{
+  "type": "Image Description",
+  "name": "de.example.image-description",
+  "version": "2026-03-23T12:00:00Z",
+  "validity": {
+    "notBefore": "2026-03-22T12:00:00Z",
+    "notAfter": "2126-03-23T12:00:00Z"
+  },
+  "description": "Image Description",
+  "descriptions": [
+    {
+      "type": "Manifest Description",
+      "name": "de.example.rtm.description",
+      "manifest": "de.example.rtm"
+    },
+    {
+      "type": "Manifest Description",
+      "name": "de.example.image.description",
+      "manifest": "de.example.image"
+    }
+  ]
+}

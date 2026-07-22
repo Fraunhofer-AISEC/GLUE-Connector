@@ -80,7 +80,8 @@ class AtlsTest {
         val objectMapper = jacksonObjectMapper()
 
         val cmcClient = CMCClient(InetSocketAddress("127.0.0.1", 9955), objectMapper, dispatcher)
-        val cmcKeyManager = CMCKeyManager(cmcClient, dispatcher)
+        val keyId = runBlocking { cmcClient.tlsKey("test", emptyList(), emptyList()) }
+        val cmcKeyManager = CMCKeyManager(cmcClient, dispatcher, keyId)
         val trustManager = TrustingX509TrustManager
 
         val tlsContext = SSLContext.getInstance("TLS")

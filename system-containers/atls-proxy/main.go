@@ -33,6 +33,8 @@ type proxyEndpoint struct {
 
 type atlsProxyConfig struct {
 	Type string `json:"@type"`
+	// If true, ATLS is enabled globally
+	Enabled bool `json:"http://fhg.de/glue/enabled"`
 	// Either server or client
 	Mode string `json:"http://fhg.de/glue/mode"`
 	// Where the container can reach the CMC
@@ -41,6 +43,8 @@ type atlsProxyConfig struct {
 	CaCertificates string `json:"http://fhg.de/glue/caCertificates"`
 	// The connections this instance of the ATLS proxy should handle
 	ProxyEndpoints []proxyEndpoint `json:"http://fhg.de/glue/proxyEndpoint"`
+	// The key ID to access the CMC TLS signing key with
+	KeyId string `json:"http://fhg.de/glue/keyId"`
 }
 
 func parseConfig() (config, atlsProxyConfig, error) {

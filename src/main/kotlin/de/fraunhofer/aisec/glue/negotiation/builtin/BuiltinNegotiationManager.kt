@@ -5,7 +5,6 @@ import de.fraunhofer.aisec.glue.DataStore
 import de.fraunhofer.aisec.glue.config.ConfigManager
 import de.fraunhofer.aisec.glue.config.ConnectorConfig
 import de.fraunhofer.aisec.glue.models.negotiation.ContractNegotiation
-import de.fraunhofer.aisec.glue.models.negotiation.ContractOfferMessage
 import de.fraunhofer.aisec.glue.models.negotiation.ContractRequestMessage
 import de.fraunhofer.aisec.glue.models.negotiation.NegotiationState
 import de.fraunhofer.aisec.glue.negotiation.Negotiation
@@ -237,25 +236,27 @@ open class BuiltinNegotiationManager(
             payload = mapOf("id" to id, "role" to role, "peer" to peer, "peerPid" to peerPid, "peerUrl" to peerUrl)
         }
 
-        val negotiation = BuiltinNegotiation(
-            initialData = BuiltinNegotiationData(
-                id = id,
-                role = role,
-                peer = peer,
-                peerPid = peerPid,
-                startTimestamp = Clock.System.now(),
-                state = initialState,
-                callbackUrl = callbackUrl,
-                peerUrl = peerUrl,
-                contract = contract,
-            ),
-            httpClient = httpClient,
-            negotiator = defaultNegotiator,
-            objectMapper = objectMapper,
-            odrlParser = odrlParser,
-            ownIdentity = connectorConfig.identity,
-            scope = childScope,
-        )
+        val negotiation =
+            BuiltinNegotiation(
+                initialData =
+                    BuiltinNegotiationData(
+                        id = id,
+                        role = role,
+                        peer = peer,
+                        peerPid = peerPid,
+                        startTimestamp = Clock.System.now(),
+                        state = initialState,
+                        callbackUrl = callbackUrl,
+                        peerUrl = peerUrl,
+                        contract = contract,
+                    ),
+                httpClient = httpClient,
+                negotiator = defaultNegotiator,
+                objectMapper = objectMapper,
+                odrlParser = odrlParser,
+                ownIdentity = connectorConfig.identity,
+                scope = childScope,
+            )
         observeNegotiationState(negotiation)
         return negotiation
     }
@@ -263,7 +264,11 @@ open class BuiltinNegotiationManager(
     /**
      * Get the negotiation for the provided [id], [role], and [peer] identity.
      */
-    suspend fun getNegotiation(id: String, role: Negotiation.Role?, peer: String?): BuiltinNegotiation? {
+    suspend fun getNegotiation(
+        id: String,
+        role: Negotiation.Role?,
+        peer: String?,
+    ): BuiltinNegotiation? {
         // Since all of our IDs are UUIDs, we can safely say that every other format will not be one of our negotiations
         val parsedId = parsePid(id) ?: return null
 
@@ -271,14 +276,20 @@ open class BuiltinNegotiationManager(
         if ((role != null && negotiation.role != role) || negotiation.peerIdentity != peer) {
             LOG.atTrace {
                 message = "A requested negotiation exists but its role or identity do not match"
-                payload = mapOf("id" to id, "role" to role, "peer" to peer, "expectedRole" to negotiation.role, "expectedPeer" to negotiation.peerIdentity)
+                payload =
+                    mapOf(
+                        "id" to id,
+                        "role" to role,
+                        "peer" to peer,
+                        "expectedRole" to negotiation.role,
+                        "expectedPeer" to negotiation.peerIdentity,
+                    )
             }
             return null
         }
 
         return negotiation
     }
-
 
     override suspend fun getNegotiations(): Collection<Negotiation> {
         return negotiations.values.toList()
@@ -299,9 +310,7 @@ open class BuiltinNegotiationManager(
      * Observe updates to the negotiation state and updates and dispatch them accordingly.
      * Optionally accepts a future to receive the final contract when finishing the negotiation.
      */
-    private suspend fun observeNegotiationState(
-        negotiation: BuiltinNegotiation
-    ) {
+    private suspend fun observeNegotiationState(negotiation: BuiltinNegotiation) {
         dataStore.addNegotiation(negotiation.data)
         negotiation.stateObservers.add { data ->
             LOG.atTrace {
@@ -311,7 +320,7 @@ open class BuiltinNegotiationManager(
 
             dataStore.updateNegotiation(data)
 
-            if (data.state == NegotiationState.FINALIZED || data.state == NegotiationState.TERMINATED) {
+            if (data.state == NegotiationState.FINALIZED) {
                 assert(data.contract != null && data.contract is OdrlAgreement)
                 dataStore.addContract(data.contract as OdrlAgreement)
             }

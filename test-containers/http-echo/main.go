@@ -1,15 +1,32 @@
 package main
 
 import (
+	"bytes"
 	"io"
 	"log"
 	"net/http"
+	"os"
 )
 
 func echo(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Handling request from %s", r.RemoteAddr)
+	http.NewResponseController(w).EnableFullDuplex()
 
-	_, _ = io.Copy(w, r.Body)
+	var body bytes.Buffer
+	if _, err := io.Copy(&body, io.TeeReader(r.Body, os.Stdout)); err != nil {
+		log.Printf("failed to read request body: %v", err)
+		return
+	}
+
+	// If the last byte in the buffer is not a newline character, print one anyway to get the
+	// stdout buffer displayed.
+	if body.Bytes()[body.Len()-1] != '\n' {
+		os.Stdout.Write([]byte("\n"))
+	}
+
+	if _, err := io.Copy(w, &body); err != nil {
+		log.Printf("failed to write response body: %v", err)
+	}
 }
 
 func main() {

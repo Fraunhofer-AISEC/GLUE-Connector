@@ -2,6 +2,44 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$ref": "#/$defs/VerificationResponse",
   "$defs": {
+    "AttestationResult": {
+      "properties": {
+        "version": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "summary": {
+          "$ref": "#/$defs/Result"
+        },
+        "prover": {
+          "$ref": "#/$defs/Endpoint"
+        },
+        "verifier": {
+          "$ref": "#/$defs/Endpoint"
+        },
+        "created": {
+          "type": "string"
+        },
+        "freshness": {
+          "$ref": "#/$defs/Result"
+        },
+        "certLevel": {
+          "type": "integer"
+        },
+        "measurements": {
+          "items": {
+            "$ref": "#/$defs/MeasurementResult"
+          },
+          "type": "array"
+        },
+        "metadata": {
+          "$ref": "#/$defs/MetadataSummary"
+        }
+      },
+      "type": "object"
+    },
     "BooleanMatch": {
       "properties": {
         "success": {
@@ -14,12 +52,7 @@
           "type": "boolean"
         }
       },
-      "type": "object",
-      "required": [
-        "success",
-        "claimed",
-        "measured"
-      ]
+      "type": "object"
     },
     "Box": {
       "properties": {
@@ -30,11 +63,7 @@
           "type": "integer"
         }
       },
-      "type": "object",
-      "required": [
-        "height",
-        "width"
-      ]
+      "type": "object"
     },
     "CPUAffinity": {
       "properties": {
@@ -43,17 +72,6 @@
         },
         "final": {
           "type": "string"
-        }
-      },
-      "type": "object"
-    },
-    "CertConfig": {
-      "properties": {
-        "akCsr": {
-          "$ref": "#/$defs/CsrParams"
-        },
-        "ikCsr": {
-          "$ref": "#/$defs/CsrParams"
         }
       },
       "type": "object"
@@ -82,27 +100,45 @@
           "type": "array"
         }
       },
-      "type": "object",
-      "required": [
-        "result"
-      ]
+      "type": "object"
     },
-    "CsrParams": {
+    "Component": {
       "properties": {
-        "subject": {
-          "$ref": "#/$defs/Name"
+        "type": {
+          "type": "string"
         },
-        "dnsNames": {
+        "name": {
+          "type": "string"
+        },
+        "index": {
+          "type": "integer"
+        },
+        "hashes": {
           "items": {
-            "type": "string"
+            "$ref": "#/$defs/ReferenceHash"
           },
           "type": "array"
         },
-        "ipAddresses": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
+        "version": {
+          "type": "string"
+        },
+        "optional": {
+          "type": "boolean"
+        },
+        "description": {
+          "type": "string"
+        },
+        "eventdata": {
+          "$ref": "#/$defs/EventData"
+        },
+        "ctrData": {
+          "$ref": "#/$defs/CtrData"
+        },
+        "intelCollateral": {
+          "$ref": "#/$defs/IntelCollateral"
+        },
+        "purl": {
+          "type": "string"
         }
       },
       "type": "object"
@@ -119,11 +155,7 @@
           "$ref": "#/$defs/Spec"
         }
       },
-      "type": "object",
-      "required": [
-        "configSha256",
-        "rootfsSha256"
-      ]
+      "type": "object"
     },
     "DigestResult": {
       "properties": {
@@ -136,14 +168,14 @@
         "type": {
           "type": "string"
         },
-        "subtype": {
+        "name": {
           "type": "string"
         },
         "index": {
           "type": "integer"
         },
         "digest": {
-          "type": "string"
+          "$ref": "#/$defs/HexByte"
         },
         "measured": {
           "type": "string"
@@ -156,14 +188,15 @@
         },
         "ctrDetails": {
           "$ref": "#/$defs/CtrData"
+        },
+        "purl": {
+          "type": "string"
+        },
+        "hashAlg": {
+          "type": "string"
         }
       },
-      "type": "object",
-      "required": [
-        "success",
-        "launched",
-        "index"
-      ]
+      "type": "object"
     },
     "EFIDevicePath": {
       "properties": {
@@ -255,10 +288,7 @@
           "type": "string"
         }
       },
-      "type": "object",
-      "required": [
-        "type"
-      ]
+      "type": "object"
     },
     "EFILoadOption": {
       "properties": {
@@ -278,27 +308,21 @@
           "type": "string"
         }
       },
-      "type": "object",
-      "required": [
-        "attributes",
-        "description",
-        "filepathlist"
-      ]
+      "type": "object"
     },
-    "Environment": {
+    "Endpoint": {
       "properties": {
-        "key": {
+        "hostname": {
           "type": "string"
         },
-        "value": {
+        "ip": {
+          "type": "string"
+        },
+        "peerId": {
           "type": "string"
         }
       },
-      "type": "object",
-      "required": [
-        "key",
-        "value"
-      ]
+      "type": "object"
     },
     "EventData": {
       "properties": {
@@ -329,29 +353,6 @@
       },
       "type": "object"
     },
-    "ExternalInterface": {
-      "properties": {
-        "type": {
-          "type": "string"
-        },
-        "appEndpoint": {
-          "type": "string"
-        },
-        "interface": {
-          "type": "string"
-        },
-        "port": {
-          "type": "integer"
-        }
-      },
-      "type": "object",
-      "required": [
-        "type",
-        "appEndpoint",
-        "interface",
-        "port"
-      ]
-    },
     "FreeBSD": {
       "properties": {
         "devices": {
@@ -375,10 +376,7 @@
           "type": "integer"
         }
       },
-      "type": "object",
-      "required": [
-        "path"
-      ]
+      "type": "object"
     },
     "FreeBSDJail": {
       "properties": {
@@ -588,10 +586,7 @@
           "$ref": "#/$defs/HexByte"
         }
       },
-      "type": "object",
-      "required": [
-        "signatureownerguid"
-      ]
+      "type": "object"
     },
     "HexByte": {
       "type": "string",
@@ -618,10 +613,7 @@
           "type": "integer"
         }
       },
-      "type": "object",
-      "required": [
-        "path"
-      ]
+      "type": "object"
     },
     "Hooks": {
       "properties": {
@@ -676,11 +668,7 @@
           "type": "integer"
         }
       },
-      "type": "object",
-      "required": [
-        "firstMFN",
-        "nrMFNs"
-      ]
+      "type": "object"
     },
     "ImageLoadEvent": {
       "properties": {
@@ -700,12 +688,52 @@
           "type": "array"
         }
       },
-      "type": "object",
-      "required": [
-        "imagelocationinmemory",
-        "imagelengthinmemory",
-        "imagelinktimeaddress"
-      ]
+      "type": "object"
+    },
+    "IntelCollateral": {
+      "properties": {
+        "TcbInfo": {
+          "type": "string",
+          "contentEncoding": "base64"
+        },
+        "QeIdentity": {
+          "type": "string",
+          "contentEncoding": "base64"
+        },
+        "RootCaCrl": {
+          "type": "string",
+          "contentEncoding": "base64"
+        },
+        "PckCrl": {
+          "type": "string",
+          "contentEncoding": "base64"
+        },
+        "PckCrlIntermediateCert": {
+          "type": "string",
+          "contentEncoding": "base64"
+        },
+        "PckCrlRootCert": {
+          "type": "string",
+          "contentEncoding": "base64"
+        },
+        "TcbInfoIntermediateCert": {
+          "type": "string",
+          "contentEncoding": "base64"
+        },
+        "TcbInfoRootCert": {
+          "type": "string",
+          "contentEncoding": "base64"
+        },
+        "QeIdentityIntermediateCert": {
+          "type": "string",
+          "contentEncoding": "base64"
+        },
+        "QeIdentityRootCert": {
+          "type": "string",
+          "contentEncoding": "base64"
+        }
+      },
+      "type": "object"
     },
     "Linux": {
       "properties": {
@@ -922,13 +950,7 @@
           "type": "integer"
         }
       },
-      "type": "object",
-      "required": [
-        "path",
-        "type",
-        "major",
-        "minor"
-      ]
+      "type": "object"
     },
     "LinuxDeviceCgroup": {
       "properties": {
@@ -948,10 +970,7 @@
           "type": "string"
         }
       },
-      "type": "object",
-      "required": [
-        "allow"
-      ]
+      "type": "object"
     },
     "LinuxHugepageLimit": {
       "properties": {
@@ -962,11 +981,7 @@
           "type": "integer"
         }
       },
-      "type": "object",
-      "required": [
-        "pageSize",
-        "limit"
-      ]
+      "type": "object"
     },
     "LinuxIDMapping": {
       "properties": {
@@ -980,12 +995,7 @@
           "type": "integer"
         }
       },
-      "type": "object",
-      "required": [
-        "containerID",
-        "hostID",
-        "size"
-      ]
+      "type": "object"
     },
     "LinuxIOPriority": {
       "properties": {
@@ -996,11 +1006,7 @@
           "type": "integer"
         }
       },
-      "type": "object",
-      "required": [
-        "class",
-        "priority"
-      ]
+      "type": "object"
     },
     "LinuxIntelRdt": {
       "properties": {
@@ -1034,11 +1040,7 @@
           "type": "integer"
         }
       },
-      "type": "object",
-      "required": [
-        "name",
-        "priority"
-      ]
+      "type": "object"
     },
     "LinuxMemory": {
       "properties": {
@@ -1087,11 +1089,7 @@
           "type": "array"
         }
       },
-      "type": "object",
-      "required": [
-        "mode",
-        "nodes"
-      ]
+      "type": "object"
     },
     "LinuxNamespace": {
       "properties": {
@@ -1102,10 +1100,7 @@
           "type": "string"
         }
       },
-      "type": "object",
-      "required": [
-        "type"
-      ]
+      "type": "object"
     },
     "LinuxNetDevice": {
       "properties": {
@@ -1141,10 +1136,7 @@
           "type": "array"
         }
       },
-      "type": "object",
-      "required": [
-        "domain"
-      ]
+      "type": "object"
     },
     "LinuxPids": {
       "properties": {
@@ -1242,10 +1234,7 @@
           "type": "array"
         }
       },
-      "type": "object",
-      "required": [
-        "defaultAction"
-      ]
+      "type": "object"
     },
     "LinuxSeccompArg": {
       "properties": {
@@ -1262,12 +1251,7 @@
           "type": "string"
         }
       },
-      "type": "object",
-      "required": [
-        "index",
-        "value",
-        "op"
-      ]
+      "type": "object"
     },
     "LinuxSyscall": {
       "properties": {
@@ -1290,11 +1274,7 @@
           "type": "array"
         }
       },
-      "type": "object",
-      "required": [
-        "names",
-        "action"
-      ]
+      "type": "object"
     },
     "LinuxThrottleDevice": {
       "properties": {
@@ -1308,12 +1288,7 @@
           "type": "integer"
         }
       },
-      "type": "object",
-      "required": [
-        "major",
-        "minor",
-        "rate"
-      ]
+      "type": "object"
     },
     "LinuxTimeOffset": {
       "properties": {
@@ -1341,11 +1316,7 @@
           "type": "integer"
         }
       },
-      "type": "object",
-      "required": [
-        "major",
-        "minor"
-      ]
+      "type": "object"
     },
     "ManifestDescription": {
       "properties": {
@@ -1360,25 +1331,9 @@
         },
         "manifest": {
           "type": "string"
-        },
-        "externalConnections": {
-          "items": {
-            "$ref": "#/$defs/ExternalInterface"
-          },
-          "type": "array"
-        },
-        "environment": {
-          "items": {
-            "$ref": "#/$defs/Environment"
-          },
-          "type": "array"
         }
       },
-      "type": "object",
-      "required": [
-        "type",
-        "name"
-      ]
+      "type": "object"
     },
     "MeasurementResult": {
       "properties": {
@@ -1413,13 +1368,7 @@
           "$ref": "#/$defs/TdxResult"
         }
       },
-      "type": "object",
-      "required": [
-        "type",
-        "summary",
-        "freshness",
-        "signature"
-      ]
+      "type": "object"
     },
     "MetadataResult": {
       "properties": {
@@ -1438,11 +1387,8 @@
         "description": {
           "type": "string"
         },
-        "referenceValues": {
-          "items": {
-            "$ref": "#/$defs/ReferenceValue"
-          },
-          "type": "array"
+        "sbom": {
+          "$ref": "#/$defs/Sbom"
         },
         "developerCommonName": {
           "type": "string"
@@ -1474,9 +1420,6 @@
         "details": {
           "type": "object"
         },
-        "ociSpec": {
-          "$ref": "#/$defs/Spec"
-        },
         "location": {
           "type": "string"
         },
@@ -1485,21 +1428,6 @@
             "$ref": "#/$defs/ManifestDescription"
           },
           "type": "array"
-        },
-        "tpm": {
-          "$ref": "#/$defs/CertConfig"
-        },
-        "snp": {
-          "$ref": "#/$defs/CertConfig"
-        },
-        "tdx": {
-          "$ref": "#/$defs/CertConfig"
-        },
-        "sgx": {
-          "$ref": "#/$defs/CertConfig"
-        },
-        "sw": {
-          "$ref": "#/$defs/CertConfig"
         },
         "summary": {
           "$ref": "#/$defs/Result"
@@ -1514,19 +1442,11 @@
           "type": "array"
         }
       },
-      "type": "object",
-      "required": [
-        "type",
-        "name",
-        "version",
-        "validity",
-        "summary",
-        "signatureValidation"
-      ]
+      "type": "object"
     },
     "MetadataSummary": {
       "properties": {
-        "devDescResult": {
+        "imageDescriptionResult": {
           "$ref": "#/$defs/MetadataResult"
         },
         "manifestResults": {
@@ -1535,7 +1455,7 @@
           },
           "type": "array"
         },
-        "compDescResult": {
+        "companyDescriptionResult": {
           "$ref": "#/$defs/MetadataResult"
         },
         "unknownResults": {
@@ -1548,12 +1468,7 @@
           "$ref": "#/$defs/CompatibilityResult"
         }
       },
-      "type": "object",
-      "required": [
-        "devDescResult",
-        "manifestResults",
-        "compatibilityResult"
-      ]
+      "type": "object"
     },
     "Mount": {
       "properties": {
@@ -1585,42 +1500,6 @@
           "type": "array"
         }
       },
-      "type": "object",
-      "required": [
-        "destination"
-      ]
-    },
-    "Name": {
-      "properties": {
-        "commonName": {
-          "type": "string"
-        },
-        "country": {
-          "type": "string"
-        },
-        "organization": {
-          "type": "string"
-        },
-        "organizationalUnit": {
-          "type": "string"
-        },
-        "locality": {
-          "type": "string"
-        },
-        "province": {
-          "type": "string"
-        },
-        "streetAddress": {
-          "type": "string"
-        },
-        "postalCode": {
-          "type": "string"
-        },
-        "names": {
-          "items": true,
-          "type": "array"
-        }
-      },
       "type": "object"
     },
     "PCClientTaggedEvent": {
@@ -1632,11 +1511,7 @@
           "type": "string"
         }
       },
-      "type": "object",
-      "required": [
-        "taggedeventid",
-        "taggedeventdata"
-      ]
+      "type": "object"
     },
     "POSIXRlimit": {
       "properties": {
@@ -1650,12 +1525,7 @@
           "type": "integer"
         }
       },
-      "type": "object",
-      "required": [
-        "type",
-        "hard",
-        "soft"
-      ]
+      "type": "object"
     },
     "PkixExtension": {
       "properties": {
@@ -1670,12 +1540,7 @@
           "contentEncoding": "base64"
         }
       },
-      "type": "object",
-      "required": [
-        "id",
-        "critical",
-        "value"
-      ]
+      "type": "object"
     },
     "PolicyCheck": {
       "properties": {
@@ -1698,15 +1563,7 @@
           "$ref": "#/$defs/BooleanMatch"
         }
       },
-      "type": "object",
-      "required": [
-        "result",
-        "abi",
-        "smt",
-        "migration",
-        "debug",
-        "singleSocket"
-      ]
+      "type": "object"
     },
     "Process": {
       "properties": {
@@ -1768,11 +1625,7 @@
           "$ref": "#/$defs/CPUAffinity"
         }
       },
-      "type": "object",
-      "required": [
-        "user",
-        "cwd"
-      ]
+      "type": "object"
     },
     "QeReportResult": {
       "properties": {
@@ -1783,6 +1636,12 @@
           "$ref": "#/$defs/Result"
         },
         "isvProdId": {
+          "$ref": "#/$defs/Result"
+        },
+        "cpuSvn": {
+          "$ref": "#/$defs/Result"
+        },
+        "isvSvn": {
           "$ref": "#/$defs/Result"
         },
         "miscSelect": {
@@ -1798,53 +1657,18 @@
           "type": "string"
         }
       },
-      "type": "object",
-      "required": [
-        "summary",
-        "mrsigner",
-        "isvProdId",
-        "miscSelect",
-        "attributes",
-        "status",
-        "date"
-      ]
+      "type": "object"
     },
-    "ReferenceValue": {
+    "ReferenceHash": {
       "properties": {
-        "type": {
+        "alg": {
           "type": "string"
         },
-        "subtype": {
-          "type": "string"
-        },
-        "index": {
-          "type": "integer"
-        },
-        "sha256": {
+        "content": {
           "$ref": "#/$defs/HexByte"
-        },
-        "sha384": {
-          "$ref": "#/$defs/HexByte"
-        },
-        "sha512": {
-          "$ref": "#/$defs/HexByte"
-        },
-        "optional": {
-          "type": "boolean"
-        },
-        "description": {
-          "type": "string"
-        },
-        "eventdata": {
-          "$ref": "#/$defs/EventData"
         }
       },
-      "type": "object",
-      "required": [
-        "type",
-        "subtype",
-        "index"
-      ]
+      "type": "object"
     },
     "Result": {
       "properties": {
@@ -1879,10 +1703,7 @@
           "type": "string"
         }
       },
-      "type": "object",
-      "required": [
-        "status"
-      ]
+      "type": "object"
     },
     "Root": {
       "properties": {
@@ -1893,10 +1714,7 @@
           "type": "boolean"
         }
       },
-      "type": "object",
-      "required": [
-        "path"
-      ]
+      "type": "object"
     },
     "SGXAttributes": {
       "properties": {
@@ -1925,17 +1743,27 @@
           "type": "boolean"
         }
       },
-      "type": "object",
-      "required": [
-        "initted",
-        "debug",
-        "mode64Bit",
-        "provisionKey",
-        "eInitToken",
-        "kss",
-        "legacy",
-        "avx"
-      ]
+      "type": "object"
+    },
+    "Sbom": {
+      "properties": {
+        "bomFormat": {
+          "type": "string"
+        },
+        "specVersion": {
+          "type": "string"
+        },
+        "version": {
+          "type": "integer"
+        },
+        "components": {
+          "items": {
+            "$ref": "#/$defs/Component"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
     },
     "Scheduler": {
       "properties": {
@@ -1964,10 +1792,7 @@
           "type": "integer"
         }
       },
-      "type": "object",
-      "required": [
-        "policy"
-      ]
+      "type": "object"
     },
     "SgxAttributesCheck": {
       "properties": {
@@ -1996,28 +1821,15 @@
           "$ref": "#/$defs/BooleanMatch"
         }
       },
-      "type": "object",
-      "required": [
-        "initted",
-        "debug",
-        "mode64Bit",
-        "provisionKey",
-        "eInitToken",
-        "kss",
-        "legacy",
-        "avx"
-      ]
+      "type": "object"
     },
     "SgxPolicy": {
       "properties": {
         "quoteVersion": {
           "type": "integer"
         },
-        "isvProdId": {
-          "type": "integer"
-        },
         "mrSigner": {
-          "type": "string"
+          "$ref": "#/$defs/HexByte"
         },
         "isvSvn": {
           "type": "integer"
@@ -2032,14 +1844,7 @@
           "type": "array"
         }
       },
-      "type": "object",
-      "required": [
-        "quoteVersion",
-        "isvProdId",
-        "mrSigner",
-        "isvSvn",
-        "attributes"
-      ]
+      "type": "object"
     },
     "SgxResult": {
       "properties": {
@@ -2056,13 +1861,7 @@
           "$ref": "#/$defs/SgxAttributesCheck"
         }
       },
-      "type": "object",
-      "required": [
-        "quoteVersionMatch",
-        "tcbInfoCheck",
-        "qeReportCheck",
-        "sgxAttributesCheck"
-      ]
+      "type": "object"
     },
     "SignatureDatabase": {
       "properties": {
@@ -2105,11 +1904,7 @@
           "type": "array"
         }
       },
-      "type": "object",
-      "required": [
-        "signatureVerification",
-        "certChainValidation"
-      ]
+      "type": "object"
     },
     "SnpFw": {
       "properties": {
@@ -2123,12 +1918,7 @@
           "type": "integer"
         }
       },
-      "type": "object",
-      "required": [
-        "build",
-        "major",
-        "minor"
-      ]
+      "type": "object"
     },
     "SnpGuestPolicy": {
       "properties": {
@@ -2154,16 +1944,7 @@
           "type": "integer"
         }
       },
-      "type": "object",
-      "required": [
-        "type",
-        "singleSocket",
-        "debug",
-        "migration",
-        "smt",
-        "abiMajor",
-        "abiMinor"
-      ]
+      "type": "object"
     },
     "SnpPolicy": {
       "properties": {
@@ -2183,13 +1964,7 @@
           "type": "array"
         }
       },
-      "type": "object",
-      "required": [
-        "reportMinVersion",
-        "reportMaxVersion",
-        "policy",
-        "versions"
-      ]
+      "type": "object"
     },
     "SnpResult": {
       "properties": {
@@ -2212,14 +1987,7 @@
           "type": "array"
         }
       },
-      "type": "object",
-      "required": [
-        "reportVersionMatch",
-        "fwCheck",
-        "tcbCheck",
-        "policyCheck",
-        "extensionsCheck"
-      ]
+      "type": "object"
     },
     "SnpTcb": {
       "properties": {
@@ -2239,14 +2007,7 @@
           "type": "integer"
         }
       },
-      "type": "object",
-      "required": [
-        "fmc",
-        "bl",
-        "tee",
-        "snp",
-        "ucode"
-      ]
+      "type": "object"
     },
     "SnpVersion": {
       "properties": {
@@ -2260,12 +2021,7 @@
           "$ref": "#/$defs/SnpTcb"
         }
       },
-      "type": "object",
-      "required": [
-        "name",
-        "fw",
-        "tcb"
-      ]
+      "type": "object"
     },
     "Solaris": {
       "properties": {
@@ -2389,10 +2145,7 @@
           "$ref": "#/$defs/FreeBSD"
         }
       },
-      "type": "object",
-      "required": [
-        "ociVersion"
-      ]
+      "type": "object"
     },
     "TDAttributes": {
       "properties": {
@@ -2409,13 +2162,7 @@
           "type": "boolean"
         }
       },
-      "type": "object",
-      "required": [
-        "debug",
-        "septVEDisable",
-        "pks",
-        "kl"
-      ]
+      "type": "object"
     },
     "TDId": {
       "properties": {
@@ -2429,12 +2176,7 @@
           "$ref": "#/$defs/HexByte"
         }
       },
-      "type": "object",
-      "required": [
-        "mrOwner",
-        "mrOwnerConfig",
-        "mrConfigId"
-      ]
+      "type": "object"
     },
     "TcbCheck": {
       "properties": {
@@ -2457,15 +2199,7 @@
           "$ref": "#/$defs/VersionCheck"
         }
       },
-      "type": "object",
-      "required": [
-        "result",
-        "fmc",
-        "bl",
-        "tee",
-        "snp",
-        "ucode"
-      ]
+      "type": "object"
     },
     "TcbInfoResult": {
       "properties": {
@@ -2482,13 +2216,7 @@
           "$ref": "#/$defs/TcbLevelResult"
         }
       },
-      "type": "object",
-      "required": [
-        "summary",
-        "id",
-        "version",
-        "tcbLevelResult"
-      ]
+      "type": "object"
     },
     "TcbLevelResult": {
       "properties": {
@@ -2514,14 +2242,7 @@
           "type": "array"
         }
       },
-      "type": "object",
-      "required": [
-        "status",
-        "date",
-        "pceSvn",
-        "sgxComponents",
-        "tdxComponents"
-      ]
+      "type": "object"
     },
     "TdAttributesCheck": {
       "properties": {
@@ -2538,13 +2259,7 @@
           "$ref": "#/$defs/BooleanMatch"
         }
       },
-      "type": "object",
-      "required": [
-        "debug",
-        "septVEDisable",
-        "pks",
-        "kl"
-      ]
+      "type": "object"
     },
     "TdxPolicy": {
       "properties": {
@@ -2567,13 +2282,7 @@
           "type": "array"
         }
       },
-      "type": "object",
-      "required": [
-        "quoteVersion",
-        "tdId",
-        "xfam",
-        "tdAttributes"
-      ]
+      "type": "object"
     },
     "TdxResult": {
       "properties": {
@@ -2602,16 +2311,7 @@
           "type": "array"
         }
       },
-      "type": "object",
-      "required": [
-        "quoteVersionMatch",
-        "tcbInfoCheck",
-        "qeReportCheck",
-        "tdAttributesCheck",
-        "seamAttributesCheck",
-        "xfamCheck",
-        "mrMatch"
-      ]
+      "type": "object"
     },
     "TpmResult": {
       "properties": {
@@ -2625,11 +2325,7 @@
           "$ref": "#/$defs/Result"
         }
       },
-      "type": "object",
-      "required": [
-        "pcrMatch",
-        "aggPcrQuoteMatch"
-      ]
+      "type": "object"
     },
     "UEFICertificate": {
       "properties": {
@@ -2640,11 +2336,7 @@
           "$ref": "#/$defs/X509CertExtracted"
         }
       },
-      "type": "object",
-      "required": [
-        "signatureownerguid",
-        "certificates"
-      ]
+      "type": "object"
     },
     "UefiConfigurationTable": {
       "properties": {
@@ -2655,11 +2347,7 @@
           "type": "integer"
         }
       },
-      "type": "object",
-      "required": [
-        "guid",
-        "tableaddress"
-      ]
+      "type": "object"
     },
     "UefiHandoffTablePointer": {
       "properties": {
@@ -2670,10 +2358,7 @@
           "type": "array"
         }
       },
-      "type": "object",
-      "required": [
-        "ueficonfigurationtable"
-      ]
+      "type": "object"
     },
     "UefiPlatformFirmwareBlob": {
       "properties": {
@@ -2684,11 +2369,7 @@
           "$ref": "#/$defs/HexByte"
         }
       },
-      "type": "object",
-      "required": [
-        "blobbase",
-        "bloblength"
-      ]
+      "type": "object"
     },
     "UefiVariableData": {
       "properties": {
@@ -2764,11 +2445,7 @@
           "type": "string"
         }
       },
-      "type": "object",
-      "required": [
-        "uid",
-        "gid"
-      ]
+      "type": "object"
     },
     "VM": {
       "properties": {
@@ -2785,10 +2462,7 @@
           "$ref": "#/$defs/HWConfig"
         }
       },
-      "type": "object",
-      "required": [
-        "kernel"
-      ]
+      "type": "object"
     },
     "VMHypervisor": {
       "properties": {
@@ -2802,10 +2476,7 @@
           "type": "array"
         }
       },
-      "type": "object",
-      "required": [
-        "path"
-      ]
+      "type": "object"
     },
     "VMImage": {
       "properties": {
@@ -2816,11 +2487,7 @@
           "type": "string"
         }
       },
-      "type": "object",
-      "required": [
-        "path",
-        "format"
-      ]
+      "type": "object"
     },
     "VMKernel": {
       "properties": {
@@ -2837,10 +2504,7 @@
           "type": "string"
         }
       },
-      "type": "object",
-      "required": [
-        "path"
-      ]
+      "type": "object"
     },
     "Validity": {
       "properties": {
@@ -2851,11 +2515,7 @@
           "type": "string"
         }
       },
-      "type": "object",
-      "required": [
-        "notBefore",
-        "notAfter"
-      ]
+      "type": "object"
     },
     "VerificationResponse": {
       "properties": {
@@ -2863,61 +2523,10 @@
           "type": "string"
         },
         "result": {
-          "$ref": "#/$defs/VerificationResult"
+          "$ref": "#/$defs/AttestationResult"
         }
       },
-      "type": "object",
-      "required": [
-        "version",
-        "result"
-      ]
-    },
-    "VerificationResult": {
-      "properties": {
-        "version": {
-          "type": "string"
-        },
-        "type": {
-          "type": "string"
-        },
-        "summary": {
-          "$ref": "#/$defs/Result"
-        },
-        "prover": {
-          "type": "string"
-        },
-        "created": {
-          "type": "string"
-        },
-        "certLevel": {
-          "type": "integer"
-        },
-        "measurements": {
-          "items": {
-            "$ref": "#/$defs/MeasurementResult"
-          },
-          "type": "array"
-        },
-        "metadata": {
-          "$ref": "#/$defs/MetadataSummary"
-        },
-        "reportSignatureCheck": {
-          "items": {
-            "$ref": "#/$defs/SignatureResult"
-          },
-          "type": "array"
-        }
-      },
-      "type": "object",
-      "required": [
-        "version",
-        "type",
-        "summary",
-        "certLevel",
-        "measurements",
-        "metadata",
-        "reportSignatureCheck"
-      ]
+      "type": "object"
     },
     "VersionCheck": {
       "properties": {
@@ -2937,12 +2546,7 @@
           "type": "array"
         }
       },
-      "type": "object",
-      "required": [
-        "success",
-        "claimed",
-        "measured"
-      ]
+      "type": "object"
     },
     "Windows": {
       "properties": {
@@ -2975,10 +2579,7 @@
           "$ref": "#/$defs/WindowsNetwork"
         }
       },
-      "type": "object",
-      "required": [
-        "layerFolders"
-      ]
+      "type": "object"
     },
     "WindowsCPUGroupAffinity": {
       "properties": {
@@ -3020,11 +2621,7 @@
           "type": "string"
         }
       },
-      "type": "object",
-      "required": [
-        "id",
-        "idType"
-      ]
+      "type": "object"
     },
     "WindowsHyperV": {
       "properties": {
@@ -3189,21 +2786,7 @@
           "type": "array"
         }
       },
-      "type": "object",
-      "required": [
-        "version",
-        "serialNumber",
-        "issuer",
-        "subject",
-        "validity",
-        "keyUsage",
-        "signatureAlgorithm",
-        "publicKeyAlgorithm",
-        "publicKey",
-        "pkixExtensions",
-        "basicConstraintsValid",
-        "subjectKeyId"
-      ]
+      "type": "object"
     },
     "X509Name": {
       "properties": {
@@ -3278,10 +2861,7 @@
           "type": "string"
         }
       },
-      "type": "object",
-      "required": [
-        "type"
-      ]
+      "type": "object"
     }
   }
 }

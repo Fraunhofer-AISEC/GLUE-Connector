@@ -73,5 +73,4 @@ private suspend fun HttpRequestBuilder.shouldSkipEdcCompatTransformation(
     return shouldSkip
 }
 
-private fun HttpRequestBuilder.getPeerEndpointPrefixOrFullRequestUrl(): String? =
-    attributes.getOrNull(EdcCompatPeerEndpointAttribute)
+private fun HttpRequestBuilder.getPeerEndpointPrefixOrFullRequestUrl(): String? = attributes.getOrNull(EdcCompatPeerEndpointAttribute)

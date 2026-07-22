@@ -24,6 +24,7 @@ type ClientProxy struct {
 	proxyConfig      atlsProxyConfig
 	connectionConfig proxyEndpoint
 	tlsConfig        *tls.Config
+	dial             func(peerAddr string) (net.Conn, error)
 
 	// For triggering the follow-up negotiation
 	setupOnce sync.Once
@@ -34,7 +35,7 @@ type ClientProxy struct {
 // negotiateWithCoordinator triggers the follow-up negotiation with the next connector in the pipeline
 func (cp *ClientProxy) negotiateWithCoordinator() error {
 	coordinatorUrl := fmt.Sprintf(
-		"http://%s:8080/coordinator/negotiate?destination=http://%s&startPipeline=true",
+		"http://%s:8080/coordinator/negotiate?destination=%s&startPipeline=true",
 		cp.config.Controller,
 		cp.connectionConfig.NextEndpoint,
 	)
@@ -103,6 +104,37 @@ func (cp *ClientProxy) ensureSetup() error {
 	return cp.setupErr
 }
 
+func (cp *ClientProxy) dialAtls(peerAddr string) (net.Conn, error) {
+	serializer, err := attestationreport.NewJsonSerializer()
+	if err != nil {
+		return nil, fmt.Errorf("could not create a json serializer: %w", err)
+	}
+
+	return attestedtls.Dial(
+		"tcp",
+		peerAddr,
+		cp.tlsConfig,
+		attestedtls.WithCmcAddr(cp.proxyConfig.CmcAddress),
+		attestedtls.WithAttest(attestedtls.Attest_Mutual),
+		attestedtls.WithCmcApi("socket"),
+		attestedtls.WithMtls(true),
+		attestedtls.WithSerializer(serializer),
+		attestedtls.WithResultCb(func(result *attestationreport.AttestationResult) {
+			switch result.Summary.Status {
+			case attestationreport.StatusSuccess:
+				slog.Info("Verification for Prover", "prover", result.Prover, "created", result.Created, "status", result.Summary.Status)
+			default:
+				slog.Warn("Verification for Prover", "prover", result.Prover, "created", result.Created, "status", result.Summary.Status)
+				result.PrintErr()
+			}
+		}),
+	)
+}
+
+func (c *ClientProxy) dialPlain(peerAddr string) (net.Conn, error) {
+	return net.Dial("tcp", peerAddr)
+}
+
 // handleConnection processes a single client connection by establishing an ATLS connection to the peer
 func (cp *ClientProxy) handleConnection(clientConn net.Conn) {
 	defer clientConn.Close()
@@ -112,27 +144,7 @@ func (cp *ClientProxy) handleConnection(clientConn net.Conn) {
 		return
 	}
 
-	atlsConn, err := attestedtls.Dial(
-		"tcp",
-		cp.peerAddr,
-		cp.tlsConfig,
-		attestedtls.WithCmcAddr(cp.proxyConfig.CmcAddress),
-		attestedtls.WithAttest(attestedtls.Attest_Mutual),
-		attestedtls.WithCmcApi(attestedtls.CmcApi_Socket),
-		attestedtls.WithMtls(true),
-		attestedtls.WithApiSerializer(attestationreport.JsonSerializer{}),
-		attestedtls.WithResultCb(func(result *attestationreport.VerificationResult) {
-			switch result.Summary.Status {
-			case attestationreport.StatusSuccess:
-				slog.Info("SUCCESS: Verification for Prover %v (%v)", result.Prover, result.Created)
-			case attestationreport.StatusWarn:
-				slog.Warn("WARN: Verification for Prover %v (%v)", result.Prover, result.Created)
-			default:
-				slog.Warn("FAILED: Verification for Prover %v (%v)", result.Prover, result.Created)
-				result.PrintErr()
-			}
-		}),
-	)
+	atlsConn, err := cp.dial(cp.peerAddr)
 	if err != nil {
 		slog.Error("Could not open connection to the peer", "error", err)
 		return
@@ -183,20 +195,24 @@ func (cp *ClientProxy) listen() error {
 func clientMain(config config, proxyConfig atlsProxyConfig) error {
 	group, ctx := errgroup.WithContext(context.Background())
 
-	tlsConfig, err := createClientTLSConfig(proxyConfig)
-	if err != nil {
-		return err
-	}
-
 	slog.Info("Starting client listeners", "count", len(proxyConfig.ProxyEndpoints))
-
 	for _, connConfig := range proxyConfig.ProxyEndpoints {
 		proxy := &ClientProxy{
 			ctx:              ctx,
 			config:           config,
 			proxyConfig:      proxyConfig,
 			connectionConfig: connConfig,
-			tlsConfig:        tlsConfig,
+		}
+
+		if proxyConfig.Enabled {
+			tlsConfig, err := createClientTLSConfig(proxyConfig)
+			if err != nil {
+				return err
+			}
+			proxy.tlsConfig = tlsConfig
+			proxy.dial = proxy.dialAtls
+		} else {
+			proxy.dial = proxy.dialPlain
 		}
 		group.Go(proxy.listen)
 	}
@@ -208,11 +224,16 @@ func clientMain(config config, proxyConfig atlsProxyConfig) error {
 func createClientTLSConfig(proxyConfig atlsProxyConfig) (*tls.Config, error) {
 	caCerts := x509.NewCertPool()
 	caCerts.AppendCertsFromPEM([]byte(proxyConfig.CaCertificates))
+	serializer, err := attestationreport.NewJsonSerializer()
+	if err != nil {
+		return nil, fmt.Errorf("could not create a json serializer: %w", err)
+	}
 
 	clientCert, err := attestedtls.GetCert(
 		attestedtls.WithCmcAddr(proxyConfig.CmcAddress),
-		attestedtls.WithCmcApi(attestedtls.CmcApi_Socket),
-		attestedtls.WithApiSerializer(attestationreport.JsonSerializer{}),
+		attestedtls.WithCmcApi("socket"),
+		attestedtls.WithSerializer(serializer),
+		attestedtls.WithKeyId(proxyConfig.KeyId),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get the client certificate from the CMC: %w", err)

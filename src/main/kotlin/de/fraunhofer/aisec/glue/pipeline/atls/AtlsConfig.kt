@@ -11,13 +11,13 @@ class AtlsConfig(rawConfig: ApplicationConfig) : Config(rawConfig) {
     // TODO: This value MUST NOT be configurable externally in a production environment!
     val proxyContainer by withDefault(
         stringProp(),
-        "container-registry.gitlab.cc-asp.fraunhofer.de/ccit-glue/usage-control/container-pipeline/atls-proxy:latest",
+        "container-registry.gitlab.cc-asp.fraunhofer.de/ccit-glue/usage-control/container-pipeline/atls-proxy:running-example",
     )
 
     // TODO: This value MUST NOT be configurable externally in a production environment!
     val proxyHash by withDefault(
         stringProp(),
-        "sha256:a17650a85ae57d948fdd729bb0fa15ba2d56208370b841ed85bb853f57ff704d",
+        "sha256:7788679ef9ec5b5c50347ca2b863a23ce57c68f11960072ec2bb6579de751f7b",
     )
 
     // TODO: Move to somewhere appropriate - values are appropriate for the connector VMs
