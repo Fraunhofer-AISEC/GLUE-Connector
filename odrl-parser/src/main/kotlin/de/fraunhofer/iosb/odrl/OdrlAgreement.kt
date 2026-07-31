@@ -2,14 +2,11 @@ package de.fraunhofer.iosb.odrl
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.fasterxml.jackson.annotation.JsonTypeName
-import de.fraunhofer.iosb.odrl.glue.GlueIdentifiers
-import de.fraunhofer.iosb.odrl.parser.JsonLd
 import de.fraunhofer.iosb.odrl.parser.JsonLdBeanValidator
 import io.konform.validation.Validation
 import io.konform.validation.ValidationError
 import java.net.URI
 
-@JsonLd(GlueIdentifiers.CONTEXT)
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type")
 @JsonTypeName(OdrlIdentifiers.AGREEMENT)
 open class OdrlAgreement(

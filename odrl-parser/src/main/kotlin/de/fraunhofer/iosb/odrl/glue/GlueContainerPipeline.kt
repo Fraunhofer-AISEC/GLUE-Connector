@@ -2,13 +2,11 @@ package de.fraunhofer.iosb.odrl.glue
 
 import com.fasterxml.jackson.annotation.*
 import de.fraunhofer.iosb.odrl.OdrlRightOperand
-import de.fraunhofer.iosb.odrl.parser.JsonLd
 import de.fraunhofer.iosb.odrl.parser.JsonLdBeanValidator
 import io.konform.validation.Validation
 import io.konform.validation.ValidationError
 import io.konform.validation.jsonschema.minItems
 
-@JsonLd(GlueIdentifiers.CONTEXT)
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type", defaultImpl = GlueContainerPipeline::class)
 @JsonTypeName(GlueIdentifiers.CONTAINER_PIPELINE)
 data class GlueContainerPipeline(
