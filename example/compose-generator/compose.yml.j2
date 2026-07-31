@@ -18,7 +18,7 @@ services:
       - -P:atls.cmcAddress=unix:/tmp/cmcd.sock
       - -P:atls.caCertPath=/pki/ca-cert.pem
       - -P:atls.proxyContainer=registry:5000/atls-proxy:latest
-      - -P:atls.proxyHash=sha256:bbd9aa651ec9f6f4d18c7c8527fdf52e3a2136f14e22c9121a01f74ce439e957
+      - -P:atls.proxyHash={{ shell("skopeo inspect -f '{{ .Digest }}' oci-archive:../images/atls-proxy.tar") }}
       - -P:connector.identity={{ http_proto }}://{{ component.name }}
       - -P:connector.publicUrl={{ http_proto }}://{{ component.name }}:8444
     environment:
