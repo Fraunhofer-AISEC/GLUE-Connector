@@ -4,14 +4,11 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.fasterxml.jackson.annotation.JsonTypeName
 import de.fraunhofer.iosb.odrl.*
-import de.fraunhofer.iosb.odrl.glue.GlueIdentifiers
-import de.fraunhofer.iosb.odrl.parser.JsonLd
 import java.net.URI
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.time.temporal.ChronoUnit
 
-@JsonLd(GlueIdentifiers.CONTEXT)
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type")
 @JsonTypeName(OdrlIdentifiers.AGREEMENT)
 class EdcOdrlAgreement(
