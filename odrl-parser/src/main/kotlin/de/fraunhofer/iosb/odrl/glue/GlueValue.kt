@@ -1,11 +1,11 @@
 package de.fraunhofer.iosb.odrl.glue
 
-import com.fasterxml.jackson.annotation.*
+import com.fasterxml.jackson.annotation.JsonProperty
+import com.fasterxml.jackson.annotation.JsonTypeInfo
+import com.fasterxml.jackson.annotation.JsonTypeName
 import com.fasterxml.jackson.databind.JsonNode
-import de.fraunhofer.iosb.odrl.*
-import de.fraunhofer.iosb.odrl.parser.JsonLd
+import de.fraunhofer.iosb.odrl.OdrlRightOperand
 
-@JsonLd(GlueIdentifiers.CONTEXT)
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type", defaultImpl = GlueValue::class)
 @JsonTypeName(GlueIdentifiers.VALUE)
 data class GlueValue(

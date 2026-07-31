@@ -1,14 +1,11 @@
 package de.fraunhofer.iosb.odrl
 
 import com.fasterxml.jackson.annotation.*
-import de.fraunhofer.iosb.odrl.glue.GlueIdentifiers
-import de.fraunhofer.iosb.odrl.parser.JsonLd
 import de.fraunhofer.iosb.odrl.parser.JsonLdBeanValidator
 import io.konform.validation.Validation
 import io.konform.validation.ValidationError
 import java.net.URI
 
-@JsonLd(GlueIdentifiers.CONTEXT)
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type", defaultImpl = OdrlProhibition::class)
 @JsonTypeName(OdrlIdentifiers.PROHIBITION)
 class OdrlProhibition(
