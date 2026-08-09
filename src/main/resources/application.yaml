@@ -7,8 +7,6 @@ ktor:
 connector:
   identity: "https://glue-connector.local"
   publicUrl: "${?PUBLIC_URL}"
-  edc:
-    url: "http://localhost:29193"
 atls:
   cmcAddress: "unix:/tmp/cmcd.sock"
   caCertPath: "/pki/ca-cert.pem"
