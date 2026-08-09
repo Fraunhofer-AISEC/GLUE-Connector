@@ -1,7 +1,10 @@
 package de.fraunhofer.iosb.odrl.glue
 
-import com.fasterxml.jackson.annotation.*
+import com.fasterxml.jackson.annotation.JsonProperty
+import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonSubTypes.Type
+import com.fasterxml.jackson.annotation.JsonTypeInfo
+import com.fasterxml.jackson.annotation.JsonTypeName
 import de.fraunhofer.iosb.odrl.parser.JsonLd
 
 @JsonLd(GlueIdentifiers.CONTEXT)
@@ -9,6 +12,7 @@ import de.fraunhofer.iosb.odrl.parser.JsonLd
 @JsonTypeName(GlueIdentifiers.PARAMETER)
 @JsonSubTypes(
     Type(GlueRestParameter::class),
+    Type(GlueKeyValueParameter::class),
 )
 open class GlueParameter(
     // Using the @field: annotation target allows Jackson to see this property also in subclasses

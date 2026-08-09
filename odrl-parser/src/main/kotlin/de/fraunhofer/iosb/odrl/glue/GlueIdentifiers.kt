@@ -36,6 +36,10 @@ object GlueIdentifiers {
     const val HAS_VALUE = "http://fhg.de/glue/value"
     const val JSON = "http://fhg.de/glue/json"
 
+    const val KEY_VALUE_PARAMETER = "http://fhg.de/glue/KeyValueParameter"
+    const val PARAMETER_VALUE = "http://fhg.de/glue/parameterValue"
+    const val PARAMETER_KEY = "http://fhg.de/glue/parameterKey"
+
     const val PARAMETER_PLACEHOLDER = "http://fhg.de/glue/ParameterPlaceholder"
     const val KEY = "http://fhg.de/glue/key"
 
