@@ -24,6 +24,8 @@ type config struct {
 }
 
 type proxyEndpoint struct {
+    // Needed to decode this nested struct apparently
+    Type string `json:"type"`
 	// The local endpoint to listen on for incoming connections
 	ListenEndpoint string `json:"http://fhg.de/glue/listenEndpoint"`
 	// The remote endpoint (next container port for server mode, peer for client mode)
@@ -55,7 +57,7 @@ func parseConfig() (config, atlsProxyConfig, error) {
 	defer file.Close()
 
 	var conf config
-	err = json.NewDecoder(io.TeeReader(file, os.Stderr)).Decode(&conf)
+	err = json.NewDecoder(file).Decode(&conf)
 	if err != nil {
 		return config{}, atlsProxyConfig{}, fmt.Errorf("could not parse config: %w", err)
 	}
