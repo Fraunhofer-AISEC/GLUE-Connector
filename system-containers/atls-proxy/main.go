@@ -55,7 +55,7 @@ func parseConfig() (config, atlsProxyConfig, error) {
 	defer file.Close()
 
 	var conf config
-	err = json.NewDecoder(file).Decode(&conf)
+	err = json.NewDecoder(io.TeeReader(file, os.Stderr)).Decode(&conf)
 	if err != nil {
 		return config{}, atlsProxyConfig{}, fmt.Errorf("could not parse config: %w", err)
 	}
