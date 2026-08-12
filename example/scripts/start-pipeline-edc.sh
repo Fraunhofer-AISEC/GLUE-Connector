@@ -1,8 +1,6 @@
 #!/usr/bin/bash
 set -euo pipefail
 
-read
-
 # This function just checks if all dependencies are available
 require() {
   missing_progs=()
@@ -92,7 +90,7 @@ echo "Starting the contract negotiation..." >&2
 negotiation_id="$(curl "${common_curl_opts[@]}" -d "$policy_content" "$edc_mgmt_url/contractnegotiations" | yq -r '.["@id"]')"
 
 echo "Awaiting negotiation completion..." >&2
-wait_for_negotiation "$negotiation_id" || read
+wait_for_negotiation "$negotiation_id" || exit $?
 
 echo "Getting contract agreement ID..." >&2
 contract_id="$(curl "${common_curl_opts[@]}" "$edc_mgmt_url/contractnegotiations/$negotiation_id" | yq -r '.contractAgreementId')"
