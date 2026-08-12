@@ -240,8 +240,8 @@ func createClientTLSConfig(proxyConfig atlsProxyConfig) (*tls.Config, error) {
 	}
 
 	return &tls.Config{
-		RootCAs:      caCerts,
-		Certificates: []tls.Certificate{clientCert},
+		RootCAs:            caCerts,
+		Certificates:       []tls.Certificate{clientCert},
 		InsecureSkipVerify: true,
 	}, nil
 }
