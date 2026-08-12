@@ -14,6 +14,29 @@ import (
 	"time"
 )
 
+type oneOrMany[T any] []T
+
+func (values *oneOrMany[T]) UnmarshalJSON(data []byte) error {
+	if string(data) == "null" {
+		*values = nil
+		return nil
+	}
+
+	var many []T
+	if err := json.Unmarshal(data, &many); err == nil {
+		*values = many
+		return nil
+	}
+
+	var one T
+	if err := json.Unmarshal(data, &one); err != nil {
+		return fmt.Errorf("expected a single value or an array: %w", err)
+	}
+
+	*values = []T{one}
+	return nil
+}
+
 type config struct {
 	// Controller address
 	Controller string `json:"controller"`
@@ -44,7 +67,7 @@ type atlsProxyConfig struct {
 	// PEM-encoded CA certificates to allow for ATLS connections
 	CaCertificates string `json:"http://fhg.de/glue/caCertificates"`
 	// The connections this instance of the ATLS proxy should handle
-	ProxyEndpoints []proxyEndpoint `json:"http://fhg.de/glue/proxyEndpoint"`
+	ProxyEndpoints oneOrMany[proxyEndpoint] `json:"http://fhg.de/glue/proxyEndpoint"`
 	// The key ID to access the CMC TLS signing key with
 	KeyId string `json:"http://fhg.de/glue/keyId"`
 }
