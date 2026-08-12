@@ -24,6 +24,8 @@ type config struct {
 }
 
 type proxyEndpoint struct {
+    // Needed to decode this nested struct apparently
+    Type string `json:"type"`
 	// The local endpoint to listen on for incoming connections
 	ListenEndpoint string `json:"http://fhg.de/glue/listenEndpoint"`
 	// The remote endpoint (next container port for server mode, peer for client mode)
