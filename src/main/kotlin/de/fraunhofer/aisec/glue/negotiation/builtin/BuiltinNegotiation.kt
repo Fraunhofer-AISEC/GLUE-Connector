@@ -480,8 +480,7 @@ class BuiltinNegotiation(
         }
 
         // TODO: Fill in true assignee here
-        val peerParty = OdrlParty(uid = peerIdentity?.let { URI.create("http://$it") } ?: peerEndpoint.toURI())
-        val agreement = offer.toAgreement(odrlParser, peerParty)
+        val agreement = odrlParser.convertToOdrlAgreement(offer)
 
         if (!terminateOnError(
                 sendMessage(
