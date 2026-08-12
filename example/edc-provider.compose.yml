@@ -1,0 +1,118 @@
+services:
+  #
+  # Services for the provider EDC
+  #
+
+  provider-connector:
+    image: container-registry.gitlab.cc-asp.fraunhofer.de/ccit-glue/usage-control/container-pipeline/example-edc:latest
+    pull_policy: always
+    hostname: provider
+    command:
+      - -Dedc.dsp.callback.address=http://provider:19194/protocol
+
+
+  #
+  # Services for the destination
+  #
+
+  destination-connector:
+    image: container-pipeline:latest
+    hostname: destination
+    volumes:
+      - destination-tmp:/tmp
+      - ./data:/data
+      - ./pki:/pki:ro
+    env_file: .env
+    command:
+      - -P:atls.enabled=false
+      - -P:atls.cmcAddress=unix:/tmp/cmcd.sock
+      - -P:atls.caCertPath=/pki/ca-cert.pem
+      - -P:atls.proxyContainer=registry:5000/atls-proxy:latest
+      - -P:atls.proxyHash=sha256:bbd9aa651ec9f6f4d18c7c8527fdf52e3a2136f14e22c9121a01f74ce439e957
+      - -P:connector.identity=http://destination
+      - -P:connector.publicUrl=http://destination:8444
+    environment:
+      AUTH_USERNAME: "${AUTH_USERNAME}"
+      AUTH_PASSWORD: "${AUTH_PASSWORD}"
+      DOCKER_HOST: "unix:///tmp/docker.sock"
+      JAVA_TOOL_OPTIONS: "-agentlib:jdwp=transport=dt_socket,address=*:5005,server=y,suspend=n"
+      PUBLIC_URL: "http://destination:8444"
+    depends_on:
+      image-loader:
+        condition: service_completed_successfully
+
+  destination-docker:
+    image: docker:29-dind
+    privileged: true
+    init: true
+    volumes:
+      - destination-tmp:/tmp
+    environment:
+      DOCKER_HOST: "unix:///tmp/docker.sock"
+    command:
+      - --insecure-registry=registry:5000
+    depends_on:
+      image-loader:
+        condition: service_completed_successfully
+    network_mode: service:destination-connector
+
+
+  #
+  # Infrastructure
+  #
+
+  registry:
+    image: registry:3
+    ports:
+      - "5000:5000"
+
+  image-loader:
+    image: quay.io/skopeo/stable:latest
+    depends_on:
+      - registry
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -eu
+
+        for image in /images/*.tar; do
+          [ -e "$$image" ] || continue
+          image_name="$$(basename "$${image}" .tar)"
+          skopeo copy --multi-arch all --dest-tls-verify=false "oci-archive:$$image" "docker://registry:5000/$${image_name}:latest"
+        done
+    volumes:
+      - ./images:/images:ro
+
+
+volumes:
+  destination-tmp:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+
+x-example-metadata:
+  start-script: start-pipeline-edc.sh
+  initial-host: provider
+  intermediary-host: destination
+  attach-to:
+    - host: destination
+      container: http-echo
+  example-data: |
+    >>======================================================<<
+    ||                                                      ||
+    ||    _____               _           _                 ||
+    ||   |_   _| __ _   _ ___| |_ ___  __| |                ||
+    ||     | || '__| | | / __| __/ _ \/ _` |                ||
+    ||     | || |  | |_| \__ \ ||  __/ (_| |                ||
+    ||     |_||_|   \__,_|___/\__\___|\__,_|                ||
+    ||    / ___|___  _ __  _ __   ___  ___| |_ ___  _ __    ||
+    ||   | |   / _ \| '_ \| '_ \ / _ \/ __| __/ _ \| '__|   ||
+    ||   | |__| (_) | | | | | | |  __/ (__| || (_) | |      ||
+    ||    \____\___/|_| |_|_| |_|\___|\___|\__\___/|_|      ||
+    ||                                                      ||
+    >>======================================================<<
+    
+    A full data pipeline is now established.
+    You can send more data through the pipeline by sending HTTP requests to
+    <http://%PIPELINE_PORT%/echo> or stop the pipeline by pressing CTRL-C.

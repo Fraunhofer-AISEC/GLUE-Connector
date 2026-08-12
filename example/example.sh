@@ -1,5 +1,5 @@
 #!/bin/bash
-
+set -x
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -139,23 +139,26 @@ defer remove_compose
 
 initial_host="$(yq -r '.["x-example-metadata"]["initial-host"]' < "$compose_file")"
 intermediary_host="$(yq -r '.["x-example-metadata"]["intermediary-host"]' < "$compose_file")"
+start_script=$(yq -r '.["x-example-metadata"]["start-script"] // "start-pipeline.sh"' < "$compose_file")
 
 initial_container_ip="$(docker inspect -f "{{ .NetworkSettings.Networks.${compose_project_name}_default.IPAddress }}" "${compose_project_name}-${initial_host}-connector-1")"
+intermediary_container_ip="$(docker inspect -f "{{ .NetworkSettings.Networks.${compose_project_name}_default.IPAddress }}" "${compose_project_name}-${intermediary_host}-connector-1")"
+
 common_curl_opts=(-sS --fail -H "Content-Type: application/json")
 
 info Starting pipeline deployment
-start_pipeline_args=("${initial_container_ip}" "${intermediary_host}" "${policy_file}")
+start_pipeline_args=("${initial_host}" "${initial_container_ip}" "${intermediary_host}" "${intermediary_container_ip}" "${policy_file}")
 
 if "$insecure"; then
   start_pipeline_args=(--no-atls "${start_pipeline_args[@]}")
 fi
 
-start_pipeline_output="$(./scripts/start-pipeline.sh "${start_pipeline_args[@]}" )"
-read -r pipeline_id pipeline_port < <(echo "$start_pipeline_output")
+start_pipeline_output="$("./scripts/$start_script" "${start_pipeline_args[@]}" )"
+read -r pipeline_host pipeline_id pipeline_port < <(echo "$start_pipeline_output")
 
 stop_pipeline() {
   info "Stopping pipeline"
-  curl -X DELETE "${common_curl_opts[@]}" "http://$initial_container_ip:8080/api/v1.0/pipelines/$pipeline_id"
+  curl -X DELETE "${common_curl_opts[@]}" "http://$pipeline_host:8080/api/v1.0/pipelines/$pipeline_id"
 }
 defer stop_pipeline
 
@@ -193,4 +196,7 @@ done < <(yq -r '.["x-example-metadata"]["attach-to"][] | [.host, .container] | @
 info "Attaching to selected pipeline containers"
 detail "Press CTRL-C to detach"
 
+# At this point, the user cancelling is the user exiting the script as intended.
+# Returning the correct error makes the shell think so, too :)
+trap 'exit 0' INT
 wait

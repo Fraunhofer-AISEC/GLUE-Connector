@@ -1,0 +1,42 @@
+{
+  "@type": "ContractRequest",
+  "counterPartyAddress": "${GC_ADDRESS}",
+  "protocol": "dataspace-protocol-http",
+  "policy": {
+    "@type": "Offer",
+    "@id": "http://dataowner.com/offer:1234",
+    "permission": {
+      "duty": {
+        "@type": "Duty",
+        "action": {
+          "refinement": {
+            "leftOperand": {
+              "@type": "LeftOperand",
+              "@id": "http://fhg.de/glue/containerPipeline"
+            },
+            "operator": {
+              "@type": "Operator",
+              "@id": "odrl:eq"
+            },
+            "rightOperand": "{\"@type\":[\"http://fhg.de/glue/ContainerPipeline\"],\"http://fhg.de/glue/container\":[{\"@type\":[\"http://fhg.de/glue/Container\"],\"http://fhg.de/glue/image\":[{\"@value\":\"registry:5000/http-echo:latest\"}],\"http://fhg.de/glue/hash\":[{\"@value\":\"${HTTP_ECHO_HASH}\"}],\"http://fhg.de/glue/allowNetwork\":[{\"@value\":false}]}]}"
+          },
+          "@id": "http://fhg.de/glue/deployPipeline"
+        }
+      },
+      "odrl:action": "http://www.w3.org/ns/odrl/2/use"
+    },
+    "target": {
+      "@type": "Asset",
+      "@id": "http://dataowner.com/document:1234"
+    },
+    "assignee": {
+      "@type": "Party",
+      "@id": "http://dataconsumer.com/org"
+    },
+    "assigner": {
+      "@type": "Party",
+      "@id": "http://destination"
+    }
+  },
+  "@context": "https://w3id.org/edc/connector/management/v0.0.1"
+}

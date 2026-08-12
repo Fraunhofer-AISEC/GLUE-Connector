@@ -25,14 +25,14 @@ if [[ "$1" == "--no-atls" ]]; then
   shift
 fi
 
-if (( $# != 3 )); then
-  echo "Usage: $0 <local connector> <remote connector> <policy path>" >&2
+if (( $# != 5 )); then
+  echo "Usage: $0 <local connector> <local connector ip> <remote connector> <remote connector ip> <policy path>" >&2
   exit 1
 fi
 
-local_connector_ip="$1"
-remote_connector="$2"
-policy="$3"
+local_connector_ip="$2"
+remote_connector="$3"
+policy="$5"
 
 common_curl_opts=(
   -sS
@@ -123,4 +123,4 @@ pipeline_id="$(yq -r '.id' <<< "$pipeline")"
 pipeline_port="$(yq -r '.["containers"][0]["ports"][0]["hostAddress"]' <<< "$pipeline")"
 
 echo "Container pipeline running on $pipeline_port" >&2
-echo "$pipeline_id $pipeline_port"
+echo "$local_connector_ip $pipeline_id $pipeline_port"

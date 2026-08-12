@@ -7,7 +7,7 @@ mkdir -p "$out_dir"
 
 destination_registry="registry:5000"
 source_registry="${SOURCE_REGISTRY:-container-registry.gitlab.cc-asp.fraunhofer.de/ccit-glue/usage-control/container-pipeline}"
-image_tag="${SOURCE_TAG:-running-example}"
+image_tag="${SOURCE_TAG:-latest}"
 
 require() {
   missing_progs=()
