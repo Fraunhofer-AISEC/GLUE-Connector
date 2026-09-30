@@ -11,6 +11,7 @@ plugins {
     alias(libs.plugins.spotless)
     alias(libs.plugins.jib)
     alias(libs.plugins.shadow)
+    alias(libs.plugins.cyclonedx)
     application
 }
 
