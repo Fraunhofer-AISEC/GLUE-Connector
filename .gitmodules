@@ -1,4 +1,4 @@
 [submodule "odrl-parser"]
 	path = odrl-parser
-	url = https://gitlab.cc-asp.fraunhofer.de/ccit-glue/usage-control/odrl-parser.git
-	branch = feature/atls-pipeline-additions
+	url = git@github.com:Fraunhofer-AISEC/GLUE-Connector.git
+	branch = odrl-parser
