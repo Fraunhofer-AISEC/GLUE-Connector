@@ -3,4 +3,4 @@ plugins {
 }
 rootProject.name = "container-pipeline"
 
-includeBuild("odrl-parser")
+include("odrl-parser")

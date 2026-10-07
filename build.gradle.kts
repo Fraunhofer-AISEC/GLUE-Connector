@@ -69,7 +69,7 @@ dependencies {
     implementation(libs.jackson.module.kotlin)
     implementation(libs.jackson.datatype.jsr310)
     implementation(libs.titaniumJsonLd)
-    implementation("fhg.glue.odrl:odrl-parser:1.1-SNAPSHOT")
+    implementation(project(":odrl-parser"))
     implementation(libs.duckdb)
     implementation(libs.ktorm.core)
     implementation(libs.ktorm.jackson)
