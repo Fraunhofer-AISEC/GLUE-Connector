@@ -1,7 +1,20 @@
+# GLUE Connector
+
+This repository contains the GLUE Connector. GLUE stands for general lightweight, usage control enforcement. 
+The general GLUE documentation can be found [here](./docs/main.md).
+
 ## API Documentation
 
 The OpenAPI specification for the API is available [here](./doc/api.yaml).
 Note that the api specification may not always be in sync with the implementation.
+
+## Security Considerations
+
+> [!WARNING]  
+> The GLUE Connector does currently not provide user authentication or user management, because it is a prototype to demonstrate usage control.
+> Nonetheless, the security can be equipped by applying standard techniques and best practices like an Nginx proxy server with TLS client certificates in front of the GLUE Connector.
+
+We are planning to integrate a WEB-UI which allows the management of users and access. However, it is currently under construction and will be added soon.
 
 ## HTTP-Server Example Using API
 
