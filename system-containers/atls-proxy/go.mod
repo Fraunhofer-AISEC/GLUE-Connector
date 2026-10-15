@@ -12,7 +12,7 @@ require (
 	github.com/edgelesssys/ego v1.9.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.1 // indirect
 	github.com/go-jose/go-jose/v4 v4.1.4 // indirect
-	github.com/google/go-attestation v0.6.0 // indirect
+	github.com/google/go-attestation v0.6.1 // indirect
 	github.com/google/go-configfs-tsm v0.3.3 // indirect
 	github.com/google/go-eventlog v0.0.2 // indirect
 	github.com/google/go-sev-guest v0.14.1 // indirect
