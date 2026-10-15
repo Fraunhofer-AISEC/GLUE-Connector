@@ -22,7 +22,7 @@ require (
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/mattn/go-sqlite3 v1.14.42 // indirect
 	github.com/opencontainers/runtime-spec v1.3.0 // indirect
-	github.com/pion/dtls/v3 v3.1.2 // indirect
+	github.com/pion/dtls/v3 v3.1.4 // indirect
 	github.com/pion/logging v0.2.4 // indirect
 	github.com/pion/transport/v4 v4.0.1 // indirect
 	github.com/plgd-dev/go-coap/v3 v3.5.1 // indirect
