@@ -1,3 +1,18 @@
+/*
+ * Copyright 2024-2026 Fraunhofer AISEC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package de.fraunhofer.aisec.glue.controllers
 
 import de.fraunhofer.aisec.glue.DataStore
@@ -23,8 +38,7 @@ class PipelineController(
     private val dataStore: DataStore,
     private val pipelineManager: PipelineManager,
     private val policyEngine: PolicyEngine,
-) :
-    AtlsController {
+) : AtlsController {
     override fun Route.registerRoutes() {
         authenticate {
             route("/pipeline") {
@@ -48,34 +62,35 @@ class PipelineController(
                     }
 
                     val policyResult = policyEngine.evaluatePolicy(contract, URI(req.action ?: DEFAULT_ACTION), URI(req.target))
-                    policyResult.map { eval ->
-                        val pipeline = eval.containerPipeline
-                        // Responds with `BadRequest` if no pipeline found
-                        if (pipeline == null) {
-                            LOG.atDebug {
-                                message = "The contract evaluation yielded no container pipeline"
-                                payload = mapOf("contract" to contract.uid, "target" to req.target, "action" to req.action)
+                    policyResult
+                        .map { eval ->
+                            val pipeline = eval.containerPipeline
+                            // Responds with `BadRequest` if no pipeline found
+                            if (pipeline == null) {
+                                LOG.atDebug {
+                                    message = "The contract evaluation yielded no container pipeline"
+                                    payload = mapOf("contract" to contract.uid, "target" to req.target, "action" to req.action)
+                                }
+                                call.respond(HttpStatusCode.BadRequest, "No matching container pipeline definition found")
+                                return@map
                             }
-                            call.respond(HttpStatusCode.BadRequest, "No matching container pipeline definition found")
-                            return@map
+                            call.respond(
+                                PipelineCreateResponse(
+                                    pipeline.name,
+                                    pipeline.getContainerInfo(0)!!.ports,
+                                ),
+                            )
+                        }.recover { err ->
+                            LOG.atDebug {
+                                message = "Error during policy evaluation"
+                                cause = err
+                                payload = mapOf("contract" to contract.uid, "action" to req.action, "target" to req.target)
+                            }
+                            when (err) {
+                                is PolicyViolationException -> call.respond(HttpStatusCode.Forbidden, err.message ?: "Unknown Error")
+                                else -> call.respond(HttpStatusCode.InternalServerError, err.message ?: "Unknown Error")
+                            }
                         }
-                        call.respond(
-                            PipelineCreateResponse(
-                                pipeline.name,
-                                pipeline.getContainerInfo(0)!!.ports,
-                            ),
-                        )
-                    }.recover { err ->
-                        LOG.atDebug {
-                            message = "Error during policy evaluation"
-                            cause = err
-                            payload = mapOf("contract" to contract.uid, "action" to req.action, "target" to req.target)
-                        }
-                        when (err) {
-                            is PolicyViolationException -> call.respond(HttpStatusCode.Forbidden, err.message ?: "Unknown Error")
-                            else -> call.respond(HttpStatusCode.InternalServerError, err.message ?: "Unknown Error")
-                        }
-                    }
                 }
 
                 get("{id}") {

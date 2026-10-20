@@ -1,3 +1,18 @@
+/*
+ * Copyright 2025 Fraunhofer AISEC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package de.fraunhofer.aisec.glue.config
 
 import io.ktor.server.config.*
@@ -6,7 +21,9 @@ import io.ktor.server.config.*
  * The [ConfigManager] class creates and stores all configuration objects.
  * A configuration class must inherit from [Config].
  */
-class ConfigManager(private val baseConfig: ApplicationConfig) {
+class ConfigManager(
+    private val baseConfig: ApplicationConfig,
+) {
     private val configCache = mutableMapOf<Class<out Config>, Config>()
 
     private fun <T : Config> deriveConfigName(cls: Class<T>): String {
@@ -49,7 +66,5 @@ class ConfigManager(private val baseConfig: ApplicationConfig) {
         } as T
     }
 
-    inline fun <reified T : Config> getConfig(noinline factory: (ApplicationConfig) -> T): T {
-        return getConfig(T::class.java, factory)
-    }
+    inline fun <reified T : Config> getConfig(noinline factory: (ApplicationConfig) -> T): T = getConfig(T::class.java, factory)
 }

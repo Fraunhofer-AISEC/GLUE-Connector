@@ -1,3 +1,18 @@
+/*
+ * Copyright 2024-2026 Fraunhofer AISEC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package de.fraunhofer.aisec.glue
 
 import de.fraunhofer.aisec.glue.DataStore.Companion.ioAsync
@@ -90,12 +105,14 @@ class NegotiationTest {
                             agreementLatch.complete(Unit)
                             respond("")
                         }
+
                         "/negotiations/$consumerPid/events" -> {
                             val reqBody = convertValue<ContractNegotiationEventMessage>(req.body)
                             assertEquals(NegotiationEvent.FINALIZED, reqBody.eventType)
                             finalizedLatch.complete(Unit)
                             respond("")
                         }
+
                         else -> {
                             throw IllegalStateException("Unexpected URL ${req.url} called")
                         }
@@ -604,21 +621,30 @@ class NegotiationTest {
             )
 
             val provider = testServer("provider", providerController).start(false)
-            val providerAddress = provider.engine.resolvedConnectors().first().run { "http://$host:$port" }
+            val providerAddress =
+                provider.engine
+                    .resolvedConnectors()
+                    .first()
+                    .run { "http://$host:$port" }
             // We can still set this config option since options are evaluated lazily
             providerConfig.put("connector.publicUrl", providerAddress)
 
             val consumer = testServer("consumer", consumerController).start(false)
-            val consumerAddress = consumer.engine.resolvedConnectors().first().run { "http://$host:$port" }
+            val consumerAddress =
+                consumer.engine
+                    .resolvedConnectors()
+                    .first()
+                    .run { "http://$host:$port" }
             consumerConfig.put("connector.publicUrl", consumerAddress)
 
             // This indirectly checks if the consumer side negotiation completed successfully
             val negotiatedPolicy =
                 withTimeout(Duration.ofSeconds(30).toKotlinDuration()) {
-                    consumerNegotiationManager.startNegotiation(
-                        providerAddress,
-                        exampleOffer,
-                    ).awaitCompletion()
+                    consumerNegotiationManager
+                        .startNegotiation(
+                            providerAddress,
+                            exampleOffer,
+                        ).awaitCompletion()
                 }
 
             coVerify { providerDataStore.addContract(negotiatedPolicy) }
@@ -821,8 +847,9 @@ class NegotiationTest {
         }
     }
 
-
-    class StateMachineObserver(vararg val expectedStates: NegotiationState) {
+    class StateMachineObserver(
+        vararg val expectedStates: NegotiationState,
+    ) {
         private val recordJob = CompletableDeferred<Unit>()
         private val actualStates = mutableListOf<NegotiationState>()
 

@@ -1,3 +1,18 @@
+/*
+ * Copyright 2024-2026 Fraunhofer AISEC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package de.fraunhofer.aisec.glue.negotiation.builtin
 
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -110,12 +125,27 @@ class BuiltinNegotiation(
         }
 
         when (Pair(internalState, role)) {
-            Pair(NegotiationState.REQUESTED, Negotiation.Role.PROVIDER) -> handleRequestInner()
-            Pair(NegotiationState.OFFERED, Negotiation.Role.CONSUMER) -> handleOfferInner()
-            Pair(NegotiationState.ACCEPTED, Negotiation.Role.PROVIDER) -> handleAcceptInner()
-            Pair(NegotiationState.AGREED, Negotiation.Role.CONSUMER) -> handleAgreementInner()
-            Pair(NegotiationState.VERIFIED, Negotiation.Role.PROVIDER) -> handleVerifyInner()
-            else ->
+            Pair(NegotiationState.REQUESTED, Negotiation.Role.PROVIDER) -> {
+                handleRequestInner()
+            }
+
+            Pair(NegotiationState.OFFERED, Negotiation.Role.CONSUMER) -> {
+                handleOfferInner()
+            }
+
+            Pair(NegotiationState.ACCEPTED, Negotiation.Role.PROVIDER) -> {
+                handleAcceptInner()
+            }
+
+            Pair(NegotiationState.AGREED, Negotiation.Role.CONSUMER) -> {
+                handleAgreementInner()
+            }
+
+            Pair(NegotiationState.VERIFIED, Negotiation.Role.PROVIDER) -> {
+                handleVerifyInner()
+            }
+
+            else -> {
                 LOG.atTrace {
                     message = "No recovery action required"
                     payload =
@@ -126,6 +156,7 @@ class BuiltinNegotiation(
                             "state" to state,
                         )
                 }
+            }
         }
     }
 
@@ -329,13 +360,12 @@ class BuiltinNegotiation(
     /**
      * Derive (providerPid, consumerPid) from own and peer pid and role.
      */
-    private fun getProviderAndConsumerPid(): Pair<String, String> {
-        return if (role == Negotiation.Role.PROVIDER) {
+    private fun getProviderAndConsumerPid(): Pair<String, String> =
+        if (role == Negotiation.Role.PROVIDER) {
             Pair(id, peerPid)
         } else {
             Pair(peerPid, id)
         }
-    }
 
     /**
      * Send a termination message to the peer containing the stated code and reason (if any)
@@ -844,7 +874,9 @@ class BuiltinNegotiation(
         return resultFuture.await()
     }
 
-    private class InternalCancellationMessage(val details: String?) : DspMessage {
+    private class InternalCancellationMessage(
+        val details: String?,
+    ) : DspMessage {
         override val id = "internal cancellation message"
     }
 

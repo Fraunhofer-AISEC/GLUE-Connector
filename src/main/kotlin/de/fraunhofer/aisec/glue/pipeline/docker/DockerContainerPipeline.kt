@@ -1,3 +1,18 @@
+/*
+ * Copyright 2024-2026 Fraunhofer AISEC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package de.fraunhofer.aisec.glue.pipeline.docker
 
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -69,25 +84,27 @@ class DockerContainerPipeline internal constructor(
 
     private suspend fun removeImpl() {
         for (container in containers) {
-            container.runCatching {
-                remove(deleteVolumes = true, force = true)
-            }.onFailure { e ->
-                LOG.atError {
-                    message = "Could not remove container ${container.name}"
-                    cause = e
+            container
+                .runCatching {
+                    remove(deleteVolumes = true, force = true)
+                }.onFailure { e ->
+                    LOG.atError {
+                        message = "Could not remove container ${container.name}"
+                        cause = e
+                    }
                 }
-            }
         }
 
         for (network in networks) {
-            network.runCatching {
-                remove()
-            }.onFailure { e ->
-                LOG.atError {
-                    message = "Could not remove network ${network.name}"
-                    cause = e
+            network
+                .runCatching {
+                    remove()
+                }.onFailure { e ->
+                    LOG.atError {
+                        message = "Could not remove network ${network.name}"
+                        cause = e
+                    }
                 }
-            }
         }
     }
 
@@ -111,7 +128,6 @@ class DockerContainerPipeline internal constructor(
                 else -> throw IllegalStateException("The container returned an unexpected state: ${state.status}")
             }
 
-
         return status
     }
 
@@ -133,34 +149,37 @@ class DockerContainerPipeline internal constructor(
         // Since we use the port binding's addresses to connect to our containers from external hosts, we cannot use the
         // catch-all addresses for binding to all interfaces.
         // Instead, we allow the user to substitute an external, default address or domain name in the config.
-        return bindings.map { b ->
-            val hostIp =
-                when (bindings[0].hostIp) {
-                    "0.0.0.0", "::" -> config.publicHostname
-                    else -> bindings[0].hostIp
-                }
+        return bindings
+            .map { b ->
+                val hostIp =
+                    when (bindings[0].hostIp) {
+                        "0.0.0.0", "::" -> config.publicHostname
+                        else -> bindings[0].hostIp
+                    }
 
-            ContainerPort(containerPort, "$hostIp:${b.hostPort}", protocol)
-        }.distinct()
+                ContainerPort(containerPort, "$hostIp:${b.hostPort}", protocol)
+            }.distinct()
     }
 
-    override suspend fun getContainerInfo(index: Int): ContainerInfo {
-        return containers[index].let { c ->
+    override suspend fun getContainerInfo(index: Int): ContainerInfo =
+        containers[index].let { c ->
             val inspect = c.inspect()
 
             ContainerInfo(
                 name = c.name,
-                ipAddresses = inspect.networkSettings?.networks?.values?.mapNotNull(EndpointSettings::ipAddress) ?: emptyList(),
+                ipAddresses =
+                    inspect.networkSettings
+                        ?.networks
+                        ?.values
+                        ?.mapNotNull(EndpointSettings::ipAddress) ?: emptyList(),
                 ports =
-                    inspect.networkSettings?.ports?.flatMap {
-                            (k, v) ->
+                    inspect.networkSettings?.ports?.flatMap { (k, v) ->
                         v?.let { parsePortBinding(k, v) } ?: emptyList()
                     } ?: emptyList(),
                 status = parseContainerStatus(inspect.state ?: throw IllegalStateException("Inspection has no state object")),
                 pid = inspect.state.pid,
             )
         }
-    }
 
     override suspend fun getContainerInfo(): List<ContainerInfo> =
         coroutineScope {
@@ -198,13 +217,9 @@ class DockerContainerPipeline internal constructor(
             followUpContracts[peer] ?: setOf()
         }
 
-    override suspend fun addRemotePipeline(remotePipeline: RemotePipeline): Boolean {
-        return followUpPipelines.add(remotePipeline)
-    }
+    override suspend fun addRemotePipeline(remotePipeline: RemotePipeline): Boolean = followUpPipelines.add(remotePipeline)
 
-    override suspend fun remotePipelines(): Set<RemotePipeline> {
-        return followUpPipelines
-    }
+    override suspend fun remotePipelines(): Set<RemotePipeline> = followUpPipelines
 
     companion object {
         private val LOG = KotlinLogging.logger {}

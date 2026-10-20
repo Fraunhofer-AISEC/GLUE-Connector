@@ -1,3 +1,18 @@
+/*
+ * Copyright 2025 Fraunhofer AISEC and Fraunhofer IOSB
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package de.fraunhofer.iosb.odrl.glue
 
 import com.fasterxml.jackson.databind.JsonMappingException
@@ -13,79 +28,100 @@ import kotlin.test.assertNotEquals
 
 class GlueContainerPipelineTest {
     private val mapper = Commons.parserInstance.mapper
-    private val pipelines = listOf(
-        GlueContainerPipeline(
-            platformSecurity = listOf("tpm2", "sgx"),
-            container = listOf(
-                GlueContainer(
-                    image = "test/container1",
-                    hash = "364a4787748a98c1c28085d4154a06c3a9be9a67c0b08a56b3f69fa8fabf172e",
-                    allowNetwork = true,
-                    parameter = listOf(GlueRestParameter(
-                        httpType = GlueHttpType.GET,
-                        httpUrl = URI.create("http://0.0.0.0:1234/dockerEndpoint?key1=value1")
-                    ))
-                ),
-                GlueContainer(
-                    image = "test/container2",
-                    hash = "ac924fdd26993b2ad157e3512c4a36ad293491f6eb8d268d6d4e1bf1c5c307ad",
-                    allowNetwork = false
-                )
-            )
-        ),
-        GlueContainerPipeline(
-            container = listOf(
-                GlueContainer(
-                    image = "test/container1",
-                    hash = "364a4787748a98c1c28085d4154a06c3a9be9a67c0b08a56b3f69fa8fabf172e",
-                    allowNetwork = true,
-                    parameter = listOf(GlueRestParameter(
-                        httpType = GlueHttpType.GET,
-                        httpUrl = URI.create("http://0.0.0.0:1234/dockerEndpoint?key1=value1")
-                    ))
-                ),
-                GlueContainer(
-                    image = "test/container2",
-                    hash = "ac924fdd26993b2ad157e3512c4a36ad293491f6eb8d268d6d4e1bf1c5c307ad",
-                    allowNetwork = false,
-                    parameter = listOf(GlueRestParameter(
-                        httpType = GlueHttpType.POST,
-                        httpUrl = URI.create("http://0.0.0.0:1234/dockerEndpoint"),
-                        value = GlueValue(mapper.readValue(
-                        "{\n" +
-                                "  \"http://example.com/valueProperty1\": \"testProperty\",\n" +
-                                "  \"http://example.com/valueProperty2\": [42, 43, 44]\n" +
-                                "}", JsonNode::class.java)
-                        )
-                    ))
-                )
-            )
+    private val pipelines =
+        listOf(
+            GlueContainerPipeline(
+                platformSecurity = listOf("tpm2", "sgx"),
+                container =
+                    listOf(
+                        GlueContainer(
+                            image = "test/container1",
+                            hash = "364a4787748a98c1c28085d4154a06c3a9be9a67c0b08a56b3f69fa8fabf172e",
+                            allowNetwork = true,
+                            parameter =
+                                listOf(
+                                    GlueRestParameter(
+                                        httpType = GlueHttpType.GET,
+                                        httpUrl = URI.create("http://0.0.0.0:1234/dockerEndpoint?key1=value1"),
+                                    ),
+                                ),
+                        ),
+                        GlueContainer(
+                            image = "test/container2",
+                            hash = "ac924fdd26993b2ad157e3512c4a36ad293491f6eb8d268d6d4e1bf1c5c307ad",
+                            allowNetwork = false,
+                        ),
+                    ),
+            ),
+            GlueContainerPipeline(
+                container =
+                    listOf(
+                        GlueContainer(
+                            image = "test/container1",
+                            hash = "364a4787748a98c1c28085d4154a06c3a9be9a67c0b08a56b3f69fa8fabf172e",
+                            allowNetwork = true,
+                            parameter =
+                                listOf(
+                                    GlueRestParameter(
+                                        httpType = GlueHttpType.GET,
+                                        httpUrl = URI.create("http://0.0.0.0:1234/dockerEndpoint?key1=value1"),
+                                    ),
+                                ),
+                        ),
+                        GlueContainer(
+                            image = "test/container2",
+                            hash = "ac924fdd26993b2ad157e3512c4a36ad293491f6eb8d268d6d4e1bf1c5c307ad",
+                            allowNetwork = false,
+                            parameter =
+                                listOf(
+                                    GlueRestParameter(
+                                        httpType = GlueHttpType.POST,
+                                        httpUrl = URI.create("http://0.0.0.0:1234/dockerEndpoint"),
+                                        value =
+                                            GlueValue(
+                                                mapper.readValue(
+                                                    "{\n" +
+                                                        "  \"http://example.com/valueProperty1\": \"testProperty\",\n" +
+                                                        "  \"http://example.com/valueProperty2\": [42, 43, 44]\n" +
+                                                        "}",
+                                                    JsonNode::class.java,
+                                                ),
+                                            ),
+                                    ),
+                                ),
+                        ),
+                    ),
+            ),
         )
-    )
 
     @Test
     fun testGlueContainerPipelineEquality() {
-        val pipeline = GlueContainerPipeline(
-            platformSecurity = listOf("tpm2", "sgx"),
-            container = listOf(
-                GlueContainer(
-                    image = "test/container1",
-                    hash = "364a4787748a98c1c28085d4154a06c3a9be9a67c0b08a56b3f69fa8fabf172e",
-                    allowNetwork = true,
-                    parameter = listOf(GlueRestParameter(
-                        httpType = GlueHttpType.GET,
-                        httpUrl = URI.create("http://0.0.0.0:1234/dockerEndpoint?key1=value1")
-                    ))
-                ),
-                GlueContainer(
-                    image = "test/container2",
-                    hash = "ac924fdd26993b2ad157e3512c4a36ad293491f6eb8d268d6d4e1bf1c5c307ad",
-                    allowNetwork = false
-                )
+        val pipeline =
+            GlueContainerPipeline(
+                platformSecurity = listOf("tpm2", "sgx"),
+                container =
+                    listOf(
+                        GlueContainer(
+                            image = "test/container1",
+                            hash = "364a4787748a98c1c28085d4154a06c3a9be9a67c0b08a56b3f69fa8fabf172e",
+                            allowNetwork = true,
+                            parameter =
+                                listOf(
+                                    GlueRestParameter(
+                                        httpType = GlueHttpType.GET,
+                                        httpUrl = URI.create("http://0.0.0.0:1234/dockerEndpoint?key1=value1"),
+                                    ),
+                                ),
+                        ),
+                        GlueContainer(
+                            image = "test/container2",
+                            hash = "ac924fdd26993b2ad157e3512c4a36ad293491f6eb8d268d6d4e1bf1c5c307ad",
+                            allowNetwork = false,
+                        ),
+                    ),
             )
-        )
-        assertEquals(pipeline, pipelines[0]);
-        assertNotEquals(pipeline, pipelines[1]);
+        assertEquals(pipeline, pipelines[0])
+        assertNotEquals(pipeline, pipelines[1])
     }
 
     @Test
@@ -98,10 +134,11 @@ class GlueContainerPipelineTest {
     @Test
     fun testGlueContainerPipelineDeserialization() {
         pipelines.forEachIndexed { i, p ->
-            val pipeline = mapper.readValue(
-                loadFileOrDie("/glue-container-pipeline-example-${i+1}.json"),
-                GlueContainerPipeline::class.java
-            )
+            val pipeline =
+                mapper.readValue(
+                    loadFileOrDie("/glue-container-pipeline-example-${i + 1}.json"),
+                    GlueContainerPipeline::class.java,
+                )
             assertEquals(p, pipeline)
         }
     }
@@ -119,11 +156,12 @@ class GlueContainerPipelineTest {
     fun testGlueContainerPipelineWithNoContainers() {
         assertThrows<JsonMappingException> {
             mapper.readValue(
-            "{\n" +
+                "{\n" +
                     "  \"@context\": {},\n" +
                     "  \"@type\": \"http://fhg.de/glue/ContainerPipeline\",\n" +
                     "  \"http://fhg.de/glue/container\": []\n" +
-                    "}", GlueContainerPipeline::class.java
+                    "}",
+                GlueContainerPipeline::class.java,
             )
         }
     }
@@ -133,15 +171,16 @@ class GlueContainerPipelineTest {
         assertThrows<JsonMappingException> {
             mapper.readValue(
                 "{\n" +
-                        "  \"@context\": {},\n" +
-                        "  \"@type\": \"http://fhg.de/glue/ContainerPipeline\",\n" +
-                        "  \"http://fhg.de/glue/platformSecurity\": [\"tpm\"],\n" +
-                        "  \"http://fhg.de/glue/container\": {\n" +
-                        "    \"@type\": \"http://fhg.de/glue/Container\",\n" +
-                        "    \"http://fhg.de/glue/image\": \"test/container1\",\n" +
-                        "    \"http://fhg.de/glue/hash\": \"364a4787748a98c1c28085d4154a06c3a9be9a67c0b08a56b3f69fa8fabf172e\"\n" +
-                        "  }\n" +
-                        "}", GlueContainerPipeline::class.java
+                    "  \"@context\": {},\n" +
+                    "  \"@type\": \"http://fhg.de/glue/ContainerPipeline\",\n" +
+                    "  \"http://fhg.de/glue/platformSecurity\": [\"tpm\"],\n" +
+                    "  \"http://fhg.de/glue/container\": {\n" +
+                    "    \"@type\": \"http://fhg.de/glue/Container\",\n" +
+                    "    \"http://fhg.de/glue/image\": \"test/container1\",\n" +
+                    "    \"http://fhg.de/glue/hash\": \"364a4787748a98c1c28085d4154a06c3a9be9a67c0b08a56b3f69fa8fabf172e\"\n" +
+                    "  }\n" +
+                    "}",
+                GlueContainerPipeline::class.java,
             )
         }
     }

@@ -1,3 +1,18 @@
+/*
+ * Copyright 2025 Fraunhofer AISEC and Fraunhofer IOSB
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package de.fraunhofer.iosb.odrl.parser
 
 import com.fasterxml.jackson.core.JsonParser
@@ -12,8 +27,9 @@ import com.fasterxml.jackson.databind.node.ObjectNode
 class OdrlPolicyDeserializer<T>(
     private val defaultDeserializer: JsonDeserializer<*>,
     private val clazz: Class<T>,
-) : JsonDeserializer<T>(), ResolvableDeserializer, ContextualDeserializer {
-
+) : JsonDeserializer<T>(),
+    ResolvableDeserializer,
+    ContextualDeserializer {
     private val processor = OdrlRuleCompositionProcessor()
 
     override fun resolve(ctx: DeserializationContext?) {
@@ -22,18 +38,17 @@ class OdrlPolicyDeserializer<T>(
 
     override fun createContextual(
         ctx: DeserializationContext?,
-        property: BeanProperty?
-    ): JsonDeserializer<*> {
-        return this
-    }
+        property: BeanProperty?,
+    ): JsonDeserializer<*> = this
 
     override fun deserialize(
         jp: JsonParser,
-        ctx: DeserializationContext
+        ctx: DeserializationContext,
     ): T {
         val root = ctx.readTree(jp)
-        if (root is ObjectNode)
+        if (root is ObjectNode) {
             processor.atomizeOdrlPolicy(root)
+        }
         val rootParser = root.traverse(jp.codec)
         rootParser.nextToken()
         return clazz.cast(defaultDeserializer.deserialize(rootParser, ctx))
@@ -43,8 +58,5 @@ class OdrlPolicyDeserializer<T>(
         jp: JsonParser,
         ctx: DeserializationContext,
         typeDeserializer: TypeDeserializer?,
-    ): T {
-        return clazz.cast(defaultDeserializer.deserializeWithType(jp, ctx, typeDeserializer))
-    }
-
+    ): T = clazz.cast(defaultDeserializer.deserializeWithType(jp, ctx, typeDeserializer))
 }

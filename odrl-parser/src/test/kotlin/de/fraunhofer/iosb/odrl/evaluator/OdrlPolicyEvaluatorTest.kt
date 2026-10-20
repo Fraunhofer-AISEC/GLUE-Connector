@@ -1,3 +1,18 @@
+/*
+ * Copyright 2025 Fraunhofer AISEC and Fraunhofer IOSB
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package de.fraunhofer.iosb.odrl.evaluator
 
 import com.fasterxml.jackson.databind.JsonNode
@@ -19,15 +34,19 @@ class OdrlPolicyEvaluatorTest {
     private val evaluator = OdrlPolicyEvaluator()
 
     private fun extractGluePipelinesOrThrow(action: OdrlAction): List<GlueContainerPipeline> {
-        if (action.refinement.size != 1)
+        if (action.refinement.size != 1) {
             throw OdrlException("Expected a single refinement in $action")
+        }
         val constraint = action.refinement[0]
-        if (constraint !is OdrlConstraint)
+        if (constraint !is OdrlConstraint) {
             throw OdrlException("Expected refinement of type constraint in $action")
-        if (constraint.leftOperand.uid.toString() != GlueIdentifiers.HAS_CONTAINER_PIPELINE)
+        }
+        if (constraint.leftOperand.uid.toString() != GlueIdentifiers.HAS_CONTAINER_PIPELINE) {
             throw OdrlException("Expected left operand ${GlueIdentifiers.HAS_CONTAINER_PIPELINE} in $action")
-        if (constraint.operator.uid.toString() != OdrlIdentifiers.EQ)
+        }
+        if (constraint.operator.uid.toString() != OdrlIdentifiers.EQ) {
             throw OdrlException("Expected operator ${OdrlIdentifiers.EQ} in $action")
+        }
         if (!constraint.rightOperand.all { it is GlueContainerPipeline }) {
             throw OdrlException("Expected all right operands to be of type GlueContainerPipeline in $action")
         }
@@ -35,48 +54,63 @@ class OdrlPolicyEvaluatorTest {
     }
 
     private fun extractPolicyTemplateOrThrow(action: OdrlAction): GlueValue {
-        if (action.refinement.size != 1)
+        if (action.refinement.size != 1) {
             throw OdrlException("Expected a single refinement in $action")
+        }
         val constraint = action.refinement[0]
-        if (constraint !is OdrlConstraint)
+        if (constraint !is OdrlConstraint) {
             throw OdrlException("Expected refinement of type constraint in $action")
-        if (constraint.leftOperand.uid.toString() != GlueIdentifiers.HAS_POLICY_TEMPLATE)
+        }
+        if (constraint.leftOperand.uid.toString() != GlueIdentifiers.HAS_POLICY_TEMPLATE) {
             throw OdrlException("Expected left operand ${GlueIdentifiers.HAS_POLICY_TEMPLATE} in $action")
-        if (constraint.operator.uid.toString() != OdrlIdentifiers.EQ)
+        }
+        if (constraint.operator.uid.toString() != OdrlIdentifiers.EQ) {
             throw OdrlException("Expected operator ${OdrlIdentifiers.EQ} in $action")
-        if (constraint.rightOperand.size != 1)
+        }
+        if (constraint.rightOperand.size != 1) {
             throw OdrlException("Expected a single right operand in $action")
+        }
         val operand = constraint.rightOperand[0]
-        if (operand !is GlueValue)
+        if (operand !is GlueValue) {
             throw OdrlException("Expected right operand to be of type GlueValue in $action")
+        }
         return operand
     }
 
-    private fun onParameterPlaceholderCallback(key: String): JsonNode {
-        return when (key) {
-            "nextDataReceiverUid" -> parser.mapper.convertValue("http://nextdatareceiver.com", JsonNode::class.java)
-            "nextDataReceiverConstraint" -> parser.mapper.convertValue(
-                OdrlConstraint(
-                    leftOperand = OdrlLeftOperand(OdrlIdentifiers.DATETIME),
-                    operator = OdrlOperator(OdrlIdentifiers.LTEQ),
-                    rightOperand = listOf(
-                        XmlDate(
-                            LocalDate.of(2035, 12, 31)
-                        )
-                    )
-                ), JsonNode::class.java
-            )
+    private fun onParameterPlaceholderCallback(key: String): JsonNode =
+        when (key) {
+            "nextDataReceiverUid" -> {
+                parser.mapper.convertValue("http://nextdatareceiver.com", JsonNode::class.java)
+            }
 
-            else -> throw OdrlException("Unsupported GlueParameterPlaceholder: $key")
+            "nextDataReceiverConstraint" -> {
+                parser.mapper.convertValue(
+                    OdrlConstraint(
+                        leftOperand = OdrlLeftOperand(OdrlIdentifiers.DATETIME),
+                        operator = OdrlOperator(OdrlIdentifiers.LTEQ),
+                        rightOperand =
+                            listOf(
+                                XmlDate(
+                                    LocalDate.of(2035, 12, 31),
+                                ),
+                            ),
+                    ),
+                    JsonNode::class.java,
+                )
+            }
+
+            else -> {
+                throw OdrlException("Unsupported GlueParameterPlaceholder: $key")
+            }
         }
-    }
 
     private suspend fun onActionCallback(action: OdrlAction): Result {
         when (action.value.uid.toString()) {
             GlueIdentifiers.DEPLOY_PIPELINE -> {
                 try {
-                    for (pipeline in extractGluePipelinesOrThrow(action))
+                    for (pipeline in extractGluePipelinesOrThrow(action)) {
                         println("   | Launching pipeline $pipeline")
+                    }
                     return Result(true)
                 } catch (e: OdrlException) {
                     return Result(false, e.message!!)
@@ -85,8 +119,9 @@ class OdrlPolicyEvaluatorTest {
 
             OdrlIdentifiers.NEXTPOLICY -> {
                 try {
-                    for (pipeline in extractGluePipelinesOrThrow(action))
+                    for (pipeline in extractGluePipelinesOrThrow(action)) {
                         println("   | Launching policy compiler pipeline $pipeline")
+                    }
                     return Result(true)
                 } catch (_: OdrlException) {
                     // ignore
@@ -104,7 +139,9 @@ class OdrlPolicyEvaluatorTest {
                 }
             }
 
-            else -> return Result(false, "Unhandled action $action")
+            else -> {
+                return Result(false, "Unhandled action $action")
+            }
         }
     }
 
@@ -152,9 +189,9 @@ class OdrlPolicyEvaluatorTest {
         }
     }
 
+    // policy-example-4.json only works with glue-odrl.jsonld in the file system root (e.g. C:\)
     @Test
     @Disabled
-    // policy-example-4.json only works with glue-odrl.jsonld in the file system root (e.g. C:\)
     fun testPolicyExample4() {
         runBlocking {
             val policy = parser.readOdrlPolicy(loadFileOrDie("/policy-example-4.json"))

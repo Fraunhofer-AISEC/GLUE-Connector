@@ -1,3 +1,18 @@
+/*
+ * Copyright 2024-2026 Fraunhofer AISEC and Fraunhofer IOSB
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package de.fraunhofer.iosb.odrl.parser
 
 import com.apicatalog.jsonld.JsonLdOptions
@@ -25,18 +40,19 @@ class OdrlParser(
     options: JsonLdOptions = JsonLdOptions(),
     documentLoader: DocumentLoader = createDocumentLoader(),
 ) {
-
     private val odrlMapper: ObjectMapper
 
     init {
         mapper.registerKotlinModule()
         mapper.registerModule(JSONPModule())
-        odrlMapper = mapper.copy()
-            .registerModule(OdrlModule(compactSerialization))
-            .registerModule(JavaTimeModule())
-            .setDateFormat(StdDateFormat().withColonInTimeZone(true)) // Provides ISO time support
-            .setSerializationInclusion(JsonInclude.Include.NON_EMPTY)    // Hides empty properties in serialized policies
-            .enable(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY) // Accepts single properties as list
+        odrlMapper =
+            mapper
+                .copy()
+                .registerModule(OdrlModule(compactSerialization))
+                .registerModule(JavaTimeModule())
+                .setDateFormat(StdDateFormat().withColonInTimeZone(true)) // Provides ISO time support
+                .setSerializationInclusion(JsonInclude.Include.NON_EMPTY) // Hides empty properties in serialized policies
+                .enable(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY) // Accepts single properties as list
         mapper.registerModule(JsonLdModule(odrlMapper, options, documentLoader))
     }
 
@@ -45,18 +61,14 @@ class OdrlParser(
      * @param r Input to deserialize.
      * @return The policy.
      */
-    fun readOdrlPolicy(r: Reader): OdrlPolicy {
-        return mapper.readValue(r, OdrlPolicy::class.java)
-    }
+    fun readOdrlPolicy(r: Reader): OdrlPolicy = mapper.readValue(r, OdrlPolicy::class.java)
 
     /**
      * Serialize a policy.
      * @param policy The policy to serialize.
      * @return The policy serialized as string.
      */
-    fun writeOdrlPolicy(policy: OdrlPolicy): String {
-        return mapper.writeValueAsString(policy)
-    }
+    fun writeOdrlPolicy(policy: OdrlPolicy): String = mapper.writeValueAsString(policy)
 
     /**
      * Try to convert a value to a policy.
@@ -64,9 +76,7 @@ class OdrlParser(
      * @return The converted policy.
      * @throws IllegalArgumentException if the conversion failed.
      */
-    fun convertToOdrlPolicy(value: Any): OdrlPolicy {
-        return mapper.convertValue(value, OdrlPolicy::class.java)
-    }
+    fun convertToOdrlPolicy(value: Any): OdrlPolicy = mapper.convertValue(value, OdrlPolicy::class.java)
 
     /**
      * Convert a policy to a set.
@@ -77,9 +87,7 @@ class OdrlParser(
     fun convertToOdrlSet(
         policy: OdrlPolicy,
         newUid: URI? = null,
-    ): OdrlSet {
-        return convertOdrlPolicy(policy, OdrlIdentifiers.SET, null, null, newUid)
-    }
+    ): OdrlSet = convertOdrlPolicy(policy, OdrlIdentifiers.SET, null, null, newUid)
 
     /**
      * Try to convert a policy to an offer.
@@ -95,9 +103,7 @@ class OdrlParser(
         assignees: List<OdrlParty>? = null,
         assigners: List<OdrlParty>? = null,
         newUid: URI? = null,
-    ): OdrlOffer {
-        return convertOdrlPolicy(policy, OdrlIdentifiers.OFFER, assignees, assigners, newUid)
-    }
+    ): OdrlOffer = convertOdrlPolicy(policy, OdrlIdentifiers.OFFER, assignees, assigners, newUid)
 
     /**
      * Convert a policy to a fresh offer (i.e. w/o assignees) for the specified assigner.
@@ -126,9 +132,7 @@ class OdrlParser(
         assignees: List<OdrlParty>? = null,
         assigners: List<OdrlParty>? = null,
         newUid: URI? = null,
-    ): OdrlAgreement {
-        return convertOdrlPolicy(policy, OdrlIdentifiers.AGREEMENT, assignees, assigners, newUid)
-    }
+    ): OdrlAgreement = convertOdrlPolicy(policy, OdrlIdentifiers.AGREEMENT, assignees, assigners, newUid)
 
     /**
      * Convert a policy to an agreement for the specified assignee and assigner.
@@ -166,8 +170,9 @@ class OdrlParser(
     ): T {
         val policyNode = odrlMapper.convertValue(policy, ObjectNode::class.java)
         policyNode.replace("@type", TextNode(type))
-        if (newUid != null)
+        if (newUid != null) {
             policyNode.replace("@id", TextNode(newUid.toString()))
+        }
 
         val processor = OdrlRuleCompositionProcessor()
         if (assignees != null) {
@@ -181,8 +186,9 @@ class OdrlParser(
 
         val bean = odrlMapper.convertValue(policyNode, object : TypeReference<T>() {})
         val validationErrors = bean.validate()
-        if (validationErrors.isNotEmpty())
+        if (validationErrors.isNotEmpty()) {
             throw JsonMappingException(null, validationErrors.toString())
+        }
         return bean
     }
 }

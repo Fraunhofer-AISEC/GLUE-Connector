@@ -1,3 +1,18 @@
+/*
+ * Copyright 2025-2026 Fraunhofer AISEC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package de.fraunhofer.aisec.glue.negotiation
 
 import de.fraunhofer.iosb.odrl.OdrlDuty
@@ -49,8 +64,8 @@ fun OdrlOffer.toAgreement(
 fun OdrlPermission.resetParties(
     assignee: OdrlParty? = null,
     assigner: OdrlParty? = null,
-): OdrlPermission {
-    return OdrlPermission(
+): OdrlPermission =
+    OdrlPermission(
         uid = this.uid,
         action = this.action,
         target = this.target,
@@ -71,13 +86,12 @@ fun OdrlPermission.resetParties(
         constraint = this.constraint,
         duty = this.duty.map { it.resetParties(assignee, assigner) },
     )
-}
 
 fun OdrlProhibition.resetParties(
     assignee: OdrlParty? = null,
     assigner: OdrlParty? = null,
-): OdrlProhibition {
-    return OdrlProhibition(
+): OdrlProhibition =
+    OdrlProhibition(
         uid = this.uid,
         action = this.action,
         target = this.target,
@@ -98,13 +112,12 @@ fun OdrlProhibition.resetParties(
         constraint = this.constraint,
         remedy = this.remedy.map { it.resetParties(assignee, assigner) },
     )
-}
 
 fun OdrlDuty.resetParties(
     assignee: OdrlParty? = null,
     assigner: OdrlParty? = null,
-): OdrlDuty {
-    return OdrlDuty(
+): OdrlDuty =
+    OdrlDuty(
         uid = this.uid,
         action = this.action,
         target = this.target,
@@ -125,4 +138,3 @@ fun OdrlDuty.resetParties(
         constraint = this.constraint,
         consequence = this.consequence.map { it.resetParties(assignee, assigner) },
     )
-}

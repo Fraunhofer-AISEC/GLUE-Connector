@@ -1,3 +1,18 @@
+/*
+ * Copyright 2024-2025 Fraunhofer AISEC and Fraunhofer IOSB
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package de.fraunhofer.iosb.odrl
 
 import com.fasterxml.jackson.annotation.*
@@ -14,18 +29,15 @@ import java.net.URI
 data class OdrlParty(
     @param:JsonProperty("@id")
     val uid: URI? = null,
-
     @param:JsonProperty(OdrlIdentifiers.PART_OF)
     @param:JsonSetter(nulls = Nulls.AS_EMPTY)
     val partOf: List<OdrlPartyCollection> = listOf(),
-): JsonLdBeanValidator {
+) : JsonLdBeanValidator {
     // Constructor necessary for Jackson to deserialize primitive type
     @Suppress("unused")
     constructor(primitiveValue: String) : this(URI.create(primitiveValue))
 
-    override fun validate(): List<ValidationError> {
-        return validateOdrlParty.validate(this).errors
-    }
+    override fun validate(): List<ValidationError> = validateOdrlParty.validate(this).errors
 
     private fun getPropertyMap(): MutableMap<String, Any> {
         val map = mutableMapOf<String, Any>()
@@ -34,19 +46,18 @@ data class OdrlParty(
         return map
     }
 
-    override fun toString(): String {
-        return "OdrlParty(${getPropertyMap().entries.joinToString(", ")})"
-    }
+    override fun toString(): String = "OdrlParty(${getPropertyMap().entries.joinToString(", ")})"
 }
 
-val validateOdrlParty = Validation {
-    // A Party SHOULD have one uid property value of type IRI
-    OdrlParty::uid ifPresent {
-        addConstraint("OdrlParty: {value} is not a valid IRI") { isIri(it) }
-    }
+val validateOdrlParty =
+    Validation {
+        // A Party SHOULD have one uid property value of type IRI
+        OdrlParty::uid ifPresent {
+            addConstraint("OdrlParty: {value} is not a valid IRI") { isIri(it) }
+        }
 
-    // A Party MAY have none, one, or many partOf property values of type PartyCollection
-    OdrlParty::partOf onEach {
-        run(validateOdrlPartyCollection)
+        // A Party MAY have none, one, or many partOf property values of type PartyCollection
+        OdrlParty::partOf onEach {
+            run(validateOdrlPartyCollection)
+        }
     }
-}

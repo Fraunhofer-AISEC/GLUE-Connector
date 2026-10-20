@@ -1,3 +1,18 @@
+/*
+ * Copyright 2025 Fraunhofer AISEC and Fraunhofer IOSB
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package de.fraunhofer.iosb.odrl
 
 import com.fasterxml.jackson.databind.exc.InvalidFormatException
@@ -9,76 +24,82 @@ import kotlin.test.assertEquals
 
 class OdrlLogicalConstraintTest {
     private val mapper = Commons.parserInstance.mapper
-    private val constraints = listOf(
-        OdrlLogicalConstraint(
-            uid = URI.create("http://example.com/logicalConstraint"),
-            or = listOf(
-                OdrlConstraint(
-                    leftOperand = OdrlLeftOperand("http://example.com/leftOperand1"),
-                    operator = OdrlOperator("http://www.w3.org/ns/odrl/2/eq"),
-                    rightOperand = listOf(PrimitiveString("exampleRightOperand1")),
-                ),
-                OdrlConstraint(
-                    leftOperand = OdrlLeftOperand("http://example.com/leftOperand2"),
-                    operator = OdrlOperator("http://www.w3.org/ns/odrl/2/eq"),
-                    rightOperand = listOf(PrimitiveString("exampleRightOperand2")),
-                )
-            )
-        ),
-        OdrlLogicalConstraint(
-            uid = URI.create("http://example.com/logicalConstraint"),
-            xone = listOf(
-                OdrlConstraint(
-                    leftOperand = OdrlLeftOperand("http://example.com/leftOperand1"),
-                    operator = OdrlOperator("http://www.w3.org/ns/odrl/2/eq"),
-                    rightOperand = listOf(PrimitiveString("exampleRightOperand1")),
-                ),
-                OdrlConstraint(
-                    leftOperand = OdrlLeftOperand("http://example.com/leftOperand2"),
-                    operator = OdrlOperator("http://www.w3.org/ns/odrl/2/eq"),
-                    rightOperand = listOf(PrimitiveString("exampleRightOperand2")),
-                )
-            )
-        ),
-        OdrlLogicalConstraint(
-            uid = URI.create("http://example.com/logicalConstraint"),
-            and = listOf(
-                OdrlConstraint(
-                    leftOperand = OdrlLeftOperand("http://example.com/leftOperand1"),
-                    operator = OdrlOperator("http://www.w3.org/ns/odrl/2/eq"),
-                    rightOperand = listOf(PrimitiveString("exampleRightOperand1")),
-                ),
-                OdrlConstraint(
-                    leftOperand = OdrlLeftOperand("http://example.com/leftOperand2"),
-                    operator = OdrlOperator("http://www.w3.org/ns/odrl/2/eq"),
-                    rightOperand = listOf(PrimitiveString("exampleRightOperand2")),
-                )
-            )
-        ),
-        OdrlLogicalConstraint(
-            uid = URI.create("http://example.com/logicalConstraint"),
-            andSequence = listOf(
-                OdrlConstraint(
-                    leftOperand = OdrlLeftOperand("http://example.com/leftOperand1"),
-                    operator = OdrlOperator("http://www.w3.org/ns/odrl/2/eq"),
-                    rightOperand = listOf(PrimitiveString("exampleRightOperand1")),
-                ),
-                OdrlConstraint(
-                    leftOperand = OdrlLeftOperand("http://example.com/leftOperand2"),
-                    operator = OdrlOperator("http://www.w3.org/ns/odrl/2/eq"),
-                    rightOperand = listOf(PrimitiveString("exampleRightOperand2")),
-                )
-            )
+    private val constraints =
+        listOf(
+            OdrlLogicalConstraint(
+                uid = URI.create("http://example.com/logicalConstraint"),
+                or =
+                    listOf(
+                        OdrlConstraint(
+                            leftOperand = OdrlLeftOperand("http://example.com/leftOperand1"),
+                            operator = OdrlOperator("http://www.w3.org/ns/odrl/2/eq"),
+                            rightOperand = listOf(PrimitiveString("exampleRightOperand1")),
+                        ),
+                        OdrlConstraint(
+                            leftOperand = OdrlLeftOperand("http://example.com/leftOperand2"),
+                            operator = OdrlOperator("http://www.w3.org/ns/odrl/2/eq"),
+                            rightOperand = listOf(PrimitiveString("exampleRightOperand2")),
+                        ),
+                    ),
+            ),
+            OdrlLogicalConstraint(
+                uid = URI.create("http://example.com/logicalConstraint"),
+                xone =
+                    listOf(
+                        OdrlConstraint(
+                            leftOperand = OdrlLeftOperand("http://example.com/leftOperand1"),
+                            operator = OdrlOperator("http://www.w3.org/ns/odrl/2/eq"),
+                            rightOperand = listOf(PrimitiveString("exampleRightOperand1")),
+                        ),
+                        OdrlConstraint(
+                            leftOperand = OdrlLeftOperand("http://example.com/leftOperand2"),
+                            operator = OdrlOperator("http://www.w3.org/ns/odrl/2/eq"),
+                            rightOperand = listOf(PrimitiveString("exampleRightOperand2")),
+                        ),
+                    ),
+            ),
+            OdrlLogicalConstraint(
+                uid = URI.create("http://example.com/logicalConstraint"),
+                and =
+                    listOf(
+                        OdrlConstraint(
+                            leftOperand = OdrlLeftOperand("http://example.com/leftOperand1"),
+                            operator = OdrlOperator("http://www.w3.org/ns/odrl/2/eq"),
+                            rightOperand = listOf(PrimitiveString("exampleRightOperand1")),
+                        ),
+                        OdrlConstraint(
+                            leftOperand = OdrlLeftOperand("http://example.com/leftOperand2"),
+                            operator = OdrlOperator("http://www.w3.org/ns/odrl/2/eq"),
+                            rightOperand = listOf(PrimitiveString("exampleRightOperand2")),
+                        ),
+                    ),
+            ),
+            OdrlLogicalConstraint(
+                uid = URI.create("http://example.com/logicalConstraint"),
+                andSequence =
+                    listOf(
+                        OdrlConstraint(
+                            leftOperand = OdrlLeftOperand("http://example.com/leftOperand1"),
+                            operator = OdrlOperator("http://www.w3.org/ns/odrl/2/eq"),
+                            rightOperand = listOf(PrimitiveString("exampleRightOperand1")),
+                        ),
+                        OdrlConstraint(
+                            leftOperand = OdrlLeftOperand("http://example.com/leftOperand2"),
+                            operator = OdrlOperator("http://www.w3.org/ns/odrl/2/eq"),
+                            rightOperand = listOf(PrimitiveString("exampleRightOperand2")),
+                        ),
+                    ),
+            ),
         )
-    )
 
     @Test
     fun testLogicalConstraintDeserialization() {
         constraints.forEachIndexed { i, c ->
-            val constraint = mapper.readValue(
-                loadFileOrDie("/logical-constraint-example-${i + 1}.json"),
-                OdrlLogicalConstraint::class.java
-            )
+            val constraint =
+                mapper.readValue(
+                    loadFileOrDie("/logical-constraint-example-${i + 1}.json"),
+                    OdrlLogicalConstraint::class.java,
+                )
             assertEquals(c, constraint)
         }
     }
@@ -97,10 +118,11 @@ class OdrlLogicalConstraintTest {
         assertThrows<InvalidFormatException> {
             mapper.readValue(
                 "{\n" +
-                        "  \"@context\": \"http://www.w3.org/ns/odrl.jsonld\",\n" +
-                        "  \"@type\": \"LogicalConstraint\",\n" +
-                        "  \"@id\": \":::invalid-uri:::\"\n" +
-                        "}", OdrlLogicalConstraint::class.java
+                    "  \"@context\": \"http://www.w3.org/ns/odrl.jsonld\",\n" +
+                    "  \"@type\": \"LogicalConstraint\",\n" +
+                    "  \"@id\": \":::invalid-uri:::\"\n" +
+                    "}",
+                OdrlLogicalConstraint::class.java,
             )
         }
     }

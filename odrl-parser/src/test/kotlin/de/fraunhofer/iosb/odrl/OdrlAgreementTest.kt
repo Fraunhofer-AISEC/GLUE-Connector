@@ -1,3 +1,18 @@
+/*
+ * Copyright 2025 Fraunhofer AISEC and Fraunhofer IOSB
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package de.fraunhofer.iosb.odrl
 
 import com.fasterxml.jackson.databind.JsonMappingException
@@ -12,26 +27,29 @@ import kotlin.test.assertEquals
 
 class OdrlAgreementTest {
     private val parser = Commons.parserInstance
-    private val agreement1 = OdrlAgreement(
-        uid = URI.create("http://example.com/agreement"),
-        profile = listOf(OdrlIri(URI.create("http://example.com/profile"))),
-        permission = listOf(
-            OdrlPermission(
-                uid = URI.create("http://example.com/permission"),
-                target = OdrlAsset("http://example.com/target"),
-                assigner = OdrlParty("http://example.com/assigner"),
-                assignee = OdrlParty("http://example.com/assignee"),
-                action = OdrlAction("http://www.w3.org/ns/odrl/2/play"),
-                constraint = listOf(
-                    OdrlConstraint(
-                        leftOperand = OdrlLeftOperand("http://www.w3.org/ns/odrl/2/dateTime"),
-                        operator = OdrlOperator("http://www.w3.org/ns/odrl/2/lteq"),
-                        rightOperand = listOf(XmlDate(LocalDate.of(2045, 12, 31)))
-                    )
-                )
-            )
+    private val agreement1 =
+        OdrlAgreement(
+            uid = URI.create("http://example.com/agreement"),
+            profile = listOf(OdrlIri(URI.create("http://example.com/profile"))),
+            permission =
+                listOf(
+                    OdrlPermission(
+                        uid = URI.create("http://example.com/permission"),
+                        target = OdrlAsset("http://example.com/target"),
+                        assigner = OdrlParty("http://example.com/assigner"),
+                        assignee = OdrlParty("http://example.com/assignee"),
+                        action = OdrlAction("http://www.w3.org/ns/odrl/2/play"),
+                        constraint =
+                            listOf(
+                                OdrlConstraint(
+                                    leftOperand = OdrlLeftOperand("http://www.w3.org/ns/odrl/2/dateTime"),
+                                    operator = OdrlOperator("http://www.w3.org/ns/odrl/2/lteq"),
+                                    rightOperand = listOf(XmlDate(LocalDate.of(2045, 12, 31))),
+                                ),
+                            ),
+                    ),
+                ),
         )
-    )
 
     @Test
     fun testAgreementDeserialization() {
@@ -52,11 +70,11 @@ class OdrlAgreementTest {
             parser.readOdrlPolicy(
                 StringReader(
                     "{\n" +
-                            "  \"@context\": \"http://www.w3.org/ns/odrl.jsonld\",\n" +
-                            "  \"@type\": \"Agreement\",\n" +
-                            "  \"@id\": \":::invalid-uri:::\"\n" +
-                            "}"
-                )
+                        "  \"@context\": \"http://www.w3.org/ns/odrl.jsonld\",\n" +
+                        "  \"@type\": \"Agreement\",\n" +
+                        "  \"@id\": \":::invalid-uri:::\"\n" +
+                        "}",
+                ),
             )
         }
     }
@@ -67,15 +85,15 @@ class OdrlAgreementTest {
             parser.readOdrlPolicy(
                 StringReader(
                     "{\n" +
-                            "  \"@context\": \"http://www.w3.org/ns/odrl.jsonld\",\n" +
-                            "  \"@type\": \"Agreement\",\n" +
-                            "  \"permission\": {\n" +
-                            "    \"target\": \"http://example.com/target\",\n" +
-                            "    \"action\": \"play\",\n" +
-                            "    \"assignee\": \"http://example.com/assignee\"\n" +
-                            "  }\n" +
-                            "}"
-                )
+                        "  \"@context\": \"http://www.w3.org/ns/odrl.jsonld\",\n" +
+                        "  \"@type\": \"Agreement\",\n" +
+                        "  \"permission\": {\n" +
+                        "    \"target\": \"http://example.com/target\",\n" +
+                        "    \"action\": \"play\",\n" +
+                        "    \"assignee\": \"http://example.com/assignee\"\n" +
+                        "  }\n" +
+                        "}",
+                ),
             )
         }
     }
@@ -86,72 +104,78 @@ class OdrlAgreementTest {
             parser.readOdrlPolicy(
                 StringReader(
                     "{\n" +
-                            "  \"@context\": \"http://www.w3.org/ns/odrl.jsonld\",\n" +
-                            "  \"@type\": \"Agreement\",\n" +
-                            "  \"prohibition\": {\n" +
-                            "    \"target\": \"http://example.com/target\",\n" +
-                            "    \"action\": \"play\",\n" +
-                            "    \"assigner\": \"http://example.com/assigner\"\n" +
-                            "  }\n" +
-                            "}"
-                )
+                        "  \"@context\": \"http://www.w3.org/ns/odrl.jsonld\",\n" +
+                        "  \"@type\": \"Agreement\",\n" +
+                        "  \"prohibition\": {\n" +
+                        "    \"target\": \"http://example.com/target\",\n" +
+                        "    \"action\": \"play\",\n" +
+                        "    \"assigner\": \"http://example.com/assigner\"\n" +
+                        "  }\n" +
+                        "}",
+                ),
             )
         }
     }
 
     @Test
     fun testAgreementConversionToSet() {
-        val expectedSet = OdrlSet(
-            uid = URI.create("http://example.com/set"),
-            profile = listOf(OdrlIri(URI.create("http://example.com/profile"))),
-            permission = listOf(
-                OdrlPermission(
-                    uid = URI.create("http://example.com/permission"),
-                    target = OdrlAsset("http://example.com/target"),
-                    assigner = OdrlParty("http://example.com/assigner"),
-                    assignee = OdrlParty("http://example.com/assignee"),
-                    action = OdrlAction("http://www.w3.org/ns/odrl/2/play"),
-                    constraint = listOf(
-                        OdrlConstraint(
-                            leftOperand = OdrlLeftOperand("http://www.w3.org/ns/odrl/2/dateTime"),
-                            operator = OdrlOperator("http://www.w3.org/ns/odrl/2/lteq"),
-                            rightOperand = listOf(XmlDate(LocalDate.of(2045, 12, 31)))
-                        )
-                    )
-                )
+        val expectedSet =
+            OdrlSet(
+                uid = URI.create("http://example.com/set"),
+                profile = listOf(OdrlIri(URI.create("http://example.com/profile"))),
+                permission =
+                    listOf(
+                        OdrlPermission(
+                            uid = URI.create("http://example.com/permission"),
+                            target = OdrlAsset("http://example.com/target"),
+                            assigner = OdrlParty("http://example.com/assigner"),
+                            assignee = OdrlParty("http://example.com/assignee"),
+                            action = OdrlAction("http://www.w3.org/ns/odrl/2/play"),
+                            constraint =
+                                listOf(
+                                    OdrlConstraint(
+                                        leftOperand = OdrlLeftOperand("http://www.w3.org/ns/odrl/2/dateTime"),
+                                        operator = OdrlOperator("http://www.w3.org/ns/odrl/2/lteq"),
+                                        rightOperand = listOf(XmlDate(LocalDate.of(2045, 12, 31))),
+                                    ),
+                                ),
+                        ),
+                    ),
             )
-        )
         assertEquals(expectedSet, parser.convertToOdrlSet(agreement1, URI.create("http://example.com/set")))
     }
 
     @Test
     fun testAgreementConversionToOffer() {
-        val expectedOffer = OdrlOffer(
-            uid = URI.create("http://example.com/offer"),
-            profile = listOf(OdrlIri(URI.create("http://example.com/profile"))),
-            permission = listOf(
-                OdrlPermission(
-                    uid = URI.create("http://example.com/permission"),
-                    target = OdrlAsset("http://example.com/target"),
-                    assigner = OdrlParty("http://example.com/freshAssigner"),
-                    action = OdrlAction("http://www.w3.org/ns/odrl/2/play"),
-                    constraint = listOf(
-                        OdrlConstraint(
-                            leftOperand = OdrlLeftOperand("http://www.w3.org/ns/odrl/2/dateTime"),
-                            operator = OdrlOperator("http://www.w3.org/ns/odrl/2/lteq"),
-                            rightOperand = listOf(XmlDate(LocalDate.of(2045, 12, 31)))
-                        )
-                    )
-                )
+        val expectedOffer =
+            OdrlOffer(
+                uid = URI.create("http://example.com/offer"),
+                profile = listOf(OdrlIri(URI.create("http://example.com/profile"))),
+                permission =
+                    listOf(
+                        OdrlPermission(
+                            uid = URI.create("http://example.com/permission"),
+                            target = OdrlAsset("http://example.com/target"),
+                            assigner = OdrlParty("http://example.com/freshAssigner"),
+                            action = OdrlAction("http://www.w3.org/ns/odrl/2/play"),
+                            constraint =
+                                listOf(
+                                    OdrlConstraint(
+                                        leftOperand = OdrlLeftOperand("http://www.w3.org/ns/odrl/2/dateTime"),
+                                        operator = OdrlOperator("http://www.w3.org/ns/odrl/2/lteq"),
+                                        rightOperand = listOf(XmlDate(LocalDate.of(2045, 12, 31))),
+                                    ),
+                                ),
+                        ),
+                    ),
             )
-        )
         assertEquals(
             expectedOffer,
             parser.convertToOdrlOffer(
                 agreement1,
                 OdrlParty("http://example.com/freshAssigner"),
-                URI.create("http://example.com/offer")
-            )
+                URI.create("http://example.com/offer"),
+            ),
         )
     }
 }

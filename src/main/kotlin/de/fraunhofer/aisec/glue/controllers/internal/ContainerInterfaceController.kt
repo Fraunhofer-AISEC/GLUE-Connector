@@ -1,3 +1,18 @@
+/*
+ * Copyright 2025-2026 Fraunhofer AISEC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package de.fraunhofer.aisec.glue.controllers.internal
 
 import com.fasterxml.jackson.databind.JsonNode
@@ -102,7 +117,12 @@ class ContainerInterfaceController(
 
                 // For now, we only allow the last container in the chain to start follow-up negotiations.
                 //  capability
-                if (!callingPipeline.getContainerInfo().last().ipAddresses.contains(callingAddress)) {
+                if (!callingPipeline
+                        .getContainerInfo()
+                        .last()
+                        .ipAddresses
+                        .contains(callingAddress)
+                ) {
                     LOG.atDebug {
                         message = "Rejecting request as the calling container is not last in the pipeline"
                         payload =
@@ -120,11 +140,12 @@ class ContainerInterfaceController(
                 // Now we're done with verifying parameters and we can start with the actual negotiation
 
                 // We default to port 8444 if the caller specifies no port
-                val destinationHost = if (destination.contains(":")) {
-                    destination
-                } else {
-                    "$destination:8444"
-                }
+                val destinationHost =
+                    if (destination.contains(":")) {
+                        destination
+                    } else {
+                        "$destination:8444"
+                    }
 
                 // Check if we already have a follow-up contract that matches this target
                 val contractCandidates =
@@ -154,25 +175,26 @@ class ContainerInterfaceController(
                         }
 
                         val evaluation =
-                            policyEngine.evaluatePolicy(
-                                contract!!,
-                                URI(OdrlIdentifiers.DISTRIBUTE),
-                                URI(callingPipeline.targetId),
-                            ).getOrElse { e ->
-                                LOG.atDebug {
-                                    message = "Policy evaluation for next policy failed"
-                                    cause = e
-                                    payload =
-                                        mapOf(
-                                            "origin" to callingAddress,
-                                            "destination" to destination,
-                                            "startPipeline" to startPipeline,
-                                            "callingPipeline" to callingPipeline.name,
-                                        )
+                            policyEngine
+                                .evaluatePolicy(
+                                    contract!!,
+                                    URI(OdrlIdentifiers.DISTRIBUTE),
+                                    URI(callingPipeline.targetId),
+                                ).getOrElse { e ->
+                                    LOG.atDebug {
+                                        message = "Policy evaluation for next policy failed"
+                                        cause = e
+                                        payload =
+                                            mapOf(
+                                                "origin" to callingAddress,
+                                                "destination" to destination,
+                                                "startPipeline" to startPipeline,
+                                                "callingPipeline" to callingPipeline.name,
+                                            )
+                                    }
+                                    // Let's just blame the caller here ;)
+                                    throw BadRequestException("Policy evaluation failed")
                                 }
-                                // Let's just blame the caller here ;)
-                                throw BadRequestException("Policy evaluation failed")
-                            }
 
                         val nextPolicy =
                             GlueValueProcessor(odrlParser.mapper).resolvePlaceholders(
@@ -184,7 +206,8 @@ class ContainerInterfaceController(
                             }
 
                         val convertedNextPolicy =
-                            odrlParser.convertToOdrlPolicy(nextPolicy.json)
+                            odrlParser
+                                .convertToOdrlPolicy(nextPolicy.json)
                                 .toOffer(odrlParser, OdrlParty(URI("todo:name-this-connector")))
 
                         val negotiation =

@@ -1,3 +1,18 @@
+/*
+ * Copyright 2025 Fraunhofer AISEC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package de.fraunhofer.aisec.glue.config
 
 import io.ktor.server.config.*
@@ -9,7 +24,9 @@ import kotlin.properties.ReadOnlyProperty
  * Note that any validation and conversion is only done when accessing the configuration values, so errors are not
  * detected early.
  */
-abstract class Config(val rawConfig: ApplicationConfig) {
+abstract class Config(
+    val rawConfig: ApplicationConfig,
+) {
     /**
      * Get a string property from the configuration object.
      * The name argument specifies the path relative to the configuration object separated by '.' characters.
@@ -17,11 +34,10 @@ abstract class Config(val rawConfig: ApplicationConfig) {
      * Dereferencing this property throws an [ApplicationConfigurationException] when the property in question is not
      * a string literal.
      */
-    protected fun stringProp(name: String? = null): ReadOnlyProperty<Any, String?> {
-        return ReadOnlyProperty { _, property ->
+    protected fun stringProp(name: String? = null): ReadOnlyProperty<Any, String?> =
+        ReadOnlyProperty { _, property ->
             rawConfig.propertyOrNull(name ?: property.name)?.let(ApplicationConfigValue::getString)
         }
-    }
 
     /**
      * Get a (string) list property from the configuration object.
@@ -30,11 +46,10 @@ abstract class Config(val rawConfig: ApplicationConfig) {
      * Dereferencing this property throws an [ApplicationConfigurationException] when the property in question is not
      * a list of strings.
      */
-    protected fun listProp(name: String? = null): ReadOnlyProperty<Any, List<String>?> {
-        return ReadOnlyProperty { _, property ->
+    protected fun listProp(name: String? = null): ReadOnlyProperty<Any, List<String>?> =
+        ReadOnlyProperty { _, property ->
             rawConfig.propertyOrNull(name ?: property.name)?.let(ApplicationConfigValue::getList)
         }
-    }
 
     /**
      * Convert the type of a given property using [converter].
@@ -43,9 +58,7 @@ abstract class Config(val rawConfig: ApplicationConfig) {
     protected fun <T, R> convert(
         from: ReadOnlyProperty<Any, T?>,
         converter: (T) -> R,
-    ): ReadOnlyProperty<Any, R?> {
-        return ReadOnlyProperty { thisRef, property -> from.getValue(thisRef, property)?.let(converter) }
-    }
+    ): ReadOnlyProperty<Any, R?> = ReadOnlyProperty { thisRef, property -> from.getValue(thisRef, property)?.let(converter) }
 
     /**
      * Supply a default value for a given property.
@@ -55,9 +68,7 @@ abstract class Config(val rawConfig: ApplicationConfig) {
     protected fun <T> withDefault(
         from: ReadOnlyProperty<Any, T?>,
         default: T,
-    ): ReadOnlyProperty<Any, T> {
-        return ReadOnlyProperty { thisRef, property -> from.getValue(thisRef, property) ?: default }
-    }
+    ): ReadOnlyProperty<Any, T> = ReadOnlyProperty { thisRef, property -> from.getValue(thisRef, property) ?: default }
 
     /**
      * Require a property to not be null.
@@ -67,16 +78,15 @@ abstract class Config(val rawConfig: ApplicationConfig) {
     protected fun <T> required(
         from: ReadOnlyProperty<Any, T?>,
         message: String? = null,
-    ): ReadOnlyProperty<Any, T> {
-        return ReadOnlyProperty {
-                thisRef,
-                property,
+    ): ReadOnlyProperty<Any, T> =
+        ReadOnlyProperty {
+            thisRef,
+            property,
             ->
             from.getValue(thisRef, property) ?: throw NullPointerException(
                 message ?: "Property is required but not set",
             )
         }
-    }
 
     /**
      * Cache the result of a configuration property.

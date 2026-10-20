@@ -1,3 +1,18 @@
+/*
+ * Copyright 2025 Fraunhofer AISEC and Fraunhofer IOSB
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package de.fraunhofer.iosb.odrl
 
 import com.fasterxml.jackson.databind.exc.InvalidFormatException
@@ -10,33 +25,36 @@ import kotlin.test.assertEquals
 
 class OdrlPermissionTest {
     private val mapper = Commons.parserInstance.mapper
-    private val permission1 = OdrlPermission(
-        uid = URI.create("http://example.com/permission"),
-        action = OdrlAction("http://www.w3.org/ns/odrl/2/play"),
-        target = OdrlAsset("http://example.com/targetAsset"),
-        output = OdrlAsset("http://example.com/outputAsset"),
-        assignee = OdrlParty("http://example.com/assignee"),
-        assigner = OdrlParty("http://example.com/assigner"),
-        constraint = listOf(
-            OdrlConstraint(
-                leftOperand = OdrlLeftOperand("http://example.com/leftOperand"),
-                operator = OdrlOperator("http://www.w3.org/ns/odrl/2/gteq"),
-                rightOperand = listOf(PrimitiveString("exampleRightOperand"))
-            )
-        ),
-        duty = listOf(
-            OdrlDuty(
-                uid = URI.create("http://example.com/compensationDuty"),
-                action = OdrlAction("http://www.w3.org/ns/odrl/2/compensate"),
-                compensatedParty = OdrlParty("http://example.com/compensatedParty")
-            ),
-            OdrlDuty(
-                uid = URI.create("http://example.com/attributionDuty"),
-                action = OdrlAction("http://www.w3.org/ns/odrl/2/attribute"),
-                attributedParty = OdrlParty("http://example.com/attributedParty")
-            )
+    private val permission1 =
+        OdrlPermission(
+            uid = URI.create("http://example.com/permission"),
+            action = OdrlAction("http://www.w3.org/ns/odrl/2/play"),
+            target = OdrlAsset("http://example.com/targetAsset"),
+            output = OdrlAsset("http://example.com/outputAsset"),
+            assignee = OdrlParty("http://example.com/assignee"),
+            assigner = OdrlParty("http://example.com/assigner"),
+            constraint =
+                listOf(
+                    OdrlConstraint(
+                        leftOperand = OdrlLeftOperand("http://example.com/leftOperand"),
+                        operator = OdrlOperator("http://www.w3.org/ns/odrl/2/gteq"),
+                        rightOperand = listOf(PrimitiveString("exampleRightOperand")),
+                    ),
+                ),
+            duty =
+                listOf(
+                    OdrlDuty(
+                        uid = URI.create("http://example.com/compensationDuty"),
+                        action = OdrlAction("http://www.w3.org/ns/odrl/2/compensate"),
+                        compensatedParty = OdrlParty("http://example.com/compensatedParty"),
+                    ),
+                    OdrlDuty(
+                        uid = URI.create("http://example.com/attributionDuty"),
+                        action = OdrlAction("http://www.w3.org/ns/odrl/2/attribute"),
+                        attributedParty = OdrlParty("http://example.com/attributedParty"),
+                    ),
+                ),
         )
-    )
 
     @Test
     fun testPermissionDeserialization() {
@@ -56,10 +74,11 @@ class OdrlPermissionTest {
         assertThrows<InvalidFormatException> {
             mapper.readValue(
                 "{\n" +
-                        "  \"@context\": \"http://www.w3.org/ns/odrl.jsonld\",\n" +
-                        "  \"@type\": \"Permission\",\n" +
-                        "  \"@id\": \":::invalid-uri:::\"\n" +
-                        "}", OdrlPermission::class.java
+                    "  \"@context\": \"http://www.w3.org/ns/odrl.jsonld\",\n" +
+                    "  \"@type\": \"Permission\",\n" +
+                    "  \"@id\": \":::invalid-uri:::\"\n" +
+                    "}",
+                OdrlPermission::class.java,
             )
         }
     }

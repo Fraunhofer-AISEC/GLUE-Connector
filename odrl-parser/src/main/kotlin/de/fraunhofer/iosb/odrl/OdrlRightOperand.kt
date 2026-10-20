@@ -1,3 +1,18 @@
+/*
+ * Copyright 2024-2025 Fraunhofer AISEC and Fraunhofer IOSB
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package de.fraunhofer.iosb.odrl
 
 import com.fasterxml.jackson.annotation.*
@@ -34,32 +49,36 @@ import de.fraunhofer.iosb.odrl.parser.JsonLd
     Type(GlueContainerPipeline::class),
     Type(GlueValue::class),
 )
-abstract class OdrlRightOperand: Comparable<OdrlRightOperand> {
+abstract class OdrlRightOperand : Comparable<OdrlRightOperand> {
     companion object {
-        @JsonCreator @JvmStatic fun create(value: Boolean): OdrlRightOperand {
-            return PrimitiveBoolean(value)
-        }
-        @JsonCreator @JvmStatic fun create(value: Int): OdrlRightOperand {
-            return PrimitiveInt(value)
-        }
-        @JsonCreator @JvmStatic fun create(value: Double): OdrlRightOperand {
-            return PrimitiveDouble(value)
-        }
-        @JsonCreator @JvmStatic fun create(value: String): OdrlRightOperand {
-            return PrimitiveString(value)
-        }
+        @JsonCreator @JvmStatic
+        fun create(value: Boolean): OdrlRightOperand = PrimitiveBoolean(value)
+
+        @JsonCreator @JvmStatic
+        fun create(value: Int): OdrlRightOperand = PrimitiveInt(value)
+
+        @JsonCreator @JvmStatic
+        fun create(value: Double): OdrlRightOperand = PrimitiveDouble(value)
+
+        @JsonCreator @JvmStatic
+        fun create(value: String): OdrlRightOperand = PrimitiveString(value)
     }
 
-    protected fun compareBoolean(value: Boolean, other: OdrlRightOperand): Int {
-        return when (other) {
+    protected fun compareBoolean(
+        value: Boolean,
+        other: OdrlRightOperand,
+    ): Int =
+        when (other) {
             is PrimitiveBoolean -> value.compareTo(other.value)
             is XmlBoolean -> value.compareTo(other.value)
             else -> throw UnsupportedOperationException("Cannot compare Boolean to ${other.javaClass.simpleName}")
         }
-    }
 
-    protected fun compareInt(value: Int, other: OdrlRightOperand): Int {
-        return when (other) {
+    protected fun compareInt(
+        value: Int,
+        other: OdrlRightOperand,
+    ): Int =
+        when (other) {
             is PrimitiveInt -> value.compareTo(other.value)
             is PrimitiveDouble -> value.toDouble().compareTo(other.value)
             is XmlByte -> value.compareTo(other.value)
@@ -70,10 +89,12 @@ abstract class OdrlRightOperand: Comparable<OdrlRightOperand> {
             is XmlFloat -> value.toDouble().compareTo(other.value)
             else -> throw UnsupportedOperationException("Cannot compare Int to ${other.javaClass.simpleName}")
         }
-    }
 
-    protected fun compareDouble(value: Double, other: OdrlRightOperand): Int {
-        return when (other) {
+    protected fun compareDouble(
+        value: Double,
+        other: OdrlRightOperand,
+    ): Int =
+        when (other) {
             is PrimitiveInt -> value.compareTo(other.value.toDouble())
             is PrimitiveDouble -> value.compareTo(other.value)
             is XmlByte -> value.compareTo(other.value.toDouble())
@@ -84,61 +105,76 @@ abstract class OdrlRightOperand: Comparable<OdrlRightOperand> {
             is XmlFloat -> value.compareTo(other.value)
             else -> throw UnsupportedOperationException("Cannot compare Double to ${other.javaClass.simpleName}")
         }
-    }
 
-    protected fun compareString(value: String, other: OdrlRightOperand): Int {
-        return when (other) {
+    protected fun compareString(
+        value: String,
+        other: OdrlRightOperand,
+    ): Int =
+        when (other) {
             is PrimitiveString -> value.compareTo(other.value)
             is XmlString -> value.compareTo(other.value)
             is XmlAnyUri -> value.compareTo(other.value.toString())
             is XmlAnyType -> value.compareTo(other.value.toString())
             else -> throw UnsupportedOperationException("Cannot compare String to ${other.javaClass.simpleName}")
         }
-    }
 
     override fun equals(other: Any?): Boolean {
         if (other == null || other !is OdrlRightOperand) return false
         return compareTo(other) == 0
     }
 
-    override fun hashCode(): Int {
-        return javaClass.hashCode()
-    }
+    override fun hashCode(): Int = javaClass.hashCode()
 }
 
 @JsonSerialize(using = PrimitiveSerializer::class)
-data class PrimitiveBoolean(val value: Boolean): OdrlRightOperand() {
+data class PrimitiveBoolean(
+    val value: Boolean,
+) : OdrlRightOperand() {
     override fun compareTo(other: OdrlRightOperand) = compareBoolean(value, other)
+
     override fun equals(other: Any?) = super.equals(other)
+
     override fun hashCode() = value.hashCode()
 }
 
 @JsonSerialize(using = PrimitiveSerializer::class)
-data class PrimitiveInt(val value: Int): OdrlRightOperand() {
+data class PrimitiveInt(
+    val value: Int,
+) : OdrlRightOperand() {
     override fun compareTo(other: OdrlRightOperand) = compareInt(value, other)
+
     override fun equals(other: Any?) = super.equals(other)
+
     override fun hashCode() = value.hashCode()
 }
 
 @JsonSerialize(using = PrimitiveSerializer::class)
-data class PrimitiveDouble(val value: Double): OdrlRightOperand() {
+data class PrimitiveDouble(
+    val value: Double,
+) : OdrlRightOperand() {
     override fun compareTo(other: OdrlRightOperand) = compareDouble(value, other)
+
     override fun equals(other: Any?) = super.equals(other)
+
     override fun hashCode() = value.hashCode()
 }
 
 @JsonSerialize(using = PrimitiveSerializer::class)
-data class PrimitiveString(val value: String): OdrlRightOperand() {
+data class PrimitiveString(
+    val value: String,
+) : OdrlRightOperand() {
     override fun compareTo(other: OdrlRightOperand) = compareString(value, other)
+
     override fun equals(other: Any?) = super.equals(other)
+
     override fun hashCode() = value.hashCode()
 }
 
-class PrimitiveSerializer: StdSerializer<Any>(Any::class.java) {
+class PrimitiveSerializer : StdSerializer<Any>(Any::class.java) {
     override fun serialize(
         value: Any,
         gen: JsonGenerator,
-        serializers: SerializerProvider
+        serializers: SerializerProvider,
     ) {
         when (value) {
             is PrimitiveBoolean -> gen.writeBoolean(value.value)
@@ -152,7 +188,7 @@ class PrimitiveSerializer: StdSerializer<Any>(Any::class.java) {
         value: Any,
         gen: JsonGenerator,
         serializers: SerializerProvider,
-        typeSer: TypeSerializer
+        typeSer: TypeSerializer,
     ) {
         serialize(value, gen, serializers)
     }

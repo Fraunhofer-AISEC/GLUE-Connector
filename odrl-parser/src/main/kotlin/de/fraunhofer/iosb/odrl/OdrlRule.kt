@@ -1,3 +1,18 @@
+/*
+ * Copyright 2024-2025 Fraunhofer AISEC and Fraunhofer IOSB
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package de.fraunhofer.iosb.odrl
 
 import com.fasterxml.jackson.annotation.*
@@ -21,66 +36,45 @@ abstract class OdrlRule(
     // Using the @field: annotation target allows Jackson to see these properties also in subclasses
     @field:JsonProperty("@id")
     val uid: URI? = null,
-
     @field:JsonProperty(OdrlIdentifiers.HAS_ACTION)
     val action: OdrlAction,
-
     @field:JsonProperty(OdrlIdentifiers.TARGET)
     val target: OdrlAsset? = null,
-
     @field:JsonProperty(OdrlIdentifiers.OUTPUT)
     val output: OdrlAsset? = null,
-
     @field:JsonProperty(OdrlIdentifiers.ASSIGNEE)
     val assignee: OdrlParty? = null,
-
     @field:JsonProperty(OdrlIdentifiers.ASSIGNER)
     val assigner: OdrlParty? = null,
-
     @field:JsonProperty(OdrlIdentifiers.ATTRIBUTED_PARTY)
     val attributedParty: OdrlParty? = null,
-
     @field:JsonProperty(OdrlIdentifiers.ATTRIBUTING_PARTY)
     val attributingParty: OdrlParty? = null,
-
     @field:JsonProperty(OdrlIdentifiers.COMPENSATED_PARTY)
     val compensatedParty: OdrlParty? = null,
-
     @field:JsonProperty(OdrlIdentifiers.COMPENSATING_PARTY)
     val compensatingParty: OdrlParty? = null,
-
     @field:JsonProperty(OdrlIdentifiers.CONSENTED_PARTY)
     val consentedParty: OdrlParty? = null,
-
     @field:JsonProperty(OdrlIdentifiers.CONSENTING_PARTY)
     val consentingParty: OdrlParty? = null,
-
     @field:JsonProperty(OdrlIdentifiers.CONTRACTED_PARTY)
     val contractedParty: OdrlParty? = null,
-
     @field:JsonProperty(OdrlIdentifiers.CONTRACTING_PARTY)
     val contractingParty: OdrlParty? = null,
-
     @field:JsonProperty(OdrlIdentifiers.INFORMED_PARTY)
     val informedParty: OdrlParty? = null,
-
     @field:JsonProperty(OdrlIdentifiers.INFORMING_PARTY)
     val informingParty: OdrlParty? = null,
-
     @field:JsonProperty(OdrlIdentifiers.TRACKED_PARTY)
     val trackedParty: OdrlParty? = null,
-
     @field:JsonProperty(OdrlIdentifiers.TRACKING_PARTY)
     val trackingParty: OdrlParty? = null,
-
     @field:JsonProperty(OdrlIdentifiers.HAS_CONSTRAINT)
     @field:JsonSetter(nulls = Nulls.AS_EMPTY)
     val constraint: List<OdrlConstraintRepresentation> = listOf(),
-): JsonLdBeanValidator {
-
-    override fun validate(): List<ValidationError> {
-        return validateOdrlRule.validate(this).errors
-    }
+) : JsonLdBeanValidator {
+    override fun validate(): List<ValidationError> = validateOdrlRule.validate(this).errors
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -158,89 +152,88 @@ abstract class OdrlRule(
         return map
     }
 
-    override fun toString(): String {
-        return "OdrlRule(${getPropertyMap().entries.joinToString(", ")})"
-    }
+    override fun toString(): String = "OdrlRule(${getPropertyMap().entries.joinToString(", ")})"
 }
 
-val validateOdrlRule = Validation {
-    // A Rule MAY have none or one uid property values of type IRI
-    OdrlRule::uid ifPresent {
-        addConstraint("OdrlRule: {value} is not a valid IRI") { isIri(it) }
-    }
+val validateOdrlRule =
+    Validation {
+        // A Rule MAY have none or one uid property values of type IRI
+        OdrlRule::uid ifPresent {
+            addConstraint("OdrlRule: {value} is not a valid IRI") { isIri(it) }
+        }
 
-    // A Rule MUST have one action property value of type Action
-    OdrlRule::action {
-        run(validateOdrlAction)
-    }
+        // A Rule MUST have one action property value of type Action
+        OdrlRule::action {
+            run(validateOdrlAction)
+        }
 
-    // A Rule MAY have none or one relation sub-property values of type Asset
-    OdrlRule::output ifPresent {
-        run(validateOdrlAsset)
-    }
-    OdrlRule::target ifPresent {
-        run(validateOdrlAsset)
-    }
+        // A Rule MAY have none or one relation sub-property values of type Asset
+        OdrlRule::output ifPresent {
+            run(validateOdrlAsset)
+        }
+        OdrlRule::target ifPresent {
+            run(validateOdrlAsset)
+        }
 
-    // A Rule MAY have none, one or many function sub-property values of type Party
-    OdrlRule::assignee ifPresent {
-        run(validateOdrlParty)
-    }
-    OdrlRule::assigner ifPresent {
-        run(validateOdrlParty)
-    }
-    OdrlRule::attributedParty ifPresent {
-        run(validateOdrlParty)
-    }
-    OdrlRule::attributingParty ifPresent {
-        run(validateOdrlParty)
-    }
-    OdrlRule::compensatedParty ifPresent {
-        run(validateOdrlParty)
-    }
-    OdrlRule::compensatingParty ifPresent {
-        run(validateOdrlParty)
-    }
-    OdrlRule::consentedParty ifPresent {
-        run(validateOdrlParty)
-    }
-    OdrlRule::consentingParty ifPresent {
-        run(validateOdrlParty)
-    }
-    OdrlRule::contractedParty ifPresent {
-        run(validateOdrlParty)
-    }
-    OdrlRule::contractingParty ifPresent {
-        run(validateOdrlParty)
-    }
-    OdrlRule::informedParty ifPresent {
-        run(validateOdrlParty)
-    }
-    OdrlRule::informingParty ifPresent {
-        run(validateOdrlParty)
-    }
-    OdrlRule::trackedParty ifPresent {
-        run(validateOdrlParty)
-    }
-    OdrlRule::trackingParty ifPresent {
-        run(validateOdrlParty)
-    }
+        // A Rule MAY have none, one or many function sub-property values of type Party
+        OdrlRule::assignee ifPresent {
+            run(validateOdrlParty)
+        }
+        OdrlRule::assigner ifPresent {
+            run(validateOdrlParty)
+        }
+        OdrlRule::attributedParty ifPresent {
+            run(validateOdrlParty)
+        }
+        OdrlRule::attributingParty ifPresent {
+            run(validateOdrlParty)
+        }
+        OdrlRule::compensatedParty ifPresent {
+            run(validateOdrlParty)
+        }
+        OdrlRule::compensatingParty ifPresent {
+            run(validateOdrlParty)
+        }
+        OdrlRule::consentedParty ifPresent {
+            run(validateOdrlParty)
+        }
+        OdrlRule::consentingParty ifPresent {
+            run(validateOdrlParty)
+        }
+        OdrlRule::contractedParty ifPresent {
+            run(validateOdrlParty)
+        }
+        OdrlRule::contractingParty ifPresent {
+            run(validateOdrlParty)
+        }
+        OdrlRule::informedParty ifPresent {
+            run(validateOdrlParty)
+        }
+        OdrlRule::informingParty ifPresent {
+            run(validateOdrlParty)
+        }
+        OdrlRule::trackedParty ifPresent {
+            run(validateOdrlParty)
+        }
+        OdrlRule::trackingParty ifPresent {
+            run(validateOdrlParty)
+        }
 
-    // A Rule MAY have none, one or many failure sub-property values of type Rule
-    // Note: Failure sub-properties (consequence, remedy) are handled by subclasses (Duty, Prohibition)
+        // A Rule MAY have none, one or many failure sub-property values of type Rule
+        // Note: Failure sub-properties (consequence, remedy) are handled by subclasses (Duty, Prohibition)
 
-    // A Rule MAY have none, one or many constraint property values of type Constraint/LogicalConstraint
-    OdrlRule::constraint {
-        addConstraint("OdrlRule: Constraint list must be of homogeneous types Constraint/LogicalConstraint") { list ->
-            list.all { it is OdrlConstraint } || list.all { it is OdrlLogicalConstraint }
+        // A Rule MAY have none, one or many constraint property values of type Constraint/LogicalConstraint
+        OdrlRule::constraint {
+            addConstraint("OdrlRule: Constraint list must be of homogeneous types Constraint/LogicalConstraint") { list ->
+                list.all { it is OdrlConstraint } || list.all { it is OdrlLogicalConstraint }
+            }
+        }
+        OdrlRule::constraint onEach {
+            ifInstanceOf<OdrlConstraint> {
+                run(validateOdrlConstraint)
+            }
+            ifInstanceOf<OdrlLogicalConstraint> {
+                run(validateOdrlLogicalConstraint)
+            }
         }
     }
-    OdrlRule::constraint onEach {
-        ifInstanceOf<OdrlConstraint> {
-            run(validateOdrlConstraint)
-        }
-        ifInstanceOf<OdrlLogicalConstraint> {
-            run(validateOdrlLogicalConstraint)
-        }
-    }
-}

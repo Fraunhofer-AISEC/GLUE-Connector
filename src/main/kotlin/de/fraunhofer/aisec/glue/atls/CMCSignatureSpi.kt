@@ -1,3 +1,18 @@
+/*
+ * Copyright 2025-2026 Fraunhofer AISEC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package de.fraunhofer.aisec.glue.atls
 
 import kotlinx.coroutines.runBlocking
@@ -32,9 +47,8 @@ class CMCSignatureSpi(
      * Initialize this signature object for verification with the given public key.
      * This is not supported as CMC only handles signing, not verification.
      */
-    override fun engineInitVerify(publicKey: PublicKey) {
+    override fun engineInitVerify(publicKey: PublicKey): Unit =
         throw UnsupportedOperationException("CMC signature verification is not supported. Use standard Java crypto for verification.")
-    }
 
     /**
      * Update the data to be signed with a single byte.
@@ -75,9 +89,8 @@ class CMCSignatureSpi(
     /**
      * Verify a signature. Not supported as CMC only handles signing.
      */
-    override fun engineVerify(sigBytes: ByteArray): Boolean {
+    override fun engineVerify(sigBytes: ByteArray): Boolean =
         throw UnsupportedOperationException("CMC signature verification is not supported. Use standard Java crypto for verification.")
-    }
 
     /**
      * Set the signature algorithm parameter. Not used for CMC signatures.
@@ -86,24 +99,20 @@ class CMCSignatureSpi(
     override fun engineSetParameter(
         param: String?,
         value: Any?,
-    ) {
-        throw UnsupportedOperationException("Signature parameters are not supported")
-    }
+    ): Unit = throw UnsupportedOperationException("Signature parameters are not supported")
 
     /**
      * Get the signature algorithm parameter. Not used for CMC signatures.
      */
     @Deprecated("Use getParameter")
-    override fun engineGetParameter(param: String?): Any {
-        throw UnsupportedOperationException("Signature parameters are not supported")
-    }
+    override fun engineGetParameter(param: String?): Any = throw UnsupportedOperationException("Signature parameters are not supported")
 
     companion object {
         /**
          * Map JCA hash algorithm names to the hash type values expected by the CMC.
          */
-        private fun mapJcaHashToCmcHashType(jcaHash: String): CMCClient.HashType {
-            return when (jcaHash.uppercase().replace("-", "")) {
+        private fun mapJcaHashToCmcHashType(jcaHash: String): CMCClient.HashType =
+            when (jcaHash.uppercase().replace("-", "")) {
                 "SHA1" -> CMCClient.HashType.SHA1
                 "SHA224" -> CMCClient.HashType.SHA224
                 "SHA256" -> CMCClient.HashType.SHA256
@@ -119,6 +128,5 @@ class CMCSignatureSpi(
                 "SHA512/256", "SHA512256" -> CMCClient.HashType.SHA512_256
                 else -> throw IllegalArgumentException("Unsupported hash algorithm: $jcaHash")
             }
-        }
     }
 }

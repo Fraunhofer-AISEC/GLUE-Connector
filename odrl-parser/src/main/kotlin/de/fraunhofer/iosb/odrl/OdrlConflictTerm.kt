@@ -1,3 +1,18 @@
+/*
+ * Copyright 2024-2025 Fraunhofer AISEC and Fraunhofer IOSB
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package de.fraunhofer.iosb.odrl
 
 import com.fasterxml.jackson.annotation.*
@@ -14,30 +29,23 @@ import java.net.URI
 data class OdrlConflictTerm(
     @param:JsonProperty("@id")
     val uid: URI,
-): JsonLdBeanValidator {
+) : JsonLdBeanValidator {
     // Constructor necessary for Jackson to deserialize primitive type
     @Suppress("unused")
     constructor(primitiveValue: String) : this(URI.create(primitiveValue))
 
-    override fun validate(): List<ValidationError> {
-        return validateOdrlConflictTerm.validate(this).errors
-    }
+    override fun validate(): List<ValidationError> = validateOdrlConflictTerm.validate(this).errors
 
-    fun isInvalid(): Boolean {
-        return uid.toString() == OdrlIdentifiers.INVALID
-    }
+    fun isInvalid(): Boolean = uid.toString() == OdrlIdentifiers.INVALID
 
-    fun isProhibit(): Boolean {
-        return uid.toString() == OdrlIdentifiers.PROHIBIT
-    }
+    fun isProhibit(): Boolean = uid.toString() == OdrlIdentifiers.PROHIBIT
 
-    fun isPerm(): Boolean {
-        return uid.toString() == OdrlIdentifiers.PERM
-    }
+    fun isPerm(): Boolean = uid.toString() == OdrlIdentifiers.PERM
 }
 
-val validateOdrlConflictTerm = Validation<OdrlConflictTerm> {
-    addConstraint("OdrlConflictTerm: {value} must be one of 'invalid', 'prohibit', or 'perm'") {
-        it.isInvalid() || it.isProhibit() || it.isPerm()
+val validateOdrlConflictTerm =
+    Validation<OdrlConflictTerm> {
+        addConstraint("OdrlConflictTerm: {value} must be one of 'invalid', 'prohibit', or 'perm'") {
+            it.isInvalid() || it.isProhibit() || it.isPerm()
+        }
     }
-}

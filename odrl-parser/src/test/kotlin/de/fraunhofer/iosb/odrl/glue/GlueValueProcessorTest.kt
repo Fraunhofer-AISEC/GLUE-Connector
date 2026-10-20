@@ -1,3 +1,18 @@
+/*
+ * Copyright 2024-2025 Fraunhofer AISEC and Fraunhofer IOSB
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package de.fraunhofer.iosb.odrl.glue
 
 import com.fasterxml.jackson.databind.JsonNode
@@ -15,31 +30,29 @@ import kotlin.test.assertEquals
 class GlueValueProcessorTest {
     private val mapper = OdrlParser().mapper
     private val processor = GlueValueProcessor()
-    private val callback = GlueParameterPlaceholderCallback {
-        when (it) {
-            "testKeyString" -> TextNode.valueOf("testValue")
-            "testKeyBool" -> BooleanNode.valueOf(true)
-            "nextDataReceiverUid" -> getTestNextDataReceiverUid()
-            "nextDataReceiverConstraint" -> getTestNextDataReceiverConstraint()
-            else -> NullNode.getInstance()
+    private val callback =
+        GlueParameterPlaceholderCallback {
+            when (it) {
+                "testKeyString" -> TextNode.valueOf("testValue")
+                "testKeyBool" -> BooleanNode.valueOf(true)
+                "nextDataReceiverUid" -> getTestNextDataReceiverUid()
+                "nextDataReceiverConstraint" -> getTestNextDataReceiverConstraint()
+                else -> NullNode.getInstance()
+            }
         }
-    }
 
-    private fun getTestNextDataReceiverUid(): TextNode {
-        return TextNode.valueOf("http://nextdataowner.com/")
-    }
+    private fun getTestNextDataReceiverUid(): TextNode = TextNode.valueOf("http://nextdataowner.com/")
 
-    private fun getTestNextDataReceiverConstraint(): JsonNode {
-        return mapper.convertValue(
+    private fun getTestNextDataReceiverConstraint(): JsonNode =
+        mapper.convertValue(
             OdrlConstraint(
                 null,
                 OdrlLeftOperand("dateTime"),
                 OdrlOperator("lt"),
-                listOf(XmlDate(LocalDate.of(2035, 12, 31)))
+                listOf(XmlDate(LocalDate.of(2035, 12, 31))),
             ),
-            JsonNode::class.java
+            JsonNode::class.java,
         )
-    }
 
     @Test
     fun testPrimitiveParameterReplacement() {
@@ -59,7 +72,8 @@ class GlueValueProcessorTest {
 
     @Test
     fun testGlueRestParameterReplacement() {
-        val s = "{\n" +
+        val s =
+            "{\n" +
                 "  \"@type\": \"http://fhg.de/glue/RestParameter\",\n" +
                 "  \"http://fhg.de/glue/httpUrl\": \"http://0.0.0.0:1234/dockerEndpoint\",\n" +
                 "  \"http://fhg.de/glue/httpType\": \"POST\",\n" +

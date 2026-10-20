@@ -1,3 +1,18 @@
+/*
+ * Copyright 2024-2025 Fraunhofer AISEC and Fraunhofer IOSB
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package de.fraunhofer.iosb.odrl
 
 import com.fasterxml.jackson.annotation.JsonProperty
@@ -13,10 +28,12 @@ import java.time.LocalTime
 data class XmlBoolean(
     @param:JsonProperty("@value")
     val value: Boolean,
-): OdrlRightOperand() {
+) : OdrlRightOperand() {
     override fun compareTo(other: OdrlRightOperand) = compareBoolean(value, other)
+
     override fun equals(other: Any?) = super.equals(other)
-    override fun hashCode(): Int { return value.hashCode() }
+
+    override fun hashCode(): Int = value.hashCode()
 }
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type", defaultImpl = XmlByte::class)
@@ -24,9 +41,11 @@ data class XmlBoolean(
 data class XmlByte(
     @param:JsonProperty("@value")
     val value: Int,
-): OdrlRightOperand() {
+) : OdrlRightOperand() {
     override fun compareTo(other: OdrlRightOperand) = compareInt(value, other)
+
     override fun equals(other: Any?) = super.equals(other)
+
     override fun hashCode() = value.hashCode()
 }
 
@@ -35,9 +54,11 @@ data class XmlByte(
 data class XmlInt(
     @param:JsonProperty("@value")
     val value: Int,
-): OdrlRightOperand() {
+) : OdrlRightOperand() {
     override fun compareTo(other: OdrlRightOperand) = compareInt(value, other)
+
     override fun equals(other: Any?) = super.equals(other)
+
     override fun hashCode() = value.hashCode()
 }
 
@@ -46,9 +67,11 @@ data class XmlInt(
 data class XmlInteger(
     @param:JsonProperty("@value")
     val value: Int,
-): OdrlRightOperand() {
+) : OdrlRightOperand() {
     override fun compareTo(other: OdrlRightOperand) = compareInt(value, other)
+
     override fun equals(other: Any?) = super.equals(other)
+
     override fun hashCode() = value.hashCode()
 }
 
@@ -57,9 +80,9 @@ data class XmlInteger(
 data class XmlLong(
     @param:JsonProperty("@value")
     val value: Long,
-): OdrlRightOperand() {
-    override fun compareTo(other: OdrlRightOperand): Int {
-        return when (other) {
+) : OdrlRightOperand() {
+    override fun compareTo(other: OdrlRightOperand): Int =
+        when (other) {
             is PrimitiveInt -> value.compareTo(other.value.toLong())
             is PrimitiveDouble -> value.toDouble().compareTo(other.value)
             is XmlByte -> value.compareTo(other.value.toLong())
@@ -70,8 +93,9 @@ data class XmlLong(
             is XmlFloat -> value.toDouble().compareTo(other.value)
             else -> throw UnsupportedOperationException("Cannot compare Long to ${other.javaClass.simpleName}")
         }
-    }
+
     override fun equals(other: Any?) = super.equals(other)
+
     override fun hashCode() = value.hashCode()
 }
 
@@ -80,9 +104,11 @@ data class XmlLong(
 data class XmlDouble(
     @param:JsonProperty("@value")
     val value: Double,
-): OdrlRightOperand() {
+) : OdrlRightOperand() {
     override fun compareTo(other: OdrlRightOperand) = compareDouble(value, other)
+
     override fun equals(other: Any?) = super.equals(other)
+
     override fun hashCode() = value.hashCode()
 }
 
@@ -91,9 +117,11 @@ data class XmlDouble(
 data class XmlFloat(
     @param:JsonProperty("@value")
     val value: Float,
-): OdrlRightOperand() {
+) : OdrlRightOperand() {
     override fun compareTo(other: OdrlRightOperand) = compareDouble(value.toDouble(), other)
+
     override fun equals(other: Any?) = super.equals(other)
+
     override fun hashCode() = value.hashCode()
 }
 
@@ -102,9 +130,11 @@ data class XmlFloat(
 data class XmlString(
     @param:JsonProperty("@value")
     val value: String,
-): OdrlRightOperand() {
+) : OdrlRightOperand() {
     override fun compareTo(other: OdrlRightOperand) = compareString(value, other)
+
     override fun equals(other: Any?) = super.equals(other)
+
     override fun hashCode() = value.hashCode()
 }
 
@@ -113,16 +143,17 @@ data class XmlString(
 data class XmlDateTime(
     @param:JsonProperty("@value")
     val value: LocalDateTime,
-): OdrlRightOperand() {
-    override fun compareTo(other: OdrlRightOperand): Int {
-        return when (other) {
+) : OdrlRightOperand() {
+    override fun compareTo(other: OdrlRightOperand): Int =
+        when (other) {
             is XmlDateTime -> value.compareTo(other.value)
             is XmlDate -> value.toLocalDate().compareTo(other.value)
             is XmlTime -> value.toLocalTime().compareTo(other.value)
             else -> throw UnsupportedOperationException("Cannot compare DateTime to ${other.javaClass.simpleName}")
         }
-    }
+
     override fun equals(other: Any?) = super.equals(other)
+
     override fun hashCode() = value.hashCode()
 }
 
@@ -131,15 +162,16 @@ data class XmlDateTime(
 data class XmlDate(
     @param:JsonProperty("@value")
     val value: LocalDate,
-): OdrlRightOperand() {
-    override fun compareTo(other: OdrlRightOperand): Int {
-        return when (other) {
+) : OdrlRightOperand() {
+    override fun compareTo(other: OdrlRightOperand): Int =
+        when (other) {
             is XmlDateTime -> value.compareTo(other.value.toLocalDate())
             is XmlDate -> value.compareTo(other.value)
             else -> throw UnsupportedOperationException("Cannot compare Date to ${other.javaClass.simpleName}")
         }
-    }
+
     override fun equals(other: Any?) = super.equals(other)
+
     override fun hashCode() = value.hashCode()
 }
 
@@ -148,15 +180,16 @@ data class XmlDate(
 data class XmlTime(
     @param:JsonProperty("@value")
     val value: LocalTime,
-): OdrlRightOperand() {
-    override fun compareTo(other: OdrlRightOperand): Int {
-        return when (other) {
+) : OdrlRightOperand() {
+    override fun compareTo(other: OdrlRightOperand): Int =
+        when (other) {
             is XmlDateTime -> value.compareTo(other.value.toLocalTime())
             is XmlTime -> value.compareTo(other.value)
             else -> throw UnsupportedOperationException("Cannot compare Time to ${other.javaClass.simpleName}")
         }
-    }
+
     override fun equals(other: Any?) = super.equals(other)
+
     override fun hashCode() = value.hashCode()
 }
 
@@ -165,13 +198,15 @@ data class XmlTime(
 data class XmlAnyUri(
     @param:JsonProperty("@value")
     val value: URI,
-): OdrlRightOperand() {
+) : OdrlRightOperand() {
     // Constructor necessary for Jackson to deserialize primitive type
     @Suppress("unused")
     constructor(primitiveValue: String) : this(URI.create(primitiveValue))
 
     override fun compareTo(other: OdrlRightOperand) = compareString(value.toString(), other)
+
     override fun equals(other: Any?) = super.equals(other)
+
     override fun hashCode() = value.hashCode()
 }
 
@@ -180,12 +215,14 @@ data class XmlAnyUri(
 data class XmlAnyType(
     @param:JsonProperty("@value")
     val value: URI,
-): OdrlRightOperand() {
+) : OdrlRightOperand() {
     // Constructor necessary for Jackson to deserialize primitive type
     @Suppress("unused")
     constructor(primitiveValue: String) : this(URI.create(primitiveValue))
 
     override fun compareTo(other: OdrlRightOperand) = compareString(value.toString(), other)
+
     override fun equals(other: Any?) = super.equals(other)
+
     override fun hashCode() = value.hashCode()
 }

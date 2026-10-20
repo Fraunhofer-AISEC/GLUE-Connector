@@ -1,3 +1,18 @@
+/*
+ * Copyright 2025 Fraunhofer AISEC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package de.fraunhofer.aisec.glue.policy
 
 import de.fraunhofer.iosb.odrl.OdrlAction
@@ -94,15 +109,12 @@ internal class PolicyEvaluation {
         return Result(true)
     }
 
-    suspend fun actionCallback(action: OdrlAction): Result {
-        return when (action.value.uid.toString()) {
+    suspend fun actionCallback(action: OdrlAction): Result =
+        when (action.value.uid.toString()) {
             GlueIdentifiers.DEPLOY_PIPELINE -> handlePipelineAction(action)
             OdrlIdentifiers.NEXTPOLICY -> handleNextPolicyAction(action)
             else -> Result(false, "Action ${action.value.uid} is not supported")
         }
-    }
 
-    suspend fun infringementCallback(action: OdrlAction): Boolean {
-        return true
-    }
+    suspend fun infringementCallback(action: OdrlAction): Boolean = true
 }

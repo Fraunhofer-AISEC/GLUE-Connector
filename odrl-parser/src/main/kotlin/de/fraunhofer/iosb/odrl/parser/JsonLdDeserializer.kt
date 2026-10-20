@@ -1,3 +1,18 @@
+/*
+ * Copyright 2024-2026 Fraunhofer AISEC and Fraunhofer IOSB
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package de.fraunhofer.iosb.odrl.parser
 
 import com.apicatalog.jsonld.JsonLd
@@ -22,29 +37,36 @@ class JsonLdDeserializer<T>(
     private val documentLoader: DocumentLoader,
     private val clazz: Class<T>,
 ) : JsonDeserializer<T>() {
-
     private val jsonProvider = JsonProvider.instance()
 
     override fun deserialize(
         jp: JsonParser,
-        ctx: DeserializationContext
+        ctx: DeserializationContext,
     ): T {
         val jsonStructure = mapper.readValue(jp, JsonStructure::class.java)
         val jsonDocument = JsonDocument.of(jsonStructure)
-        val jsonLdObject = JsonLd.compact(jsonDocument, JsonDocument.of(JsonValue.EMPTY_JSON_OBJECT))
-            .options(options).loader(documentLoader).compactArrays(true).compactToRelative(false).get()
+        val jsonLdObject =
+            JsonLd
+                .compact(jsonDocument, JsonDocument.of(JsonValue.EMPTY_JSON_OBJECT))
+                .options(options)
+                .loader(documentLoader)
+                .compactArrays(true)
+                .compactToRelative(false)
+                .get()
 
-        val fixedJsonLdObject = replaceStringValues(
-            jsonLdObject,
-            "http://www.w3.org/ns/odrl/2/neg",
-            OdrlIdentifiers.NEQ
-        )
+        val fixedJsonLdObject =
+            replaceStringValues(
+                jsonLdObject,
+                "http://www.w3.org/ns/odrl/2/neg",
+                OdrlIdentifiers.NEQ,
+            )
 
         val bean = mapper.convertValue(fixedJsonLdObject, clazz)
         if (bean is JsonLdBeanValidator) {
             val validationErrors = bean.validate()
-            if (validationErrors.isNotEmpty())
+            if (validationErrors.isNotEmpty()) {
                 throw JsonMappingException(jp, validationErrors.toString())
+            }
         }
         return bean
     }
@@ -53,12 +75,14 @@ class JsonLdDeserializer<T>(
         jp: JsonParser,
         ctx: DeserializationContext,
         typeDeserializer: TypeDeserializer?,
-    ): T {
-        return deserialize(jp, ctx)
-    }
+    ): T = deserialize(jp, ctx)
 
-    private fun replaceStringValues(value: JsonValue, from: String, to: String): JsonValue {
-        return when (value.valueType) {
+    private fun replaceStringValues(
+        value: JsonValue,
+        from: String,
+        to: String,
+    ): JsonValue =
+        when (value.valueType) {
             JsonValue.ValueType.OBJECT -> {
                 val builder = jsonProvider.createObjectBuilder()
                 value.asJsonObject().forEach { (key, entryValue) ->
@@ -67,6 +91,7 @@ class JsonLdDeserializer<T>(
                 }
                 builder.build()
             }
+
             JsonValue.ValueType.ARRAY -> {
                 val builder = jsonProvider.createArrayBuilder()
                 value.asJsonArray().forEach { entryValue ->
@@ -74,13 +99,15 @@ class JsonLdDeserializer<T>(
                 }
                 builder.build()
             }
+
             JsonValue.ValueType.STRING -> {
                 val jsonString = value as JsonString
                 val replaced = jsonString.string.replace(from, to)
                 if (replaced == jsonString.string) value else jsonProvider.createValue(replaced)
             }
-            else -> value
-        }
-    }
 
+            else -> {
+                value
+            }
+        }
 }

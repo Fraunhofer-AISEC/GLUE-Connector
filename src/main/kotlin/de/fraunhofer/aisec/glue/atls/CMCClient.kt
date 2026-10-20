@@ -1,3 +1,18 @@
+/*
+ * Copyright 2025-2026 Fraunhofer AISEC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package de.fraunhofer.aisec.glue.atls
 
 import com.fasterxml.jackson.databind.DeserializationFeature
@@ -181,8 +196,14 @@ class CMCClient(
                     decoder.decode(pem.inputStream(), X509Certificate::class.java)
                 } ?: emptyList()
             }
-            is SocketError -> throw IllegalStateException("Received error from CMC: ${resp.msg}")
-            else -> throw IllegalStateException("Unexpected response type ${resp::class.qualifiedName}")
+
+            is SocketError -> {
+                throw IllegalStateException("Received error from CMC: ${resp.msg}")
+            }
+
+            else -> {
+                throw IllegalStateException("Unexpected response type ${resp::class.qualifiedName}")
+            }
         }
     }
 
@@ -202,13 +223,17 @@ class CMCClient(
             is TLSSignResponse -> return Base64.decode(
                 resp.signedContent ?: throw IllegalStateException("No signed data received from CMC"),
             )
+
             is SocketError -> throw IllegalStateException("Received error from CMC: ${resp.msg}")
+
             else -> throw IllegalStateException("Unexpected response type ${resp::class.qualifiedName}")
         }
     }
 
     @Suppress("unused")
-    enum class HashType(val string: String) {
+    enum class HashType(
+        val string: String,
+    ) {
         SHA1("SHA-1"),
         SHA224("SHA-224"),
         SHA256("SHA-256"),
@@ -230,13 +255,17 @@ class CMCClient(
         BLAKE2B_512("BLAKE2B-512"),
     }
 
-    enum class TLSKeyType(val representation: TLSCreateRequest.Type) {
+    enum class TLSKeyType(
+        val representation: TLSCreateRequest.Type,
+    ) {
         TPM(TLSCreateRequest.Type.tpm),
         SOFTWARE(TLSCreateRequest.Type.sw),
         SNP(TLSCreateRequest.Type.snp),
     }
 
-    enum class TLSKeyAlg(val representation: TLSCreateRequest.Alg) {
+    enum class TLSKeyAlg(
+        val representation: TLSCreateRequest.Alg,
+    ) {
         EC256(TLSCreateRequest.Alg.EC256),
         EC384(TLSCreateRequest.Alg.EC384),
         EC521(TLSCreateRequest.Alg.EC521),

@@ -1,3 +1,18 @@
+/*
+ * Copyright 2024-2026 Fraunhofer AISEC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package de.fraunhofer.aisec.glue.docker
 
 import com.fasterxml.jackson.annotation.JsonInclude
@@ -19,7 +34,10 @@ import java.nio.file.Path
 import kotlin.math.pow
 import de.fraunhofer.aisec.glue.docker.model.Network as NetworkInspectResponse
 
-class DockerClient(internal val httpClient: HttpClient, private val baseUrl: Url) : Closeable {
+class DockerClient(
+    internal val httpClient: HttpClient,
+    private val baseUrl: Url,
+) : Closeable {
     init {
         // Monitor retry events for logging
         httpClient.monitor.subscribe(HttpRequestRetryEvent) { event ->
@@ -35,9 +53,7 @@ class DockerClient(internal val httpClient: HttpClient, private val baseUrl: Url
     /**
      * Convert a relative URL path to an absolute URL suitable for this docker client.
      */
-    internal fun endpoint(path: String): Url {
-        return URLBuilder(baseUrl).appendEncodedPathSegments(path).build()
-    }
+    internal fun endpoint(path: String): Url = URLBuilder(baseUrl).appendEncodedPathSegments(path).build()
 
     override fun close() {
         httpClient.close()
@@ -100,15 +116,13 @@ class DockerClient(internal val httpClient: HttpClient, private val baseUrl: Url
             return container
         }
 
-        suspend fun list(): List<ContainerSummary> {
-            return httpClient.get(endpoint("containers/json")) {
-                contentType(ContentType.Application.Json)
-            }.body()
-        }
+        suspend fun list(): List<ContainerSummary> =
+            httpClient
+                .get(endpoint("containers/json")) {
+                    contentType(ContentType.Application.Json)
+                }.body()
 
-        fun get(name: String): Container {
-            return Container(this@DockerClient, name)
-        }
+        fun get(name: String): Container = Container(this@DockerClient, name)
     }
 
     val containers = Containers()
@@ -152,14 +166,10 @@ class DockerClient(internal val httpClient: HttpClient, private val baseUrl: Url
             return Network(this@DockerClient, req.name)
         }
 
-        fun get(name: String): Network {
-            return Network(this@DockerClient, name)
-        }
+        fun get(name: String): Network = Network(this@DockerClient, name)
 
         @Suppress("unused")
-        suspend fun inspectAll(): List<NetworkInspectResponse> {
-            return httpClient.get(endpoint("networks")).body()
-        }
+        suspend fun inspectAll(): List<NetworkInspectResponse> = httpClient.get(endpoint("networks")).body()
     }
 
     val networks = Networks()
@@ -248,16 +258,17 @@ class DockerClient(internal val httpClient: HttpClient, private val baseUrl: Url
 
                         val (clientCertificate, trustManager) = TLSHelper.loadDockerTLSParams(certDir)
                         val dockerBaseUrl =
-                            URLBuilder(uri.toString()).apply {
-                                protocol = URLProtocol("https", 0)
-                                // This looks a bit ugly, but should work to assign the correct default port for the
-                                // docker https protocol. If we use ktor's default mechanism, then we'll have problems
-                                // with port 443
-                                if (port == 0) {
-                                    port = 2376
-                                }
-                                appendPathSegments(API_VERSION)
-                            }.build()
+                            URLBuilder(uri.toString())
+                                .apply {
+                                    protocol = URLProtocol("https", 0)
+                                    // This looks a bit ugly, but should work to assign the correct default port for the
+                                    // docker https protocol. If we use ktor's default mechanism, then we'll have problems
+                                    // with port 443
+                                    if (port == 0) {
+                                        port = 2376
+                                    }
+                                    appendPathSegments(API_VERSION)
+                                }.build()
 
                         LOG.atInfo {
                             message = "Using docker engine TLS socket"
@@ -277,13 +288,14 @@ class DockerClient(internal val httpClient: HttpClient, private val baseUrl: Url
                         )
                     } else {
                         val dockerBaseUrl =
-                            URLBuilder(uri.toString()).apply {
-                                protocol = URLProtocol("http", 0)
-                                if (port == 0) {
-                                    port = 2375
-                                }
-                                appendPathSegments(API_VERSION)
-                            }.build()
+                            URLBuilder(uri.toString())
+                                .apply {
+                                    protocol = URLProtocol("http", 0)
+                                    if (port == 0) {
+                                        port = 2375
+                                    }
+                                    appendPathSegments(API_VERSION)
+                                }.build()
                         LOG.atInfo {
                             message = "Using docker engine TCP socket"
                             payload = mapOf("location" to dockerBaseUrl)
@@ -295,6 +307,7 @@ class DockerClient(internal val httpClient: HttpClient, private val baseUrl: Url
                         )
                     }
                 }
+
                 "unix" -> {
                     LOG.atInfo {
                         message = "Using docker engine unix socket"
@@ -311,7 +324,9 @@ class DockerClient(internal val httpClient: HttpClient, private val baseUrl: Url
                     )
                 }
 
-                else -> throw IllegalArgumentException("Protocol ${uri.scheme} is not supported")
+                else -> {
+                    throw IllegalArgumentException("Protocol ${uri.scheme} is not supported")
+                }
             }
         }
     }

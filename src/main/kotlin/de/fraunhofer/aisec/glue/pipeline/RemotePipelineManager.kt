@@ -1,3 +1,18 @@
+/*
+ * Copyright 2025-2026 Fraunhofer AISEC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package de.fraunhofer.aisec.glue.pipeline
 
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -15,7 +30,10 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlin.random.Random
 
-class RemotePipelineManager(val httpClient: HttpClient, val objectMapper: ObjectMapper) {
+class RemotePipelineManager(
+    val httpClient: HttpClient,
+    val objectMapper: ObjectMapper,
+) {
     // We need a mutex as we have more than one lookup table
     private val pipelinesMutex = Mutex()
 
@@ -97,9 +115,7 @@ class RemotePipelineManager(val httpClient: HttpClient, val objectMapper: Object
         actionId: String = OdrlIdentifiers.USE,
     ): RemotePipeline = pipelinesMutex.withLock { createUnlocked(peerUrl, contractId, targetId, actionId) }
 
-    fun getAll(): Collection<RemotePipeline> {
-        return remotePipelines.values
-    }
+    fun getAll(): Collection<RemotePipeline> = remotePipelines.values
 
     suspend fun getById(pipelineId: String): RemotePipeline? =
         pipelinesMutex.withLock {

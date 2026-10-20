@@ -1,3 +1,18 @@
+/*
+ * Copyright 2024-2025 Fraunhofer AISEC and Fraunhofer IOSB
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package de.fraunhofer.iosb.odrl
 
 import com.fasterxml.jackson.annotation.*
@@ -22,34 +37,25 @@ open class OdrlPolicy(
     // Using the @field: annotation target allows Jackson to see these properties also in subclasses
     @field:JsonProperty("@id")
     val uid: URI,
-
     @field:JsonProperty(OdrlIdentifiers.HAS_PERMISSION)
     @field:JsonSetter(nulls = Nulls.AS_EMPTY)
     val permission: List<OdrlPermission> = listOf(),
-
     @field:JsonProperty(OdrlIdentifiers.HAS_PROHIBITION)
     @field:JsonSetter(nulls = Nulls.AS_EMPTY)
     val prohibition: List<OdrlProhibition> = listOf(),
-
     @field:JsonProperty(OdrlIdentifiers.OBLIGATION)
     @field:JsonSetter(nulls = Nulls.AS_EMPTY)
     val obligation: List<OdrlDuty> = listOf(),
-
     @field:JsonProperty(OdrlIdentifiers.PROFILE)
     @field:JsonSetter(nulls = Nulls.AS_EMPTY)
     val profile: List<OdrlIri> = listOf(),
-
     @field:JsonProperty(OdrlIdentifiers.INHERIT_FROM)
     @field:JsonSetter(nulls = Nulls.AS_EMPTY)
     val inheritFrom: List<OdrlIri> = listOf(),
-
     @field:JsonProperty(OdrlIdentifiers.CONFLICT)
     val conflict: OdrlConflictTerm? = null,
 ) : JsonLdBeanValidator {
-
-    override fun validate(): List<ValidationError> {
-        return validateOdrlPolicy.validate(this).errors
-    }
+    override fun validate(): List<ValidationError> = validateOdrlPolicy.validate(this).errors
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -91,43 +97,42 @@ open class OdrlPolicy(
         return map
     }
 
-    override fun toString(): String {
-        return "OdrlPolicy(${getPropertyMap().entries.joinToString(", ")})"
-    }
+    override fun toString(): String = "OdrlPolicy(${getPropertyMap().entries.joinToString(", ")})"
 }
 
-val validateOdrlPolicy = Validation<OdrlPolicy> {
-    // A Policy MUST have one uid property value of type IRI
-    OdrlPolicy::uid {
-        addConstraint("OdrlPolicy: {value} is not a valid IRI") { isIri(it) }
-    }
+val validateOdrlPolicy =
+    Validation<OdrlPolicy> {
+        // A Policy MUST have one uid property value of type IRI
+        OdrlPolicy::uid {
+            addConstraint("OdrlPolicy: {value} is not a valid IRI") { isIri(it) }
+        }
 
-    // A Policy MUST have at least one permission, prohibition, or obligation property values
-    OdrlPolicy::permission onEach {
-        run(validateOdrlPermission)
-    }
-    OdrlPolicy::prohibition onEach {
-        run(validateOdrlProhibition)
-    }
-    OdrlPolicy::obligation onEach {
-        run(validateOdrlDuty)
-    }
-    validate("policyHasAtLeastOneRule", { it.permission.size + it.prohibition.size + it.obligation.size }) {
-        minimum(1)
-    }
+        // A Policy MUST have at least one permission, prohibition, or obligation property values
+        OdrlPolicy::permission onEach {
+            run(validateOdrlPermission)
+        }
+        OdrlPolicy::prohibition onEach {
+            run(validateOdrlProhibition)
+        }
+        OdrlPolicy::obligation onEach {
+            run(validateOdrlDuty)
+        }
+        validate("policyHasAtLeastOneRule", { it.permission.size + it.prohibition.size + it.obligation.size }) {
+            minimum(1)
+        }
 
-    // A Policy MAY have none, one, or many profile property values of type IRI
-    OdrlPolicy::profile onEach {
-        run(validateOdrlIri)
-    }
+        // A Policy MAY have none, one, or many profile property values of type IRI
+        OdrlPolicy::profile onEach {
+            run(validateOdrlIri)
+        }
 
-    // A Policy MAY have none, one, or many inheritFrom property values of type IRI
-    OdrlPolicy::inheritFrom onEach {
-        run(validateOdrlIri)
-    }
+        // A Policy MAY have none, one, or many inheritFrom property values of type IRI
+        OdrlPolicy::inheritFrom onEach {
+            run(validateOdrlIri)
+        }
 
-    // A Policy MAY have none or one conflict property values of type conflict term
-    OdrlPolicy::conflict ifPresent {
-        run(validateOdrlConflictTerm)
+        // A Policy MAY have none or one conflict property values of type conflict term
+        OdrlPolicy::conflict ifPresent {
+            run(validateOdrlConflictTerm)
+        }
     }
-}

@@ -1,3 +1,18 @@
+/*
+ * Copyright 2024-2026 Fraunhofer AISEC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package de.fraunhofer.aisec.glue.pipeline.docker
 
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -32,7 +47,8 @@ class DockerBackend(
     private val dockerSubnet = System.getenv("DOCKER_SUBNET") ?: "10.1.0.0"
     private val subnetLen = 29
     private val subnets =
-        InetUtil.getSubnets(InetUtil.parseInet4Address(dockerSubnet), 16, subnetLen)
+        InetUtil
+            .getSubnets(InetUtil.parseInet4Address(dockerSubnet), 16, subnetLen)
             .iterator()
     private val config = configManager.getConfig(::DockerConfig)
 
@@ -79,26 +95,27 @@ class DockerBackend(
         targetId: String,
     ): MutableList<ContainerCreateRequest> {
         checkHashes(pipelineSpec)
-        return pipelineSpec.map { c ->
-            //       We probably should persist this to the point where we inject the config
-            ContainerCreateRequest(
-                image = c.base.image,
-                hostConfig =
-                    HostConfig(
-                        networkMode = if (c.base.allowNetwork == true) "bridge" else "none",
-                        binds = c.extraVolumes.map { (hostPath, containerPath) -> "$hostPath:$containerPath" },
-                    ),
-                volumes = c.extraVolumes.map { (_, containerPath) -> containerPath to object {} }.toMap(),
-                // Attach labels to the containers so we can recover running pipelines if we crash and/or restart
-                labels =
-                    mapOf(
-                        "de.fraunhofer.aisec.glue.pipeline.id" to id,
-                        "de.fraunhofer.aisec.glue.pipeline.contract" to contractId,
-                        "de.fraunhofer.aisec.glue.pipeline.target" to targetId,
-                        "de.fraunhofer.aisec.glue.pipeline.owner" to "TODO: Put identity of whoever spawned the pipeline here",
-                    ),
-            )
-        }.toMutableList()
+        return pipelineSpec
+            .map { c ->
+                //       We probably should persist this to the point where we inject the config
+                ContainerCreateRequest(
+                    image = c.base.image,
+                    hostConfig =
+                        HostConfig(
+                            networkMode = if (c.base.allowNetwork == true) "bridge" else "none",
+                            binds = c.extraVolumes.map { (hostPath, containerPath) -> "$hostPath:$containerPath" },
+                        ),
+                    volumes = c.extraVolumes.map { (_, containerPath) -> containerPath to object {} }.toMap(),
+                    // Attach labels to the containers so we can recover running pipelines if we crash and/or restart
+                    labels =
+                        mapOf(
+                            "de.fraunhofer.aisec.glue.pipeline.id" to id,
+                            "de.fraunhofer.aisec.glue.pipeline.contract" to contractId,
+                            "de.fraunhofer.aisec.glue.pipeline.target" to targetId,
+                            "de.fraunhofer.aisec.glue.pipeline.owner" to "TODO: Put identity of whoever spawned the pipeline here",
+                        ),
+                )
+            }.toMutableList()
     }
 
     // Hash check adapted from https://github.com/Fraunhofer-AISEC/trusted-connector/blob/16fb97953c89e796d80c52cacc7a4445c1dda019/ids-dataflow-control/src/main/kotlin/de/fhg/aisec/ids/dataflowcontrol/usagecontrol/DockerImageConstraint.kt#L104
@@ -127,12 +144,13 @@ class DockerBackend(
 
             LOG.atWarn {
                 message = "Hash check failed."
-                payload = mapOf(
-                    "image" to glueContainer.image,
-                    "expectedDigest" to glueContainer.hash,
-                    "configDigest" to idHash,
-                    "repoDigests" to repoDigests,
-                )
+                payload =
+                    mapOf(
+                        "image" to glueContainer.image,
+                        "expectedDigest" to glueContainer.hash,
+                        "configDigest" to idHash,
+                        "repoDigests" to repoDigests,
+                    )
             }
 
             throw Exception(
@@ -146,11 +164,10 @@ class DockerBackend(
     private suspend fun createContainers(
         id: String,
         containerSpecs: List<ContainerCreateRequest>,
-    ): List<Container> {
-        return mapParallel(containerSpecs, Container::remove) { index, item ->
+    ): List<Container> =
+        mapParallel(containerSpecs, Container::remove) { index, item ->
             dockerClient.containers.create("pipeline-$id-$index", item)
         }
-    }
 
     private suspend fun linkContainers(
         id: String,
@@ -263,7 +280,13 @@ class DockerBackend(
             } else {
                 // The docker network properties are unfortunately only initialized after the container has started.
                 containerNetworks.keys.firstOrNull()?.let { network ->
-                    dockerClient.networks.get(network).inspect().ipam?.config?.get(0)?.gateway
+                    dockerClient.networks
+                        .get(network)
+                        .inspect()
+                        .ipam
+                        ?.config
+                        ?.get(0)
+                        ?.gateway
                 }
             }
         return address ?: run {
@@ -282,12 +305,19 @@ class DockerBackend(
     override suspend fun getPipelineFromIp(ipAddress: String): String? {
         // Unfortunately, due to the highly nullable (defaultable?) nature of Go, we have to do a bunch of null checks
         // on every property...
-        return dockerClient.containers.list()
-            .filter { c -> c.networkSettings?.networks?.values?.any { n -> n.ipAddress == ipAddress } ?: false }
-            .firstNotNullOfOrNull { c -> c.labels?.get("de.fraunhofer.aisec.glue.pipeline.id") }
+        return dockerClient.containers
+            .list()
+            .filter { c ->
+                c.networkSettings
+                    ?.networks
+                    ?.values
+                    ?.any { n -> n.ipAddress == ipAddress } ?: false
+            }.firstNotNullOfOrNull { c -> c.labels?.get("de.fraunhofer.aisec.glue.pipeline.id") }
     }
 
-    class DockerConfig(inner: ApplicationConfig) : Config(inner) {
+    class DockerConfig(
+        inner: ApplicationConfig,
+    ) : Config(inner) {
         val publicHostname: String by withDefault(stringProp(), InetAddress.getLocalHost().hostAddress)
     }
 

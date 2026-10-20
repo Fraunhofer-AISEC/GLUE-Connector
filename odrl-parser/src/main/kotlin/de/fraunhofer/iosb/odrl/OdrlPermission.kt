@@ -1,3 +1,18 @@
+/*
+ * Copyright 2024-2026 Fraunhofer AISEC and Fraunhofer IOSB
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package de.fraunhofer.iosb.odrl
 
 import com.fasterxml.jackson.annotation.*
@@ -29,19 +44,33 @@ class OdrlPermission(
     trackedParty: OdrlParty? = null,
     trackingParty: OdrlParty? = null,
     constraint: List<OdrlConstraintRepresentation> = listOf(),
-
     // Properties of OdrlPermission
     @param:JsonProperty(OdrlIdentifiers.HAS_DUTY)
     @param:JsonSetter(nulls = Nulls.AS_EMPTY)
-    val duty: List<OdrlDuty> = listOf()
-): OdrlRule(uid, action, target, output, assignee, assigner, attributedParty, attributingParty, compensatedParty,
-        compensatingParty, consentedParty, consentingParty, contractedParty, contractingParty, informedParty,
-        informingParty, trackedParty, trackingParty, constraint),
+    val duty: List<OdrlDuty> = listOf(),
+) : OdrlRule(
+        uid,
+        action,
+        target,
+        output,
+        assignee,
+        assigner,
+        attributedParty,
+        attributingParty,
+        compensatedParty,
+        compensatingParty,
+        consentedParty,
+        consentingParty,
+        contractedParty,
+        contractingParty,
+        informedParty,
+        informingParty,
+        trackedParty,
+        trackingParty,
+        constraint,
+    ),
     JsonLdBeanValidator {
-
-    override fun validate(): List<ValidationError> {
-        return validateOdrlPermission.validate(this).errors
-    }
+    override fun validate(): List<ValidationError> = validateOdrlPermission.validate(this).errors
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -65,24 +94,23 @@ class OdrlPermission(
         return map
     }
 
-    override fun toString(): String {
-        return "OdrlPermission(${getPropertyMap().entries.joinToString(", ")})"
-    }
+    override fun toString(): String = "OdrlPermission(${getPropertyMap().entries.joinToString(", ")})"
 }
 
-val validateOdrlPermission = Validation<OdrlPermission> {
-    run(validateOdrlRule)
+val validateOdrlPermission =
+    Validation<OdrlPermission> {
+        run(validateOdrlRule)
 
-    // A Permission MUST have one target property value of type Asset
-    // Other relation sub-properties MAY be used
-    addConstraint("OdrlPermission: target property is required") { it.target != null }
+        // A Permission MUST have one target property value of type Asset
+        // Other relation sub-properties MAY be used
+        addConstraint("OdrlPermission: target property is required") { it.target != null }
 
-    // A Permission MAY have none or one assigner and/or assignee property values of type Party
-    // Other function sub-properties MAY be used
-    // Note: Already validated as part of Rule
+        // A Permission MAY have none or one assigner and/or assignee property values of type Party
+        // Other function sub-properties MAY be used
+        // Note: Already validated as part of Rule
 
-    // A Permission MAY have none, one, or more duty property values of type Duty
-    OdrlPermission::duty onEach {
-        run(validateOdrlDuty)
+        // A Permission MAY have none, one, or more duty property values of type Duty
+        OdrlPermission::duty onEach {
+            run(validateOdrlDuty)
+        }
     }
-}

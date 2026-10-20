@@ -1,3 +1,18 @@
+/*
+ * Copyright 2025-2026 Fraunhofer AISEC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package de.fraunhofer.aisec.glue.atls
 
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -44,10 +59,10 @@ class AtlsHandshake(
         get() = state != State.Completed && state != State.Failed
 
     private val attestSelf
-        get() = attestationType.attestClient && isClient || attestationType.attestServer && !isClient
+        get() = (attestationType.attestClient && isClient) || (attestationType.attestServer && !isClient)
 
     private val attestPeer
-        get() = attestationType.attestClient && !isClient || attestationType.attestServer && isClient
+        get() = (attestationType.attestClient && !isClient) || (attestationType.attestServer && isClient)
 
     /**
      * Start the ATLS handshake state machine, returning the initial packet to send to the peer.
@@ -496,7 +511,9 @@ class AtlsHandshake(
         }
     }
 
-    enum class AttestationType(internal val protocolValue: Int) {
+    enum class AttestationType(
+        internal val protocolValue: Int,
+    ) {
         MUTUAL(0),
         CLIENT(1),
         SERVER(2),
@@ -524,15 +541,14 @@ class AtlsHandshake(
         }
 
         companion object {
-            internal fun fromProtocolValue(value: Int): AttestationType {
-                return when (value) {
+            internal fun fromProtocolValue(value: Int): AttestationType =
+                when (value) {
                     0 -> MUTUAL
                     1 -> CLIENT
                     2 -> SERVER
                     3 -> NONE
                     else -> throw IllegalArgumentException("Unknown attestation type $value")
                 }
-            }
         }
     }
 

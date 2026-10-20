@@ -1,3 +1,18 @@
+/*
+ * Copyright 2024-2026 Fraunhofer AISEC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package de.fraunhofer.aisec.glue
 
 import com.apicatalog.jsonld.loader.FileLoader
@@ -126,7 +141,8 @@ val defaultDependencies by DI.Module {
                 monitor.subscribe(HttpRequestRetryEvent) { event ->
                     val delayBase = 1.5
                     val nextDelay =
-                        (delayBase * 1000 * delayBase.pow(event.retryCount.toDouble() - 1)).toLong()
+                        (delayBase * 1000 * delayBase.pow(event.retryCount.toDouble() - 1))
+                            .toLong()
                             .coerceAtMost(30000)
                     LOG.atWarn {
                         message = "Retrying HTTP request"
@@ -146,7 +162,8 @@ val defaultDependencies by DI.Module {
             val jsonLdCacheDir = Path.of(cacheHome, "glue", "jsonld")
             val mapper =
                 ObjectMapper(
-                    JsonFactoryBuilder().enable(StreamReadFeature.INCLUDE_SOURCE_IN_LOCATION)
+                    JsonFactoryBuilder()
+                        .enable(StreamReadFeature.INCLUDE_SOURCE_IN_LOCATION)
                         .build(),
                 ).apply {
                     registerSubtypes(AtlsParameter::class.java)
@@ -164,10 +181,11 @@ val defaultDependencies by DI.Module {
         }
     bind<ObjectMapper>() with singleton { instance<OdrlParser>().mapper }
     bind<DockerClient>() with singleton { DockerClient.fromEnv() }
-    bind<CMCClient>() with singleton {
-        val atlsConfig = instance<ConfigManager>().getConfig(::AtlsConfig)
-        CMCClient(atlsConfig.cmcAddress, instance(), Dispatchers.Default)
-    }
+    bind<CMCClient>() with
+        singleton {
+            val atlsConfig = instance<ConfigManager>().getConfig(::AtlsConfig)
+            CMCClient(atlsConfig.cmcAddress, instance(), Dispatchers.Default)
+        }
     bind<ContentConverter>() with singleton { JacksonConverter(instance()) }
     bind<RemotePipelineManager>() with singleton { RemotePipelineManager(instance(), instance()) }
     bind<Backend>() with singleton { DockerBackend(instance(), instance(), instance()) }

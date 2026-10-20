@@ -1,3 +1,18 @@
+/*
+ * Copyright 2025-2026 Fraunhofer AISEC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package de.fraunhofer.aisec.glue.atls
 
 import kotlinx.coroutines.CoroutineDispatcher
@@ -97,9 +112,7 @@ class CMCKeyManager(
     /**
      * Returns the certificate chain for the given alias.
      */
-    override fun getCertificateChain(alias: String?): Array<X509Certificate>? {
-        return if (alias == ALIAS) certificateChain else null
-    }
+    override fun getCertificateChain(alias: String?): Array<X509Certificate>? = if (alias == ALIAS) certificateChain else null
 
     /**
      * Returns client aliases matching the given key type and issuers.
@@ -118,9 +131,7 @@ class CMCKeyManager(
     /**
      * Returns the private key for the given alias.
      */
-    override fun getPrivateKey(alias: String?): PrivateKey? {
-        return if (alias == ALIAS) privateKey else null
-    }
+    override fun getPrivateKey(alias: String?): PrivateKey? = if (alias == ALIAS) privateKey else null
 
     /**
      * Returns server aliases matching the given key type and issuers.

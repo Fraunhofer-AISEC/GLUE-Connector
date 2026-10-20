@@ -1,3 +1,18 @@
+/*
+ * Copyright 2024-2026 Fraunhofer AISEC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package de.fraunhofer.aisec.glue
 
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -36,7 +51,8 @@ class DataStore(
 
     // Let Flyway handle the database setup/migrations
     init {
-        Flyway.configure()
+        Flyway
+            .configure()
             .dataSource(dataSource)
             .load()
             .migrate()
@@ -65,7 +81,11 @@ class DataStore(
                         val targetUid = p.target?.uid?.toString() ?: continue
                         item {
                             set(it.target, targetUid)
-                            set(it.action, p.action.value.uid.toString())
+                            set(
+                                it.action,
+                                p.action.value.uid
+                                    .toString(),
+                            )
                             set(it.contract, contract.uid.toString())
                         }
                     }
@@ -86,9 +106,10 @@ class DataStore(
                 .map { it.contract.contract }
         }
 
-    suspend fun contracts(): Map<String, OdrlPolicy> = ioAsync {
-        connection.contracts.associate { it.id to it.contract }
-    }
+    suspend fun contracts(): Map<String, OdrlPolicy> =
+        ioAsync {
+            connection.contracts.associate { it.id to it.contract }
+        }
 
     suspend fun addNegotiation(data: BuiltinNegotiationData) =
         ioAsync {

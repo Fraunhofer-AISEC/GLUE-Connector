@@ -1,3 +1,18 @@
+/*
+ * Copyright 2025-2026 Fraunhofer AISEC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package de.fraunhofer.aisec.glue.negotiation.edc
 
 import com.apicatalog.jsonld.JsonLd
@@ -54,7 +69,10 @@ object EdcQuirks {
                     node.walkObjects(action)
                 }
             }
-            is ArrayNode -> forEach { it.walkObjects(action) }
+
+            is ArrayNode -> {
+                forEach { it.walkObjects(action) }
+            }
         }
     }
 
@@ -75,15 +93,22 @@ object EdcQuirks {
         val action = compactSerialization.remove(ACTION_KEY)
 
         when (val permission = compactSerialization.get(permissionKey)) {
-            is ArrayNode ->
+            is ArrayNode -> {
                 permission.forEach {
                     (it as? ObjectNode)?.putIfAbsent(
                         ACTION_KEY,
                         action,
                     ) ?: throw AssertionError("Unexpected type ${it.javaClass.simpleName} for permission")
                 }
-            is ObjectNode -> permission.putIfAbsent(ACTION_KEY, action)
-            else -> throw AssertionError("Unexpected type ${permission.javaClass.simpleName} for permission")
+            }
+
+            is ObjectNode -> {
+                permission.putIfAbsent(ACTION_KEY, action)
+            }
+
+            else -> {
+                throw AssertionError("Unexpected type ${permission.javaClass.simpleName} for permission")
+            }
         }
     }
 
@@ -116,15 +141,17 @@ object EdcQuirks {
         serialization: ObjectNode,
     ) {
         // This function returns true if the currently processed node should be replaced.
-        fun shouldStringify(node: JsonNode): Boolean {
-            return when {
+        fun shouldStringify(node: JsonNode): Boolean =
+            when {
                 node is ObjectNode -> {
                     // This hard to parse comparison means "node has a type property and its value is in glueTypes"
                     node.get("@type")?.let { type -> GLUE_TYPES.any { type == TextNode(it) } } == true
                 }
-                else -> false
+
+                else -> {
+                    false
+                }
             }
-        }
 
         // The EDC stores its stringified values in expanded representation,
         // so we need to convert to compact JsonLd and back to expanded representation.
@@ -190,11 +217,12 @@ object EdcQuirks {
             }
 
             val leftOpRaw = objectNode[LEFT_OPERAND_KEY]
-            val leftOp = if (leftOpRaw.isObject) {
-                (leftOpRaw as ObjectNode).get("@id")?.asText() ?: leftOpRaw.asText()
-            } else {
-                leftOpRaw.asText()
-            }
+            val leftOp =
+                if (leftOpRaw.isObject) {
+                    (leftOpRaw as ObjectNode).get("@id")?.asText() ?: leftOpRaw.asText()
+                } else {
+                    leftOpRaw.asText()
+                }
             val rightOp = objectNode[RIGHT_OPERAND_KEY]
 
             // Check if the right op is a string and if the left op is known
@@ -289,8 +317,10 @@ object EdcQuirks {
     fun patchAction(serialization: ObjectNode) {
         val valueKeys = listOf("rdf:value", RdfIdentifiers.VALUE)
 
-        serialization.findValues(ACTION_KEY)
-            .filter { v -> v is ObjectNode && valueKeys.any { v.has(it) } }.forEach {
+        serialization
+            .findValues(ACTION_KEY)
+            .filter { v -> v is ObjectNode && valueKeys.any { v.has(it) } }
+            .forEach {
                 val node = it as ObjectNode
                 val oldAction = node.toString()
                 val rdfValue =
@@ -307,8 +337,8 @@ object EdcQuirks {
     fun makeIncomingEdcPatcher(
         objectMapper: ObjectMapper,
         role: String,
-    ): (ByteArray) -> ByteArray {
-        return { jsonBytes ->
+    ): (ByteArray) -> ByteArray =
+        { jsonBytes ->
             LOG.debug { "Applying incoming ($role) EDC transformations..." }
             val node = objectMapper.readTree(jsonBytes)
             // If no fixes made, skip re-serialization and preserve original payload bytes
@@ -318,13 +348,12 @@ object EdcQuirks {
                 jsonBytes
             }
         }
-    }
 
     fun makeOutgoingEdcPatcher(
         objectMapper: ObjectMapper,
         role: String,
-    ): (Any) -> JsonNode {
-        return { body ->
+    ): (Any) -> JsonNode =
+        { body ->
             LOG.debug { "Applying outgoing ($role) EDC transformations..." }
             // Apply specific transformations on certain object types
             var needsPatchAction = false
@@ -336,7 +365,10 @@ object EdcQuirks {
                             agreement = EdcOdrlAgreement.from(body.agreement),
                         )
                     }
-                    else -> body
+
+                    else -> {
+                        body
+                    }
                 }
             // Apply EDC patches on Jackson IR
             val tree = objectMapper.valueToTree<ObjectNode>(modBody)
@@ -348,7 +380,6 @@ object EdcQuirks {
             // Let content negotiation perform serialization of IR
             tree
         }
-    }
 }
 
 fun URI.toEdcFormat(): String = toString().substring(EDC_URI_COMPAT_SCHEME.length + 1)

@@ -1,3 +1,18 @@
+/*
+ * Copyright 2024-2026 Fraunhofer AISEC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package de.fraunhofer.aisec.glue.negotiation.builtin
 
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -74,13 +89,12 @@ open class BuiltinNegotiationManager(
     override suspend fun startNegotiation(
         peer: String,
         offer: OdrlPolicy,
-    ): Negotiation {
-        return startNegotiation(
+    ): Negotiation =
+        startNegotiation(
             Url(peer),
             connectorConfig.publicUrl,
             offer as? OdrlOffer ?: odrlParser.convertToOdrlOffer(offer, assigners = listOf(OdrlParty(peer))),
         )
-    }
 
     /**
      * Start a negotiation by sending the provided contract request to the provider.
@@ -153,6 +167,7 @@ open class BuiltinNegotiationManager(
             when (deserializedResponse.state) {
                 // The negotiation has started, should get a contract offer soon
                 NegotiationState.REQUESTED -> {}
+
                 // The provider terminated the negotiation
                 NegotiationState.TERMINATED -> {
                     LOG.atInfo {
@@ -287,17 +302,17 @@ open class BuiltinNegotiationManager(
         return negotiation
     }
 
-    override suspend fun getNegotiations(): Collection<Negotiation> {
-        return negotiations.values.toList()
-    }
+    override suspend fun getNegotiations(): Collection<Negotiation> = negotiations.values.toList()
 
-    override suspend fun getNegotiation(id: String): Negotiation? {
-        return parsePid(id)?.let(negotiations::get)
-    }
+    override suspend fun getNegotiation(id: String): Negotiation? = parsePid(id)?.let(negotiations::get)
 
     private fun parsePid(providerPid: String): UUID? {
         val urnPattern = Regex("(?:urn:uuid:)?([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})")
-        return urnPattern.find(providerPid)?.groupValues?.get(1)?.let { UUID.fromString(it) }
+        return urnPattern
+            .find(providerPid)
+            ?.groupValues
+            ?.get(1)
+            ?.let { UUID.fromString(it) }
     }
 
     private fun newProcessId(): UUID = UUID.randomUUID()

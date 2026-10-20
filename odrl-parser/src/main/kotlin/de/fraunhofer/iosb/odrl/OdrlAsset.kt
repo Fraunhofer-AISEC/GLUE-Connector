@@ -1,3 +1,18 @@
+/*
+ * Copyright 2024-2025 Fraunhofer AISEC and Fraunhofer IOSB
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package de.fraunhofer.iosb.odrl
 
 import com.fasterxml.jackson.annotation.*
@@ -14,18 +29,15 @@ import java.net.URI
 data class OdrlAsset(
     @param:JsonProperty("@id")
     val uid: URI? = null,
-
     @param:JsonProperty(OdrlIdentifiers.PART_OF)
     @param:JsonSetter(nulls = Nulls.AS_EMPTY)
     val partOf: List<OdrlAssetCollection> = listOf(),
-): JsonLdBeanValidator {
+) : JsonLdBeanValidator {
     // Constructor necessary for Jackson to deserialize primitive type
     @Suppress("unused")
     constructor(primitiveValue: String) : this(URI.create(primitiveValue))
 
-    override fun validate(): List<ValidationError> {
-        return validateOdrlAsset.validate(this).errors
-    }
+    override fun validate(): List<ValidationError> = validateOdrlAsset.validate(this).errors
 
     private fun getPropertyMap(): MutableMap<String, Any> {
         val map = mutableMapOf<String, Any>()
@@ -34,19 +46,18 @@ data class OdrlAsset(
         return map
     }
 
-    override fun toString(): String {
-        return "OdrlAsset(${getPropertyMap().entries.joinToString(", ")})"
-    }
+    override fun toString(): String = "OdrlAsset(${getPropertyMap().entries.joinToString(", ")})"
 }
 
-val validateOdrlAsset = Validation {
-    // An Asset SHOULD have one uid property value of type IRI
-    OdrlAsset::uid ifPresent {
-        addConstraint("OdrlAsset: {value} is not a valid IRI") { isIri(it) }
-    }
+val validateOdrlAsset =
+    Validation {
+        // An Asset SHOULD have one uid property value of type IRI
+        OdrlAsset::uid ifPresent {
+            addConstraint("OdrlAsset: {value} is not a valid IRI") { isIri(it) }
+        }
 
-    // An Asset MAY have none, one, or many partOf property values of type AssetCollection
-    OdrlAsset::partOf onEach {
-        run(validateOdrlAssetCollection)
+        // An Asset MAY have none, one, or many partOf property values of type AssetCollection
+        OdrlAsset::partOf onEach {
+            run(validateOdrlAssetCollection)
+        }
     }
-}

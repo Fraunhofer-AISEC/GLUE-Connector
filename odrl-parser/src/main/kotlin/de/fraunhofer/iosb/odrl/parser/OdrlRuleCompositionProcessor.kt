@@ -1,3 +1,18 @@
+/*
+ * Copyright 2025-2026 Fraunhofer AISEC and Fraunhofer IOSB
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package de.fraunhofer.iosb.odrl.parser
 
 import com.fasterxml.jackson.databind.JsonNode
@@ -7,31 +22,33 @@ import com.fasterxml.jackson.databind.node.ObjectNode
 import de.fraunhofer.iosb.odrl.OdrlIdentifiers
 
 class OdrlRuleCompositionProcessor {
-    private val ruleKeys = listOf(
-        OdrlIdentifiers.HAS_PERMISSION,
-        OdrlIdentifiers.HAS_PROHIBITION,
-        OdrlIdentifiers.HAS_DUTY,
-    )
+    private val ruleKeys =
+        listOf(
+            OdrlIdentifiers.HAS_PERMISSION,
+            OdrlIdentifiers.HAS_PROHIBITION,
+            OdrlIdentifiers.HAS_DUTY,
+        )
 
-    private val sharedPropKeys = listOf(
+    private val sharedPropKeys =
+        listOf(
 //        OdrlIdentifiers.HAS_ACTION,
-        OdrlIdentifiers.TARGET,
-        OdrlIdentifiers.OUTPUT,
-        OdrlIdentifiers.ASSIGNEE,
-        OdrlIdentifiers.ASSIGNER,
-        OdrlIdentifiers.ATTRIBUTED_PARTY,
-        OdrlIdentifiers.ATTRIBUTING_PARTY,
-        OdrlIdentifiers.COMPENSATED_PARTY,
-        OdrlIdentifiers.COMPENSATING_PARTY,
-        OdrlIdentifiers.CONSENTED_PARTY,
-        OdrlIdentifiers.CONSENTING_PARTY,
-        OdrlIdentifiers.CONTRACTED_PARTY,
-        OdrlIdentifiers.CONTRACTING_PARTY,
-        OdrlIdentifiers.INFORMED_PARTY,
-        OdrlIdentifiers.INFORMING_PARTY,
-        OdrlIdentifiers.TRACKED_PARTY,
-        OdrlIdentifiers.TRACKING_PARTY,
-    )
+            OdrlIdentifiers.TARGET,
+            OdrlIdentifiers.OUTPUT,
+            OdrlIdentifiers.ASSIGNEE,
+            OdrlIdentifiers.ASSIGNER,
+            OdrlIdentifiers.ATTRIBUTED_PARTY,
+            OdrlIdentifiers.ATTRIBUTING_PARTY,
+            OdrlIdentifiers.COMPENSATED_PARTY,
+            OdrlIdentifiers.COMPENSATING_PARTY,
+            OdrlIdentifiers.CONSENTED_PARTY,
+            OdrlIdentifiers.CONSENTING_PARTY,
+            OdrlIdentifiers.CONTRACTED_PARTY,
+            OdrlIdentifiers.CONTRACTING_PARTY,
+            OdrlIdentifiers.INFORMED_PARTY,
+            OdrlIdentifiers.INFORMING_PARTY,
+            OdrlIdentifiers.TRACKED_PARTY,
+            OdrlIdentifiers.TRACKING_PARTY,
+        )
 
     fun replacePropertyInOdrlRules(
         policy: ObjectNode,
@@ -57,8 +74,9 @@ class OdrlRuleCompositionProcessor {
 
     private fun moveSharedPropertiesToRules(policy: ObjectNode) {
         for (propKey in sharedPropKeys) {
-            if (!policy.hasNonNull(propKey))
+            if (!policy.hasNonNull(propKey)) {
                 continue
+            }
             val prop = policy.remove(propKey)
             for (ruleKey in ruleKeys) {
                 val rule = policy.get(ruleKey) ?: continue
@@ -76,19 +94,22 @@ class OdrlRuleCompositionProcessor {
         key: String,
         value: JsonNode,
     ) {
-        if (node !is ObjectNode)
+        if (node !is ObjectNode) {
             return
+        }
         val existingProp = node.get(key)
         if (existingProp == null) {
             node.replace(key, value)
         } else if (existingProp is ArrayNode) {
-            if (value is ArrayNode)
+            if (value is ArrayNode) {
                 existingProp.addAll(value.filter { !existingProp.contains(it) })
-            else if (!existingProp.contains(value))
+            } else if (!existingProp.contains(value)) {
                 existingProp.add(value)
+            }
         } else if (value is ArrayNode) {
-            if (!value.contains(existingProp))
+            if (!value.contains(existingProp)) {
                 value.add(existingProp)
+            }
             node.replace(key, value)
         } else {
             node.replace(key, ArrayNode(JsonNodeFactory.instance, listOf(existingProp, value)))
@@ -99,8 +120,9 @@ class OdrlRuleCompositionProcessor {
         for (ruleKey in ruleKeys) {
             val rule = policy.get(ruleKey) ?: continue
             var ruleList = if (rule is ArrayNode) rule.toList() else listOf(rule)
-            for (propKey in sharedPropKeys)
+            for (propKey in sharedPropKeys) {
                 ruleList = ruleList.flatMap { reduceOdrlRuleForKey(it, propKey) }
+            }
             policy.replace(ruleKey, ArrayNode(JsonNodeFactory.instance, ruleList))
         }
     }
@@ -109,11 +131,13 @@ class OdrlRuleCompositionProcessor {
         rule: JsonNode,
         key: String,
     ): List<JsonNode> {
-        if (rule !is ObjectNode)
+        if (rule !is ObjectNode) {
             return listOf()
+        }
         val prop = rule.get(key)
-        if (prop !is ArrayNode)
+        if (prop !is ArrayNode) {
             return listOf(rule)
+        }
         if (prop.isEmpty) {
             rule.remove(key)
             return listOf(rule)
@@ -129,8 +153,9 @@ class OdrlRuleCompositionProcessor {
     private fun consolidateRules(policy: ObjectNode) {
         for (ruleKey in ruleKeys) {
             val rules = policy.get(ruleKey)
-            if (rules !is ArrayNode)
+            if (rules !is ArrayNode) {
                 continue
+            }
             do {
                 val found = consolidateNextRules(rules)
             } while (found)
@@ -140,16 +165,23 @@ class OdrlRuleCompositionProcessor {
     private fun consolidateNextRules(rules: ArrayNode): Boolean {
         for (keyToConsolidate in sharedPropKeys) {
             for (r in rules) {
-                if (r !is ObjectNode || !r.hasNonNull(keyToConsolidate))
+                if (r !is ObjectNode || !r.hasNonNull(keyToConsolidate)) {
                     continue
+                }
                 // Rules to consolidate with r must be object nodes...
-                val rulesToConsolidate = rules.filterIsInstance<ObjectNode>()
-                    // ...have exactly the same fields as r...
-                    .filter { r.fieldNames().asSequence().toSet() == it.fieldNames().asSequence().toSet() }
-                    // ...and must agree on all property values except at the field to consolidate
-                    .filter { r2 ->
-                        r.fieldNames().asSequence().minus(keyToConsolidate).all { r.get(it).equals(r2.get(it)) }
-                    }
+                val rulesToConsolidate =
+                    rules
+                        .filterIsInstance<ObjectNode>()
+                        // ...have exactly the same fields as r...
+                        .filter { r.fieldNames().asSequence().toSet() == it.fieldNames().asSequence().toSet() }
+                        // ...and must agree on all property values except at the field to consolidate
+                        .filter { r2 ->
+                            r
+                                .fieldNames()
+                                .asSequence()
+                                .minus(keyToConsolidate)
+                                .all { r.get(it).equals(r2.get(it)) }
+                        }
                 if (rulesToConsolidate.size > 1) {
                     val consolidatedValues = rulesToConsolidate.map { it.get(keyToConsolidate) }.distinct()
                     r.replace(keyToConsolidate, ArrayNode(JsonNodeFactory.instance, consolidatedValues))
@@ -162,10 +194,14 @@ class OdrlRuleCompositionProcessor {
     }
 
     private fun moveSharedPropertiesToPolicy(policy: ObjectNode) {
-        val rules = ruleKeys.filter { policy.hasNonNull(it) }.map { policy.get(it) }
-            .flatMap { if (it is ArrayNode) it.elements().asSequence().toList() else listOf(it) }
-        if (!rules.all { it is ObjectNode })
+        val rules =
+            ruleKeys
+                .filter { policy.hasNonNull(it) }
+                .map { policy.get(it) }
+                .flatMap { if (it is ArrayNode) it.elements().asSequence().toList() else listOf(it) }
+        if (!rules.all { it is ObjectNode }) {
             return
+        }
         for (propKey in sharedPropKeys) {
             val propertyValues = rules.map { it.get(propKey) }
             if (propertyValues.isNotEmpty() && propertyValues.all { it != null && it.equals(propertyValues.first()) }) {

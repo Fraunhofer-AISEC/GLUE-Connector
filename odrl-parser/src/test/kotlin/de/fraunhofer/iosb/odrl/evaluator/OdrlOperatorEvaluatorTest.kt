@@ -1,3 +1,18 @@
+/*
+ * Copyright 2025 Fraunhofer AISEC and Fraunhofer IOSB
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package de.fraunhofer.iosb.odrl.evaluator
 
 import de.fraunhofer.iosb.odrl.OdrlLeftOperand
@@ -26,52 +41,76 @@ class OdrlOperatorEvaluatorTest {
         val leftOperand = OdrlLeftOperand("http://www.w3.org/ns/odrl/2/dateTime")
 
         assertTrue(
-            evaluator.evaluateWithRightOperand(
-                ctx, gteq, leftOperand, listOf(XmlDateTime(LocalDateTime.now()))
-            ).success
+            evaluator
+                .evaluateWithRightOperand(
+                    ctx,
+                    gteq,
+                    leftOperand,
+                    listOf(XmlDateTime(LocalDateTime.now())),
+                ).success,
         )
         assertTrue(
-            evaluator.evaluateWithRightOperand(
-                ctx, lteq, leftOperand, listOf(XmlDateTime(LocalDateTime.now().plusMinutes(1)))
-            ).success
+            evaluator
+                .evaluateWithRightOperand(
+                    ctx,
+                    lteq,
+                    leftOperand,
+                    listOf(XmlDateTime(LocalDateTime.now().plusMinutes(1))),
+                ).success,
         )
         assertFalse(
-            evaluator.evaluateWithRightOperand(
-                ctx, lt, leftOperand, listOf(XmlDate(LocalDate.of(2000, 1, 1)))
-            ).success
+            evaluator
+                .evaluateWithRightOperand(
+                    ctx,
+                    lt,
+                    leftOperand,
+                    listOf(XmlDate(LocalDate.of(2000, 1, 1))),
+                ).success,
         )
     }
 
     @Test
     fun testOperatorEvaluationWithRightPipelineOperand() {
-        val ctx = Context(
-            "http://example.com/action", "http://example.com/asset",
-            GlueContainerPipeline(
-                container = listOf(
-                    GlueContainer("test/container1", "364a4787748a98c1c28085d4154a06c3a9be9a67c0b08a56b3f69fa8fabf172e")
-                )
+        val ctx =
+            Context(
+                "http://example.com/action",
+                "http://example.com/asset",
+                GlueContainerPipeline(
+                    container =
+                        listOf(
+                            GlueContainer("test/container1", "364a4787748a98c1c28085d4154a06c3a9be9a67c0b08a56b3f69fa8fabf172e"),
+                        ),
+                ),
             )
-        )
         val leftOperand = OdrlLeftOperand("http://fhg.de/glue/containerPipeline")
 
         assertTrue(
-            evaluator.evaluateWithRightOperand(
-                ctx, eq, leftOperand, listOf(ctx.params["pipeline"] as GlueContainerPipeline)
-            ).success
+            evaluator
+                .evaluateWithRightOperand(
+                    ctx,
+                    eq,
+                    leftOperand,
+                    listOf(ctx.params["pipeline"] as GlueContainerPipeline),
+                ).success,
         )
         assertTrue(
-            evaluator.evaluateWithRightOperand(
-                ctx, neq, leftOperand, listOf(
-                    GlueContainerPipeline(
-                        container = listOf(
-                            GlueContainer(
-                                image = "testContainer",
-                                hash = "364a4787748a98c1c28085d4154a06c3a9be9a67c0b08a56b3f69fa8fabf172e"
-                            )
-                        )
-                    )
-                )
-            ).success
+            evaluator
+                .evaluateWithRightOperand(
+                    ctx,
+                    neq,
+                    leftOperand,
+                    listOf(
+                        GlueContainerPipeline(
+                            container =
+                                listOf(
+                                    GlueContainer(
+                                        image = "testContainer",
+                                        hash = "364a4787748a98c1c28085d4154a06c3a9be9a67c0b08a56b3f69fa8fabf172e",
+                                    ),
+                                ),
+                        ),
+                    ),
+                ).success,
         )
     }
 }
