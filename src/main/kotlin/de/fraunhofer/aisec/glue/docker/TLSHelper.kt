@@ -16,20 +16,49 @@
 package de.fraunhofer.aisec.glue.docker
 
 import io.ktor.network.tls.*
+import java.nio.file.Files
+import java.nio.file.Path
+import java.security.KeyStore
+import java.security.PEMDecoder
+import java.security.PrivateKey
+import java.security.cert.CertificateFactory
+import java.security.cert.X509Certificate
+import javax.net.ssl.TrustManagerFactory
 import javax.net.ssl.X509TrustManager
 
-@Suppress("unused")
 object TLSHelper {
     private const val CA_CERT_FILE = "ca.pem"
     private const val CERT_FILE = "cert.pem"
     private const val KEY_FILE = "key.pem"
 
     fun loadDockerTLSParams(certDir: String): Pair<CertificateAndKey, X509TrustManager> {
-        // It seems the java crypto API is unable to load pkcs#1 keys like they are used by pretty much every project
-        // I've come across...
-        // Until I have some time to think about how to still work with the standard docker certificates, tls will not
-        // be supported for the docker client.
-        // Since we really only need docker TCP for the ci anyway, this is fine.
-        TODO("Docker tls is not implemented yet")
+        val directory = Path.of(certDir)
+        val clientCertificates = readCertificates(directory.resolve(CERT_FILE))
+        val caCertificates = readCertificates(directory.resolve(CA_CERT_FILE))
+        val privateKey = PEMDecoder.of().decode(Files.readString(directory.resolve(KEY_FILE)), PrivateKey::class.java)
+
+        val trustStore =
+            KeyStore.getInstance("PKCS12").apply {
+                load(null, null)
+                caCertificates.forEachIndexed { index, certificate -> setCertificateEntry("docker-ca-$index", certificate) }
+            }
+        val trustManager =
+            TrustManagerFactory
+                .getInstance(TrustManagerFactory.getDefaultAlgorithm())
+                .apply { init(trustStore) }
+                .trustManagers
+                .filterIsInstance<X509TrustManager>()
+                .firstOrNull() ?: throw IllegalStateException("Could not create an X509 trust manager for docker")
+
+        return CertificateAndKey(clientCertificates, privateKey) to trustManager
+    }
+
+    private fun readCertificates(path: Path): Array<X509Certificate> {
+        val certificates =
+            Files.newInputStream(path).use { input ->
+                CertificateFactory.getInstance("X.509").generateCertificates(input).map { it as X509Certificate }
+            }
+        require(certificates.isNotEmpty()) { "No certificates found in $path" }
+        return certificates.toTypedArray()
     }
 }

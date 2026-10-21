@@ -246,11 +246,11 @@ class DockerClient(
             val uri = URI(envVar)
 
             return when (uri.scheme) {
-                // Note: http and https are actually not supported by docker but its more intuitive to allow them as
-                // docker over tcp uses http(s) internally
-                "tcp" -> {
+                // Note: http and https are actually not supported by docker, but we'll allow it here as it is more
+                // intuitive.
+                "tcp", "http", "https" -> {
                     val tlsVerify = System.getenv("DOCKER_TLS_VERIFY")
-                    if (!tlsVerify.isNullOrEmpty()) {
+                    if (uri.scheme == "https" || (uri.scheme == "tcp" && !tlsVerify.isNullOrEmpty())) {
                         val certDir =
                             System.getenv(
                                 "DOCKER_CERT_PATH",
