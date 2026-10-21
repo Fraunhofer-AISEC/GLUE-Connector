@@ -47,7 +47,6 @@ import de.fraunhofer.aisec.glue.pipeline.atls.AtlsConfig
 import de.fraunhofer.aisec.glue.pipeline.atls.AtlsParameter
 import de.fraunhofer.aisec.glue.pipeline.docker.DockerBackend
 import de.fraunhofer.aisec.glue.plugins.ClientEdcCompatTransformation
-import de.fraunhofer.aisec.glue.plugins.configureAuthentication
 import de.fraunhofer.aisec.glue.policy.PolicyEngine
 import de.fraunhofer.iosb.odrl.parser.OdrlParser
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -104,14 +103,6 @@ val defaultDependencies by DI.Module {
                 }
                 install(ClientContentNegotiation) {
                     register(ContentType.Application.Json, instance())
-                }
-                install(Auth) {
-                    basic {
-                        credentials {
-                            val (username, password) = Utils.getCredentials()
-                            BasicAuthCredentials(username, password)
-                        }
-                    }
                 }
                 install(HttpTimeout) {
                     // Required as we need to wait for a remote container to fetch the atls-proxy image in the start
@@ -260,7 +251,6 @@ val defaultDependencies by DI.Module {
                         config = MapApplicationConfig()
                     },
                 module = {
-                    configureAuthentication()
                     install(DefaultHeaders) {
                         header(HttpHeaders.Server, Constants.TC_USER_AGENT)
                     }
@@ -328,7 +318,6 @@ fun Application.module() =
 fun Application.moduleWithDeps(dependencies: DirectDI) {
     LogbackObjectMapperInjector.register(dependencies.instance())
 
-    configureAuthentication()
     install(DefaultHeaders) {
         header(HttpHeaders.Server, Constants.TC_USER_AGENT)
     }

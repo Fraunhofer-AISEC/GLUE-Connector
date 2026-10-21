@@ -22,7 +22,6 @@ import de.fraunhofer.aisec.glue.config.ConnectorConfig
 import de.fraunhofer.aisec.glue.controllers.BuiltinNegotiationController
 import de.fraunhofer.aisec.glue.negotiation.builtin.BuiltinNegotiationManager
 import de.fraunhofer.aisec.glue.negotiation.builtin.DummyNegotiator
-import de.fraunhofer.aisec.glue.plugins.configureAuthentication
 import de.fraunhofer.iosb.odrl.OdrlOffer
 import de.fraunhofer.iosb.odrl.parser.OdrlParser
 import io.ktor.client.*
@@ -143,7 +142,6 @@ fun main(args: Array<String>) {
                         }
                     },
                     module = {
-                        configureAuthentication()
                         install(ServerContentNegotiation) {
                             register(ContentType.Application.Json, JacksonConverter(objectMapper))
                         }

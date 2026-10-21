@@ -242,13 +242,11 @@ open class BuiltinNegotiationController(
     }
 
     override fun Route.registerRoutes() {
-        authenticate {
-            route("/2024/1/negotiations") {
-                registerRoutes20241()
-            }
-            route("/negotiations") {
-                registerRoutes20241()
-            }
+        route("/2024/1/negotiations") {
+            registerRoutes20241()
+        }
+        route("/negotiations") {
+            registerRoutes20241()
         }
     }
 
