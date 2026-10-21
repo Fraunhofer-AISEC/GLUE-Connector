@@ -15,7 +15,6 @@
  */
 package de.fraunhofer.aisec.glue.docker
 
-import de.fraunhofer.aisec.glue.Utils.hexEncode
 import kotlinx.coroutines.runBlocking
 import kotlin.random.Random
 import kotlin.test.Test
@@ -33,7 +32,7 @@ class DockerClientTest {
     @Test
     fun testContainerFlow() {
         runBlocking {
-            val name = Random.Default.nextBytes(10).hexEncode()
+            val name = Random.nextBytes(10).toHexString()
             val httpEchoImage = System.getenv("HTTP_ECHO_IMAGE_NAME") ?: "container-pipeline/http-echo"
             val container = client.containers.create(name, httpEchoImage)
             try {
@@ -48,7 +47,7 @@ class DockerClientTest {
     @Test
     fun testNetworkFlow() {
         runBlocking {
-            val name = Random.Default.nextBytes(10).hexEncode()
+            val name = Random.nextBytes(10).toHexString()
             val net = client.networks.create(name, "10.0.${Random.Default.nextInt(256)}.0/24")
             net.remove()
         }

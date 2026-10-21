@@ -16,7 +16,6 @@
 package de.fraunhofer.aisec.glue.pipeline
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import de.fraunhofer.aisec.glue.Utils.hexEncode
 import de.fraunhofer.aisec.glue.Utils.makeHttpException
 import de.fraunhofer.aisec.glue.models.pipeline.PipelineCreateRequest
 import de.fraunhofer.aisec.glue.models.pipeline.PipelineCreateResponse
@@ -71,7 +70,7 @@ class RemotePipelineManager(
         // We prefer to use the same ID remote and locally, but that may not always be possible
         val pipelineId =
             if (remotePipelines.contains(pipelineInfo.pipelineName)) {
-                generateSequence { Random.nextBytes(8).hexEncode() }.first { n -> !remotePipelines.contains(n) }
+                generateSequence { Random.nextBytes(8).toHexString() }.first { n -> !remotePipelines.contains(n) }
             } else {
                 pipelineInfo.pipelineName
             }

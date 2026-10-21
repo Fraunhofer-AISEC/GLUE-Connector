@@ -15,7 +15,6 @@
  */
 package de.fraunhofer.aisec.glue.pipeline
 
-import de.fraunhofer.aisec.glue.Utils.hexEncode
 import de.fraunhofer.aisec.glue.atls.CMCClient
 import de.fraunhofer.aisec.glue.config.ConfigManager
 import de.fraunhofer.aisec.glue.config.ConnectorConfig
@@ -45,7 +44,7 @@ class PipelineManager(
     private val atlsConfig = config.getConfig(::AtlsConfig)
     private val connectorConfig = config.getConfig(::ConnectorConfig)
 
-    private fun createPipelineName(): String = generateSequence { Random.nextBytes(8).hexEncode() }.first { n -> !pipelines.contains(n) }
+    private fun createPipelineName(): String = generateSequence { Random.nextBytes(8).toHexString() }.first { n -> !pipelines.contains(n) }
 
     private fun createAtlsContainer(
         proxyConfig: GlueAtlsProxyConfiguration,

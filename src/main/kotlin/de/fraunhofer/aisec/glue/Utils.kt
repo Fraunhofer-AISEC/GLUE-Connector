@@ -20,18 +20,6 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 
 object Utils {
-    private const val HEX_DIGITS = "0123456789abcdef"
-
-    fun ByteArray.hexEncode(): String {
-        val builder = StringBuilder(size * 2)
-        for (byte in this) {
-            val int = byte.toInt() and 0xff
-            builder.append(HEX_DIGITS[int shr 4])
-            builder.append(HEX_DIGITS[int and 0x0f])
-        }
-        return builder.toString()
-    }
-
     /**
      * Get the base url that a request has been made against.
      * This is useful when we want to find out the exact point our API is reachable from, provided all reverse proxies
