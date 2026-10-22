@@ -47,7 +47,7 @@ class CMCClient(
         val serializedRequest = objectMapper.writeValueAsBytes(request)
         val requestSize = serializedRequest.size
 
-        LOG.atDebug {
+        LOG.atTrace {
             message = "Sending CMC request"
             payload =
                 mapOf(
@@ -88,7 +88,7 @@ class CMCClient(
                             ?: throw ProtocolException("Unknown reply type $replyType"),
                     )
 
-                LOG.atDebug {
+                LOG.atTrace {
                     message = "Received CMC response"
                     payload =
                         mapOf(
@@ -230,6 +230,9 @@ class CMCClient(
         }
     }
 
+    // The following types map to the equivalent values in the CMC.
+    // Unused values should therefore not be a warning.
+
     @Suppress("unused")
     enum class HashType(
         val string: String,
@@ -255,6 +258,7 @@ class CMCClient(
         BLAKE2B_512("BLAKE2B-512"),
     }
 
+    @Suppress("unused")
     enum class TLSKeyType(
         val representation: TLSCreateRequest.Type,
     ) {
@@ -263,6 +267,7 @@ class CMCClient(
         SNP(TLSCreateRequest.Type.snp),
     }
 
+    @Suppress("unused")
     enum class TLSKeyAlg(
         val representation: TLSCreateRequest.Alg,
     ) {

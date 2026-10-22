@@ -52,24 +52,14 @@ class DockerBackend(
             .iterator()
     private val config = configManager.getConfig(::DockerConfig)
 
-    // Note: This is an implementation detail of docker that should not be relied upon.
-    // Unfortunately, we don't have much of a choice.
+    // Note: There is no reliable way to determine if running in a container.
+    // Checking for .dockerenv is an implementation detail and the hostname can be overwritten.
+    // Even when we use such implementation details, we cannot tell if we are running on the same docker engine as the
+    // container pipelines (the one whose API socket the supplied docker client is connected to).
+    // As a result, we currently do not support running inside a sibling container with the docker backend while keeping
+    // this code around to make eventual adaptation easy.
     private val selfContainer: Container? by lazy {
         null
-        /*if (File("/.dockerenv").exists()) {
-            // Docker
-            // This normally works fine, but can fail if the container has a different hostname set.
-            // It may be better to fall back to get the PTR records for the local IP as one of the names is always the
-            // container id (unless of course a different dns is used, but then the whole networking of this system will
-            // fail anyway).
-            Container(dockerClient, InetAddress.getLocalHost().hostName)
-        } else if (File("/run/.containerenv").exists()) {
-            // Podman
-            Container(dockerClient, InetAddress.getLocalHost().hostName)
-        } else {
-            // No container
-            null
-        }*/
     }
 
     private suspend fun <T, R> mapParallel(
@@ -112,7 +102,6 @@ class DockerBackend(
                             "de.fraunhofer.aisec.glue.pipeline.id" to id,
                             "de.fraunhofer.aisec.glue.pipeline.contract" to contractId,
                             "de.fraunhofer.aisec.glue.pipeline.target" to targetId,
-                            "de.fraunhofer.aisec.glue.pipeline.owner" to "TODO: Put identity of whoever spawned the pipeline here",
                         ),
                 )
             }.toMutableList()

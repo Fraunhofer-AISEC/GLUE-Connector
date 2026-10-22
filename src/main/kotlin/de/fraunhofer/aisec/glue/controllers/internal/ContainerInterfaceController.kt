@@ -53,8 +53,9 @@ class ContainerInterfaceController(
     private val remotePeerProtocol = if (atlsEnabled) "https" else "http"
 
     override fun Route.registerRoutes() {
-        // Just IP-Address seems like it *could* be enough here (containers cannot really fake that as they cannot
-        // That said, we could easily enough just inject a token for the container to authenticate with.
+        // We currently don't use any authentication option, instead relying on the IP address of containers to match
+        // them to the correct pipeline. Note that containers can technically spoof this address, as we state in the
+        // security considerations section of the readme.
         route("/coordinator") {
             // Add a value for a pre-defined policy parameter
             post("/policy-parameter") {
