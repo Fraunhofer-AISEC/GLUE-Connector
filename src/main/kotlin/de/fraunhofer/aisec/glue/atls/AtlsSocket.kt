@@ -18,6 +18,7 @@ package de.fraunhofer.aisec.glue.atls
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.runBlocking
 import java.io.DataInputStream
 import java.io.InputStream
 import java.io.OutputStream
@@ -103,7 +104,6 @@ class AtlsSocket(
                     AtlsHandshake.AttestationType.MUTUAL,
                     true,
                     cacheKey,
-                    dispatcher,
                 )
 
             LOG.atDebug {
@@ -119,7 +119,7 @@ class AtlsSocket(
             val input = DataInputStream(inner.getInputStream())
             val output = inner.getOutputStream()
 
-            val initialPacket = atlsHandshake.start()
+            val initialPacket = runBlocking(dispatcher) { atlsHandshake.start() }
 
             LOG.atDebug {
                 message = "Starting ATLS handshake, sending initial packet"
@@ -158,7 +158,7 @@ class AtlsSocket(
                         )
                 }
 
-                val writePacket = atlsHandshake.feedPacket(readPacket)
+                val writePacket = runBlocking(dispatcher) { atlsHandshake.feedPacket(readPacket) }
 
                 if (writePacket != null) {
                     LOG.atDebug {

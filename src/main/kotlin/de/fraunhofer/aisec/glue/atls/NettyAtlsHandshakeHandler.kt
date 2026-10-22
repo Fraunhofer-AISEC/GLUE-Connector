@@ -22,9 +22,17 @@ import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.ChannelInboundHandlerAdapter
 import io.netty.handler.ssl.SslHandler
 import io.netty.handler.ssl.SslHandshakeCompletionEvent
-import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import java.security.MessageDigest
 import javax.net.ssl.ExtendedSSLSession
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 /**
  * Handler that performs custom data exchange immediately after TLS handshake completion.
@@ -33,11 +41,12 @@ import javax.net.ssl.ExtendedSSLSession
 class NettyAtlsHandshakeHandler(
     private val objectMapper: ObjectMapper,
     private val cmcClient: CMCClient,
-    private val dispatcher: CoroutineDispatcher,
 ) : ChannelInboundHandlerAdapter() {
     private var handshakeComplete = false
-    private var postHandshakeComplete = false
-    private var atlsHandshake: AtlsHandshake? = null
+    private var handshakeJob: Job? = null
+
+    // The coroutine and Netty callbacks both run on this channel's event loop.
+    private val dataAvailable = Channel<Unit>(Channel.CONFLATED)
     private val receivedData = mutableListOf<ByteArray>()
 
     override fun userEventTriggered(
@@ -55,7 +64,21 @@ class NettyAtlsHandshakeHandler(
                         )
                 }
                 handshakeComplete = true
-                performAtlsHandshakeExchange(ctx)
+                handshakeJob =
+                    CoroutineScope(ctx.executor().asCoroutineDispatcher()).launch {
+                        try {
+                            performAtlsHandshakeExchange(ctx)
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            LOG.atWarn {
+                                message = "Failed to perform ATLS handshake"
+                                cause = e
+                                payload = mapOf("channel" to ctx.channel().id().asShortText())
+                            }
+                            ctx.close()
+                        }
+                    }
             } else {
                 LOG.atWarn {
                     message = "TLS handshake failed"
@@ -72,97 +95,60 @@ class NettyAtlsHandshakeHandler(
         ctx.fireUserEventTriggered(evt)
     }
 
-    private fun performAtlsHandshakeExchange(ctx: ChannelHandlerContext) {
-        try {
-            // Get the SSL handler to access the session
-            val sslHandler = ctx.pipeline().get(SslHandler::class.java)
-            val session = sslHandler.engine().session as ExtendedSSLSession
+    private suspend fun performAtlsHandshakeExchange(ctx: ChannelHandlerContext) {
+        val session =
+            ctx
+                .pipeline()
+                .get(SslHandler::class.java)
+                .engine()
+                .session as ExtendedSSLSession
 
-            LOG.atDebug {
-                message = "Extracting SSL session information"
-                payload =
-                    mapOf(
-                        "channel" to ctx.channel().id().asShortText(),
-                        "protocol" to session.protocol,
-                        "cipherSuite" to session.cipherSuite,
-                    )
+        // Exporter data comes from the completed TLS session without remote I/O.
+        @Suppress("BlockingMethodInNonBlockingContext")
+        val channelBinding = session.exportKeyingMaterialData("EXPORTER-Channel-Binding", null, 32)
+        val cacheKey =
+            session.peerCertificates.firstOrNull()?.let {
+                MessageDigest.getInstance("SHA-256").digest(it.encoded).toHexString()
             }
 
-            // Extract the Exporter Channel Binding
-            val channelBinding = session.exportKeyingMaterialData("EXPORTER-Channel-Binding", null, 32)
+        val handshake =
+            AtlsHandshake(
+                objectMapper,
+                channelBinding,
+                cmcClient,
+                AtlsHandshake.AttestationType.MUTUAL,
+                false,
+                cacheKey,
+            )
 
-            LOG.atDebug {
-                message = "Extracted channel binding data"
-                payload =
-                    mapOf(
-                        "channel" to ctx.channel().id().asShortText(),
-                        "bindingLength" to channelBinding.size,
-                    )
-            }
+        sendPacket(ctx, handshake.start())
+        while (handshake.isRunning) {
+            handshake.feedPacket(receivePacket(ctx))?.let { sendPacket(ctx, it) }
+        }
 
-            // Calculate cache key from peer certificate SHA-256 hash
-            val cacheKey =
-                session.peerCertificates.firstOrNull()?.let {
-                    MessageDigest.getInstance("SHA-256").digest(it.encoded).toHexString()
-                }
-
-            LOG.atDebug {
-                message = "Calculated peer certificate cache key"
-                payload =
-                    mapOf(
-                        "channel" to ctx.channel().id().asShortText(),
-                        "cacheKey" to (cacheKey ?: "null"),
-                        "hasPeerCert" to (session.peerCertificates.firstOrNull() != null),
-                    )
-            }
-
-            // Create the ATLS handshake with channel binding
-            atlsHandshake =
-                AtlsHandshake(
-                    objectMapper,
-                    channelBinding,
-                    cmcClient,
-                    AtlsHandshake.AttestationType.MUTUAL,
-                    false,
-                    cacheKey,
-                    dispatcher,
-                )
-
-            LOG.atDebug {
-                message = "Created ATLS handshake instance"
-                payload =
-                    mapOf(
-                        "channel" to ctx.channel().id().asShortText(),
-                        "attestationType" to "SERVER",
-                        "useCaching" to false,
-                    )
-            }
-
-            // Start the ATLS handshake and send the initial packet
-            val initialPacket = atlsHandshake!!.start()
-            LOG.atDebug {
-                message = "Starting ATLS handshake, sending initial packet"
-                payload =
-                    mapOf(
-                        "channel" to ctx.channel().id().asShortText(),
-                        "packetSize" to initialPacket.size,
-                    )
-            }
-            sendPacket(ctx, initialPacket)
-        } catch (e: Exception) {
+        if (handshake.failure != null) {
             LOG.atWarn {
-                message = "Failed to initiate ATLS handshake"
-                cause = e
-                payload =
-                    mapOf(
-                        "channel" to ctx.channel().id().asShortText(),
-                    )
+                message = "ATLS handshake failed"
+                cause = handshake.failure
+                payload = mapOf("channel" to ctx.channel().id().asShortText())
             }
             ctx.close()
+            return
         }
+
+        // Bytes after the final ATLS packet belong to the HTTP pipeline.
+        if (receivedData.isNotEmpty()) {
+            val buffer = ctx.alloc().buffer(receivedData.sumOf { it.size })
+            receivedData.forEach { buffer.writeBytes(it) }
+            receivedData.clear()
+            ctx.fireChannelRead(buffer)
+        }
+
+        ctx.pipeline().remove(this)
+        ctx.read()
     }
 
-    private fun sendPacket(
+    private suspend fun sendPacket(
         ctx: ChannelHandlerContext,
         packet: ByteArray,
     ) {
@@ -181,29 +167,24 @@ class NettyAtlsHandshakeHandler(
                 )
         }
 
-        ctx.writeAndFlush(buffer).addListener { future ->
-            if (!future.isSuccess) {
-                LOG.atWarn {
-                    message = "Failed to send ATLS packet"
-                    cause = future.cause()
-                    payload =
-                        mapOf(
-                            "channel" to ctx.channel().id().asShortText(),
-                            "packetSize" to packet.size,
-                        )
+        suspendCancellableCoroutine { continuation ->
+            ctx.writeAndFlush(buffer).addListener { future ->
+                if (future.isSuccess) {
+                    continuation.resume(Unit)
+                } else {
+                    continuation.resumeWithException(future.cause())
                 }
-                ctx.close()
-            } else {
-                LOG.atDebug {
-                    message = "ATLS packet sent successfully"
-                    payload =
-                        mapOf(
-                            "channel" to ctx.channel().id().asShortText(),
-                            "packetSize" to packet.size,
-                        )
-                }
-                ctx.read()
             }
+        }
+    }
+
+    private suspend fun receivePacket(ctx: ChannelHandlerContext): ByteArray {
+        while (true) {
+            readPacketIfAvailable()?.let { return it }
+            // Discard the signal for bytes already inspected before waiting for more.
+            dataAvailable.tryReceive()
+            ctx.read()
+            dataAvailable.receive()
         }
     }
 
@@ -211,142 +192,38 @@ class NettyAtlsHandshakeHandler(
         ctx: ChannelHandlerContext,
         msg: Any,
     ) {
-        LOG.info { "Received message of type ${msg.javaClass.simpleName}" }
-
-        if (handshakeComplete && !postHandshakeComplete && atlsHandshake != null) {
-            // Process ATLS handshake packets
-            if (msg is ByteBuf) {
-                try {
-                    if (msg.readableBytes() == 0) {
-                        throw IllegalStateException("Received empty buffer")
-                    }
-                    // Accumulate received bytes
-                    val bytes = ByteArray(msg.readableBytes())
-                    msg.readBytes(bytes)
-                    receivedData.add(bytes)
-
-                    LOG.atDebug {
-                        message = "Received data during ATLS handshake"
-                        payload =
-                            mapOf(
-                                "channel" to ctx.channel().id().asShortText(),
-                                "bytesReceived" to bytes.size,
-                                "totalBuffered" to receivedData.sumOf { it.size },
-                            )
-                    }
-
-                    // Try to read all length-prefixed packets
-                    var packet = readPacketIfAvailable()
-                    while (packet != null) {
-                        LOG.atDebug {
-                            message = "Complete ATLS packet received, feeding to handshake"
-                            payload =
-                                mapOf(
-                                    "channel" to ctx.channel().id().asShortText(),
-                                    "packetSize" to packet!!.size,
-                                )
-                        }
-
-                        // Feed the packet to ATLS handshake
-                        val responsePacket = atlsHandshake!!.feedPacket(packet)
-
-                        // Send response if available
-                        if (responsePacket != null) {
-                            LOG.atDebug {
-                                message = "ATLS handshake produced response packet"
-                                payload =
-                                    mapOf(
-                                        "channel" to ctx.channel().id().asShortText(),
-                                        "responseSize" to responsePacket.size,
-                                    )
-                            }
-                            sendPacket(ctx, responsePacket)
-                        } else {
-                            LOG.atDebug {
-                                message = "ATLS handshake did not produce response packet"
-                                payload =
-                                    mapOf(
-                                        "channel" to ctx.channel().id().asShortText(),
-                                    )
-                            }
-                            // Request more data since we're waiting for a response
-                            ctx.read()
-                        }
-
-                        // Check if handshake is complete
-                        if (!atlsHandshake!!.isRunning) {
-                            if (atlsHandshake!!.failure != null) {
-                                LOG.atWarn {
-                                    message = "ATLS handshake failed"
-                                    cause = atlsHandshake!!.failure
-                                    payload =
-                                        mapOf(
-                                            "channel" to ctx.channel().id().asShortText(),
-                                        )
-                                }
-                                ctx.close()
-                            } else {
-                                LOG.atDebug {
-                                    message = "ATLS post-handshake completed successfully, removing handler from pipeline"
-                                    payload =
-                                        mapOf(
-                                            "channel" to ctx.channel().id().asShortText(),
-                                            "bufferedDataRemaining" to receivedData.sumOf { it.size },
-                                        )
-                                }
-                                postHandshakeComplete = true
-                                atlsHandshake = null
-
-                                // Forward any remaining buffered data to the next handler
-                                if (receivedData.isNotEmpty()) {
-                                    val remaining = receivedData.sumOf { it.size }
-                                    val buffer = ctx.alloc().buffer(remaining)
-                                    receivedData.forEach { buffer.writeBytes(it) }
-                                    LOG.atDebug {
-                                        message = "Forwarding remaining buffered data to next handler"
-                                        payload =
-                                            mapOf(
-                                                "channel" to ctx.channel().id().asShortText(),
-                                                "remainingBytes" to remaining,
-                                            )
-                                    }
-                                    ctx.fireChannelRead(buffer)
-                                }
-                                receivedData.clear()
-
-                                // Remove this handler from the pipeline as its job is done
-                                ctx.pipeline().remove(this)
-                                ctx.read()
-                            }
-                            break
-                        }
-
-                        // Try to read the next packet
-                        packet = readPacketIfAvailable()
-                    }
-                    // No more handshake packets, re-issue read call so that more data arrives to complete any partial packets.
-                    ctx.read()
-                } catch (e: Exception) {
-                    LOG.atWarn {
-                        message = "Error processing ATLS packet"
-                        cause = e
-                        payload =
-                            mapOf(
-                                "channel" to ctx.channel().id().asShortText(),
-                            )
-                    }
-                    ctx.close()
-                } finally {
-                    msg.release()
-                }
-            } else {
-                // Not a ByteBuf, pass it along
-                ctx.fireChannelRead(msg)
-            }
-        } else {
-            // Normal traffic, pass it through
+        if (!handshakeComplete || msg !is ByteBuf) {
             ctx.fireChannelRead(msg)
+            return
         }
+
+        try {
+            if (!msg.isReadable) {
+                throw IllegalStateException("Received empty buffer")
+            }
+            val bytes = ByteArray(msg.readableBytes())
+            msg.readBytes(bytes)
+            receivedData.add(bytes)
+            dataAvailable.trySend(Unit)
+        } catch (e: Exception) {
+            LOG.atWarn {
+                message = "Error receiving ATLS packet"
+                cause = e
+                payload = mapOf("channel" to ctx.channel().id().asShortText())
+            }
+            ctx.close()
+        } finally {
+            msg.release()
+        }
+    }
+
+    override fun channelInactive(ctx: ChannelHandlerContext) {
+        handshakeJob?.cancel()
+        ctx.fireChannelInactive()
+    }
+
+    override fun handlerRemoved(ctx: ChannelHandlerContext) {
+        handshakeJob?.cancel()
     }
 
     private fun readPacketIfAvailable(): ByteArray? {
@@ -432,7 +309,6 @@ class NettyAtlsHandshakeHandler(
                 mapOf(
                     "channel" to ctx.channel().id().asShortText(),
                     "handshakeComplete" to handshakeComplete,
-                    "postHandshakeComplete" to postHandshakeComplete,
                 )
         }
         ctx.close()

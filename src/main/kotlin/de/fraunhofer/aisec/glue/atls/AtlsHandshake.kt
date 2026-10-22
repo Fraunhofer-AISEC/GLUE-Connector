@@ -18,9 +18,7 @@ package de.fraunhofer.aisec.glue.atls
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import io.github.oshai.kotlinlogging.KotlinLogging
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.CancellationException
 
 /**
  * This class provides the handshake state machine for the ATLS protocol.
@@ -33,10 +31,7 @@ class AtlsHandshake(
     private val attestationType: AttestationType,
     private val isClient: Boolean,
     private val cacheKey: String?,
-    dispatcher: CoroutineDispatcher,
 ) {
-    private val handshakeScope = CoroutineScope(dispatcher)
-
     var state: State = State.Initial
         private set(value) {
             LOG.atTrace {
@@ -67,7 +62,7 @@ class AtlsHandshake(
     /**
      * Start the ATLS handshake state machine, returning the initial packet to send to the peer.
      */
-    fun start(): ByteArray {
+    suspend fun start(): ByteArray {
         if (state != State.Initial) {
             throw IllegalStateException("ATLS handshake state machine is already started")
         }
@@ -90,9 +85,7 @@ class AtlsHandshake(
                     message = "Fetching peer cache from CMC"
                     payload = mapOf("cacheKey" to cacheKey)
                 }
-                runBlocking(handshakeScope.coroutineContext) {
-                    cmcClient.fetchPeerCache(cacheKey)
-                }.also { result ->
+                cmcClient.fetchPeerCache(cacheKey).also { result ->
                     LOG.atDebug {
                         message = "Fetched peer cache from CMC"
                         payload =
@@ -157,7 +150,7 @@ class AtlsHandshake(
         }
     }
 
-    private fun handleRequest(packet: ByteArray): ByteArray {
+    private suspend fun handleRequest(packet: ByteArray): ByteArray {
         LOG.atDebug {
             message = "Handling ATLS request"
             payload =
@@ -220,9 +213,7 @@ class AtlsHandshake(
                     message = "Requesting attestation from CMC"
                     payload = mapOf("hasCachedData" to (req.cached != null))
                 }
-                runBlocking(handshakeScope.coroutineContext) {
-                    cmcClient.attest(channelBinding, req.cached)
-                }.also { result ->
+                cmcClient.attest(channelBinding, req.cached).also { result ->
                     LOG.atDebug {
                         message = "Received attestation from CMC"
                         payload =
@@ -264,7 +255,7 @@ class AtlsHandshake(
         return responsePacket
     }
 
-    private fun handleResponse(packet: ByteArray): ByteArray {
+    private suspend fun handleResponse(packet: ByteArray): ByteArray {
         LOG.atDebug {
             message = "Handling ATLS response"
             payload =
@@ -329,9 +320,7 @@ class AtlsHandshake(
                             "cacheMissesCount" to (req.cacheMisses?.size ?: 0),
                         )
                 }
-                runBlocking(
-                    handshakeScope.coroutineContext,
-                ) { cmcClient.verify(channelBinding, report, req.metadata, req.cacheMisses, cacheKey) }.also { result ->
+                cmcClient.verify(channelBinding, report, req.metadata, req.cacheMisses, cacheKey).also { result ->
                     LOG.atDebug {
                         message = "CMC verification completed"
                         payload = mapOf("verificationResult" to result)
@@ -427,7 +416,7 @@ class AtlsHandshake(
     /**
      * Feed a received packet to the state machine, returning the next packet to send to the peer (if any).
      */
-    fun feedPacket(packet: ByteArray): ByteArray? {
+    suspend fun feedPacket(packet: ByteArray): ByteArray? {
         LOG.atDebug {
             message = "Feeding packet to ATLS state machine"
             payload =
@@ -458,6 +447,8 @@ class AtlsHandshake(
             }
 
             return result
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             LOG.atWarn {
                 message = "ATLS handshake state machine encountered error"
