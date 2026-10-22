@@ -119,7 +119,7 @@ fun main(args: Array<String>) {
                 httpClient,
                 objectMapper,
                 DummyNegotiator(true),
-                DataStore(objectMapper),
+                DataStore(objectMapper, configManager),
                 OdrlParser(),
                 configManager,
             )

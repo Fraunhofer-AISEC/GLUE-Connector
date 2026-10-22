@@ -16,6 +16,8 @@
 package de.fraunhofer.aisec.glue
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import de.fraunhofer.aisec.glue.config.Config
+import de.fraunhofer.aisec.glue.config.ConfigManager
 import de.fraunhofer.aisec.glue.negotiation.builtin.BuiltinNegotiationData
 import de.fraunhofer.aisec.glue.tables.Contracts
 import de.fraunhofer.aisec.glue.tables.Lookups
@@ -23,6 +25,7 @@ import de.fraunhofer.aisec.glue.tables.Negotiations
 import de.fraunhofer.iosb.odrl.OdrlPolicy
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ktor.http.*
+import io.ktor.server.config.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.withContext
@@ -32,17 +35,19 @@ import org.ktorm.database.Database
 import org.ktorm.dsl.*
 import org.ktorm.entity.*
 import java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor
-import kotlin.io.path.createTempDirectory
+import kotlin.io.path.Path
+import kotlin.io.path.createDirectories
 
 class DataStore(
     objectMapper: ObjectMapper,
+    configManager: ConfigManager,
 ) {
-    // Currently, this is just backed by an in-memory DB
+    private val config = configManager.getConfig(::DataStoreConfig)
+
+    // The data source is currently a simple duckdb instance on the local disk
     private val dataSource by lazy {
-        // Make sure we end up with a unique db every time.
-        // Note: On linux, the TMP dir is usually cleaned on reboot. On windows, this could lead to a bunch of junk
-        // files over time.
-        val path = createTempDirectory().resolve("contracts.db")
+        val path = Path(config.location)
+        path.parent?.createDirectories()
         BasicDataSource().apply {
             driverClassName = "org.duckdb.DuckDBDriver"
             url = "jdbc:duckdb:$path"
@@ -71,22 +76,34 @@ class DataStore(
 
     suspend fun addContract(contract: OdrlPolicy): Unit =
         ioAsync {
-            connection.useTransaction {
-                connection.insert(contractsTable) {
-                    set(it.id, contract.uid.toString())
-                    set(it.contract, contract)
+            val db = connection
+            val id = contract.uid.toString()
+            db.useTransaction {
+                db.delete(lookupsTable) { it.contract eq id }
+                val updated =
+                    db.update(contractsTable) {
+                        set(it.contract, contract)
+                        where { it.id eq id }
+                    }
+                if (updated == 0) {
+                    db.insert(contractsTable) {
+                        set(it.id, id)
+                        set(it.contract, contract)
+                    }
                 }
-                connection.batchInsert(lookupsTable) {
-                    for (p in contract.permission) {
-                        val targetUid = p.target?.uid?.toString() ?: continue
-                        item {
-                            set(it.target, targetUid)
-                            set(
-                                it.action,
-                                p.action.value.uid
-                                    .toString(),
-                            )
-                            set(it.contract, contract.uid.toString())
+                if (contract.permission.any { it.target?.uid != null }) {
+                    db.batchInsert(lookupsTable) {
+                        for (p in contract.permission) {
+                            val targetUid = p.target?.uid?.toString() ?: continue
+                            item {
+                                set(it.target, targetUid)
+                                set(
+                                    it.action,
+                                    p.action.value.uid
+                                        .toString(),
+                                )
+                                set(it.contract, id)
+                            }
                         }
                     }
                 }
@@ -181,5 +198,11 @@ class DataStore(
         private val LOG = KotlinLogging.logger {}
 
         suspend inline fun <T> ioAsync(crossinline block: suspend CoroutineScope.() -> T): T = withContext(LOOM_DISPATCHER) { block() }
+    }
+
+    class DataStoreConfig(
+        raw: ApplicationConfig,
+    ) : Config(raw) {
+        val location by withDefault(stringProp(), "/var/lib/glue/datastore.db")
     }
 }

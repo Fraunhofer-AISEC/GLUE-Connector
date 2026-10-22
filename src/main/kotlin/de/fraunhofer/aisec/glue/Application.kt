@@ -53,8 +53,6 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ktor.client.*
 import io.ktor.client.engine.okhttp.*
 import io.ktor.client.plugins.*
-import io.ktor.client.plugins.auth.*
-import io.ktor.client.plugins.auth.providers.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.serialization.*
@@ -182,7 +180,7 @@ val defaultDependencies by DI.Module {
     bind<Backend>() with singleton { DockerBackend(instance(), instance(), instance()) }
     bind<PipelineManager>() with singleton { PipelineManager(instance(), instance(), instance(), instance()) }
     bind<PolicyEngine>() with singleton { PolicyEngine(instance()) }
-    bind<DataStore>() with singleton { DataStore(instance()) }
+    bind<DataStore>() with singleton { DataStore(instance(), instance()) }
     bind<ConnectorConfig>() with singleton { instance<ConfigManager>().getConfig(::ConnectorConfig) }
     bind<NegotiationManager>() with
         singleton {
@@ -292,7 +290,6 @@ val defaultDependencies by DI.Module {
                                 NettyAtlsHandshakeHandler(
                                     instance(),
                                     atlsManager.cmcClient,
-                                    instance(),
                                 ),
                             )
                         }
