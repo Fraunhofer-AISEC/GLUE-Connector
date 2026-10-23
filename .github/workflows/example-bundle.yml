@@ -1,0 +1,61 @@
+name: Example bundle
+
+on:
+  workflow_dispatch:
+    inputs:
+      image-tag:
+        description: Tag of the published images to bundle
+        default: latest
+        required: true
+  workflow_call:
+    inputs:
+      image-tag:
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    env:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends skopeo jo zstd python3-jinja2 python3-yaml
+
+      # The images are public, logging in only avoids the anonymous pull rate limit
+      - name: Log in to Docker Hub
+        if: ${{ env.DOCKERHUB_USERNAME != '' }}
+        run: skopeo login --username "$DOCKERHUB_USERNAME" --password-stdin docker.io <<< "$DOCKERHUB_TOKEN"
+
+      - name: Build bundle
+        working-directory: example
+        env:
+          SOURCE_REGISTRY: docker.io/fraunhoferaisec
+          SOURCE_TAG: ${{ inputs.image-tag }}
+        run: |
+          ./scripts/generate-pki.sh
+          ./scripts/prepare-images.sh
+          pushd compose-generator
+          for values in *-values.yaml; do
+            ./render-template.py compose.yml.j2 "$values" > "../${values%-values.yaml}.compose.yml"
+            ./render-template.py --insecure compose.yml.j2 "$values" > "../${values%-values.yaml}-insecure.compose.yml"
+          done
+          popd
+
+      - name: Archive bundle
+        run: tar c --exclude .gitignore --exclude 'compose-generator*' example | zstd -8 > example.tar.zst
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: example-bundle
+          path: example.tar.zst
+          # Already compressed
+          compression-level: 0

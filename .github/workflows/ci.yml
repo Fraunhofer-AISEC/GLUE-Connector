@@ -1,0 +1,144 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  # Images are only published for pushes to main and version tags, never for pull requests
+  PUSH_IMAGES: ${{ github.event_name == 'push' }}
+
+jobs:
+  build:
+    name: Build, test and publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+    env:
+      # The default 10.1.0.0/16 overlaps with the network of the GitHub-hosted runners
+      DOCKER_SUBNET: 10.200.0.0
+      IMAGE_PREFIX: fraunhoferaisec
+      DOCKER_IMAGES: http-echo=test-containers/http-echo proxy=test-containers/proxy atls-proxy=system-containers/atls-proxy
+      # PRs only build for the test runner's platform; full multi-platform builds run on push to main/tags
+      BUILD_PLATFORMS: ${{ github.event_name == 'pull_request' && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        with:
+          distribution: temurin
+          java-version: 25
+
+      - uses: gradle/actions/setup-gradle@07d1f8453baaff67fb503883367f8b13e6158a54 # v6
+
+      # The containerd image store can hold multi-platform images, so they can be built once,
+      # used by the tests and pushed afterwards
+      - uses: docker/setup-docker-action@7ec28a010822b4626af4874f9448a4b05ac6f3e5 # v5
+        with:
+          daemon-config: '{"features": {"containerd-snapshotter": true}}'
+          set-host: true
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
+
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
+        if: ${{ env.PUSH_IMAGES == 'true' }}
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # Only used for the tags, which are the same for all images
+      - id: meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6
+        with:
+          images: ${{ env.IMAGE_PREFIX }}/container-pipeline
+          flavor: latest=false
+          tags: |
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+
+      - name: Compute image tags
+        env:
+          META_JSON: ${{ steps.meta.outputs.json }}
+        run: echo "IMAGE_TAGS=$(jq -r '.tags | map(sub(".*:"; "")) | join(",")' <<< "$META_JSON")" >> "$GITHUB_ENV"
+
+      # Also tagged with the default names used by the tests, which fall back to local images when pulling fails
+      - name: Build container images
+        run: |
+          for entry in $DOCKER_IMAGES; do
+            image="${entry%%=*}"
+            context="${entry#*=}"
+            tag_args=(--tag "container-pipeline/$image")
+            for tag in ${IMAGE_TAGS//,/ }; do
+              tag_args+=(--tag "$IMAGE_PREFIX/$image:$tag")
+            done
+            # No QEMU needed, the Dockerfiles cross-compile on the build platform
+            docker buildx build --load \
+              --platform "$BUILD_PLATFORMS" \
+              --cache-from "type=gha,scope=$image" \
+              --cache-to "type=gha,mode=max,scope=$image" \
+              "${tag_args[@]}" \
+              "$context"
+          done
+
+      - run: ./gradlew shadowJar test
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: container-pipeline-jar
+          path: build/libs/container-pipeline-all.jar
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        if: ${{ !cancelled() }}
+        with:
+          name: test-reports
+          path: build/reports/tests/test
+          if-no-files-found: ignore
+
+      - uses: mikepenz/action-junit-report@6ef3fdcfcd5f0b5d14df3e659ef19b8c6820f93d # v6
+        if: ${{ !cancelled() }}
+        with:
+          report_paths: build/test-results/test/TEST-*.xml
+
+      # Jib cannot build multi-platform images without pushing them, so pull requests only get the compile
+      # check from shadowJar. The image needs an explicit tag, otherwise Jib also pushes latest.
+      - name: Build and push container-pipeline image
+        if: ${{ env.PUSH_IMAGES == 'true' }}
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          ./gradlew jib \
+            -Djib.to.auth.username="$DOCKERHUB_USERNAME" \
+            -Djib.to.auth.password="$DOCKERHUB_TOKEN" \
+            -Djib.to.image="$IMAGE_PREFIX/container-pipeline:${IMAGE_TAGS%%,*}" \
+            -Djib.to.tags="$IMAGE_TAGS"
+
+      - name: Push container images
+        if: ${{ env.PUSH_IMAGES == 'true' }}
+        run: |
+          for entry in $DOCKER_IMAGES; do
+            docker push --all-tags "$IMAGE_PREFIX/${entry%%=*}"
+          done
+
+  example-bundle:
+    name: Example bundle
+    if: ${{ startsWith(github.ref, 'refs/tags/v') && needs.build.outputs.version != '' }}
+    needs: build
+    uses: ./.github/workflows/example-bundle.yml
+    with:
+      image-tag: ${{ needs.build.outputs.version }}
+    secrets: inherit
