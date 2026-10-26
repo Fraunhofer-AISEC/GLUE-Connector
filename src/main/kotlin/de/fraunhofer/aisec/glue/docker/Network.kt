@@ -15,6 +15,8 @@
  */
 package de.fraunhofer.aisec.glue.docker
 
+import de.fraunhofer.aisec.glue.pipeline.IPv4Address
+import de.fraunhofer.aisec.glue.pipeline.IPv4Network
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.*
@@ -76,14 +78,14 @@ class Network internal constructor(
         // Docker also assigns an address to the host, which means we need another bit.
         private const val LINK_NET_LEN = 29
         private val LINK_NAMES = generateSequence(0, Int::inc).map { i -> "link-$i" }.iterator()
-        private val LINK_NETS = InetUtil.getSubnets(InetUtil.parseInet4Address("10.1.0.0"), 16, LINK_NET_LEN).iterator()
+        private val LINK_NETS = IPv4Network(IPv4Address.parse("10.1.0.0"), 16).subnets(LINK_NET_LEN).iterator()
 
         suspend fun link(
             client: DockerClient,
             from: Container,
             to: Container,
         ): Network {
-            val net = client.networks.create(LINK_NAMES.next(), "${LINK_NETS.next().hostAddress}/$LINK_NET_LEN")
+            val net = client.networks.create(LINK_NAMES.next(), LINK_NETS.next().toString())
             net.connect(from)
             net.connect(to)
             return net

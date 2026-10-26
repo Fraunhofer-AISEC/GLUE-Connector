@@ -26,7 +26,9 @@ value class IPv4Address(
         if (!(0..32).contains(prefixLength)) {
             throw IllegalArgumentException("IP prefix out of range")
         }
-        return IPv4Address(value and (-1 shl (32 - prefixLength)).toUInt())
+        // Shifting a 32-bit value by 32 is a no-op on the JVM, so /0 needs special handling
+        val mask = if (prefixLength == 0) 0u else UInt.MAX_VALUE shl (32 - prefixLength)
+        return IPv4Address(value and mask)
     }
 
     companion object {
@@ -36,7 +38,7 @@ value class IPv4Address(
                 throw IllegalArgumentException("IPv4 address must consist of four segments")
             }
             if (segments.any { s -> s > 255u }) {
-                throw IllegalArgumentException("All IPv4 address segments must be between 1 and 255")
+                throw IllegalArgumentException("All IPv4 address segments must be between 0 and 255")
             }
             return IPv4Address(segments.fold(0u) { a, s -> (a shl 8) or s })
         }

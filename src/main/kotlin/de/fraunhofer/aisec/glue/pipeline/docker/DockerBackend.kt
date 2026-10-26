@@ -20,24 +20,21 @@ import de.fraunhofer.aisec.glue.config.Config
 import de.fraunhofer.aisec.glue.config.ConfigManager
 import de.fraunhofer.aisec.glue.docker.Container
 import de.fraunhofer.aisec.glue.docker.DockerClient
-import de.fraunhofer.aisec.glue.docker.InetUtil
 import de.fraunhofer.aisec.glue.docker.Network
 import de.fraunhofer.aisec.glue.docker.model.*
 import de.fraunhofer.aisec.glue.pipeline.AugmentedGlueContainer
 import de.fraunhofer.aisec.glue.pipeline.Backend
 import de.fraunhofer.aisec.glue.pipeline.ContainerInfo
 import de.fraunhofer.aisec.glue.pipeline.ContainerPipeline
+import de.fraunhofer.aisec.glue.pipeline.IPv4Address
+import de.fraunhofer.aisec.glue.pipeline.IPv4Network
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ktor.server.config.*
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.withContext
-import java.net.Inet4Address
 import java.net.InetAddress
 import java.util.concurrent.ConcurrentLinkedQueue
-import kotlin.experimental.or
 
 class DockerBackend(
     private val objectMapper: ObjectMapper,
@@ -47,8 +44,8 @@ class DockerBackend(
     private val dockerSubnet = System.getenv("DOCKER_SUBNET") ?: "10.1.0.0"
     private val subnetLen = 29
     private val subnets =
-        InetUtil
-            .getSubnets(InetUtil.parseInet4Address(dockerSubnet), 16, subnetLen)
+        IPv4Network(IPv4Address.parse(dockerSubnet), 16)
+            .subnets(subnetLen)
             .iterator()
     private val config = configManager.getConfig(::DockerConfig)
 
@@ -177,14 +174,12 @@ class DockerBackend(
         val linkRequests =
             containerPairs.mapIndexed { i, c ->
                 val subnet = subnets.next()
-                val subnetCidr = "${subnet.hostAddress}/$subnetLen"
-                val gateway =
-                    withContext(Dispatchers.IO) {
-                        Inet4Address.getByAddress(subnet.address.also { a -> a[3] = a[3] or 1 })
-                    }.hostAddress
+                val subnetCidr = subnet.toString()
+                val gateway = subnet.host(1u).toString()
                 NetworkCreateRequest(
                     name = "pipeline-$id-net-$i",
                     ipam = IPAM(config = listOf(IPAMConfig(subnet = subnetCidr, gateway = gateway))),
+                    internal = true,
                     labels =
                         mapOf(
                             "de.fraunhofer.aisec.glue.pipeline.id" to id,

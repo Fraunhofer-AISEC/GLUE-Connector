@@ -60,49 +60,51 @@ class CMCClient(
         // Despite this method signature indicating support for TCP sockets only, unix sockets also work.
         // I suppose what the authors mean to say is that the socket is stream-oriented.
         try {
-            aSocket(selectorManager).tcp().connect(cmcAddress) {
-                socketTimeout = 30000
-            }.use { socket ->
-                val output = socket.openWriteChannel(autoFlush = false)
-                val messageType =
-                    CMC_REQUEST_LOOKUP[T::class] ?: throw IllegalArgumentException(
-                        "Unknown payload type ${T::class.qualifiedName}",
-                    )
-
-                output.writeInt(requestSize)
-                output.writeInt(messageType)
-
-                output.writeByteArray(serializedRequest)
-                output.flush()
-
-                // Wait for a reply
-                val input = socket.openReadChannel()
-                val replyLength = input.readInt()
-                val replyType = input.readInt()
-
-                val replyPayload = ByteBuffer.allocate(replyLength)
-                input.readFully(replyPayload)
-
-                val response =
-                    objectMapper.readValue(
-                        replyPayload.array(),
-                        CMC_RESPONSE_LOOKUP[replyType]?.java
-                            ?: throw ProtocolException("Unknown reply type $replyType"),
-                    )
-
-                LOG.atTrace {
-                    message = "Received CMC response"
-                    payload =
-                        mapOf(
-                            "requestType" to T::class.simpleName,
-                            "replyType" to CMC_RESPONSE_LOOKUP[replyType]?.simpleName,
-                            "cmcAddress" to cmcAddress,
-                            "serializedReply" to replyPayload.array().decodeToString(),
+            aSocket(selectorManager)
+                .tcp()
+                .connect(cmcAddress) {
+                    socketTimeout = 30000
+                }.use { socket ->
+                    val output = socket.openWriteChannel(autoFlush = false)
+                    val messageType =
+                        CMC_REQUEST_LOOKUP[T::class] ?: throw IllegalArgumentException(
+                            "Unknown payload type ${T::class.qualifiedName}",
                         )
-                }
 
-                return response
-            }
+                    output.writeInt(requestSize)
+                    output.writeInt(messageType)
+
+                    output.writeByteArray(serializedRequest)
+                    output.flush()
+
+                    // Wait for a reply
+                    val input = socket.openReadChannel()
+                    val replyLength = input.readInt()
+                    val replyType = input.readInt()
+
+                    val replyPayload = ByteBuffer.allocate(replyLength)
+                    input.readFully(replyPayload)
+
+                    val response =
+                        objectMapper.readValue(
+                            replyPayload.array(),
+                            CMC_RESPONSE_LOOKUP[replyType]?.java
+                                ?: throw ProtocolException("Unknown reply type $replyType"),
+                        )
+
+                    LOG.atTrace {
+                        message = "Received CMC response"
+                        payload =
+                            mapOf(
+                                "requestType" to T::class.simpleName,
+                                "replyType" to CMC_RESPONSE_LOOKUP[replyType]?.simpleName,
+                                "cmcAddress" to cmcAddress,
+                                "serializedReply" to replyPayload.array().decodeToString(),
+                            )
+                    }
+
+                    return response
+                }
         } catch (e: SocketException) {
             LOG.atError {
                 message = "Failed to communicate with the CMC"
