@@ -24,7 +24,7 @@ import de.fraunhofer.aisec.glue.models.negotiation.ContractRequestMessage
 import de.fraunhofer.aisec.glue.models.negotiation.NegotiationState
 import de.fraunhofer.aisec.glue.negotiation.Negotiation
 import de.fraunhofer.aisec.glue.negotiation.NegotiationManager
-import de.fraunhofer.aisec.glue.negotiation.edc.toEdcFormat
+import de.fraunhofer.aisec.glue.negotiation.edc.removeEdcPrefix
 import de.fraunhofer.iosb.odrl.OdrlAgreement
 import de.fraunhofer.iosb.odrl.OdrlOffer
 import de.fraunhofer.iosb.odrl.OdrlParty
@@ -75,6 +75,7 @@ open class BuiltinNegotiationManager(
                         scope = childScope,
                     )
 
+                observeNegotiationState(negotiation)
                 negotiations[data.id] = negotiation
             }
         }
@@ -113,7 +114,7 @@ open class BuiltinNegotiationManager(
         try {
             val contractRequestMessage =
                 ContractRequestMessage(
-                    id = odrlRequest.uid.toEdcFormat(),
+                    id = odrlRequest.uid.removeEdcPrefix(),
                     providerPid = null,
                     consumerPid = consumerPid.toString(),
                     callbackAddress = callbackUrl.toString(),

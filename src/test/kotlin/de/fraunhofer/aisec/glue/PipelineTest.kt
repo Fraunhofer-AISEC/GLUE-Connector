@@ -152,7 +152,7 @@ class PipelineTest {
             coEvery { mockCmcClient.tlsKey(any(), any(), any(), any(), any()) } returns "test-key"
 
             val mockRemotePipelineManager = mockk<RemotePipelineManager>()
-            val dataStore = DataStore(objectMapper)
+            val dataStore = DataStore(objectMapper, emptyConfigManager())
             val pipelineManager =
                 PipelineManager(mockRemotePipelineManager, mockBackend, mockCmcClient, ConfigManager(MapApplicationConfig()))
             val policyEngine = PolicyEngine(pipelineManager)

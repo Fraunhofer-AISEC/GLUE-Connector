@@ -203,6 +203,6 @@ class DataStore(
     class DataStoreConfig(
         raw: ApplicationConfig,
     ) : Config(raw) {
-        val location by withDefault(stringProp(), "/var/lib/glue/datastore.db")
+        val location by withDefault(stringProp(), "datastore.db")
     }
 }

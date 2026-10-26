@@ -45,7 +45,7 @@ class EdcClientCompatTransformationTest {
                 }
             }
             install(ClientContentNegotiation) {
-                register(ContentType.Application.Json, JacksonConverter(objectMapper, streamRequestBody = false))
+                register(ContentType.Application.Json, JacksonConverter(objectMapper, streamBody = false))
             }
         }
 

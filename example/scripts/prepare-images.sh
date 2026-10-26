@@ -6,7 +6,7 @@ out_dir="${1:-images}"
 mkdir -p "$out_dir"
 
 destination_registry="registry:5000"
-source_registry="${SOURCE_REGISTRY:-container-registry.gitlab.cc-asp.fraunhofer.de/ccit-glue/usage-control/container-pipeline}"
+source_registry="${SOURCE_REGISTRY:-docker.io/fraunhoferaisec}"
 image_tag="${SOURCE_TAG:-latest}"
 
 require() {

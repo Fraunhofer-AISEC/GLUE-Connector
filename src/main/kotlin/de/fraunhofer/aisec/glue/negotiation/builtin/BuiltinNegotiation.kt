@@ -19,7 +19,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import de.fraunhofer.aisec.glue.models.negotiation.*
 import de.fraunhofer.aisec.glue.negotiation.Negotiation
 import de.fraunhofer.aisec.glue.negotiation.NegotiationException
-import de.fraunhofer.aisec.glue.negotiation.edc.toEdcFormat
+import de.fraunhofer.aisec.glue.negotiation.edc.removeEdcPrefix
 import de.fraunhofer.aisec.glue.negotiation.toAgreement
 import de.fraunhofer.aisec.glue.plugins.EdcCompatPeerEndpointAttribute
 import de.fraunhofer.iosb.odrl.OdrlAgreement
@@ -590,7 +590,7 @@ class BuiltinNegotiation(
                         sendMessage(
                             "request",
                             ContractRequestMessage(
-                                id = counter.uid.toEdcFormat(),
+                                id = counter.uid.removeEdcPrefix(),
                                 providerPid = peerPid,
                                 consumerPid = id,
                                 callbackAddress = ownEndpoint.toString(),
@@ -605,6 +605,7 @@ class BuiltinNegotiation(
                 return
             } else {
                 terminateNegotiation("errPolicyFailure", "No counteroffer can be computed for this request")
+                return
             }
         }
 
@@ -871,7 +872,11 @@ class BuiltinNegotiation(
                 )
             }
         }
-        return resultFuture.await()
+        return when (data.state) {
+            NegotiationState.FINALIZED -> data.contract as OdrlAgreement
+            NegotiationState.TERMINATED -> throw NegotiationException("Negotiation terminated: ${data.failureReason}")
+            else -> resultFuture.await()
+        }
     }
 
     private class InternalCancellationMessage(
