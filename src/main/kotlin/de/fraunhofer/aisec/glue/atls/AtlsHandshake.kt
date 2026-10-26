@@ -19,6 +19,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.CancellationException
+import javax.net.ssl.ExtendedSSLSession
 
 /**
  * This class provides the handshake state machine for the ATLS protocol.
@@ -26,7 +27,8 @@ import kotlinx.coroutines.CancellationException
  */
 class AtlsHandshake(
     private val objectMapper: ObjectMapper,
-    private val channelBinding: ByteArray,
+    private val ownBinding: ByteArray,
+    private val peerBinding: ByteArray,
     private val cmcClient: CMCClient,
     private val attestationType: AttestationType,
     private val isClient: Boolean,
@@ -184,7 +186,8 @@ class AtlsHandshake(
             throw IllegalArgumentException("Version ${req.version} is not supported")
         }
 
-        val peerAttestationType = AttestationType.fromProtocolValue(req.attest)
+        // If the attestation type is not specified, fall back to the go default and also the most restrictive value.
+        val peerAttestationType = AttestationType.fromProtocolValue(req.attest ?: 0)
         LOG.atDebug {
             message = "Checking attestation type compatibility"
             payload =
@@ -213,7 +216,7 @@ class AtlsHandshake(
                     message = "Requesting attestation from CMC"
                     payload = mapOf("hasCachedData" to (req.cached != null))
                 }
-                cmcClient.attest(channelBinding, req.cached).also { result ->
+                cmcClient.attest(ownBinding, req.cached).also { result ->
                     LOG.atDebug {
                         message = "Received attestation from CMC"
                         payload =
@@ -236,8 +239,6 @@ class AtlsHandshake(
             AtlsHandshakeResponse(
                 VERSION,
                 report = cmcResult?.report,
-                metadata = cmcResult?.metadata,
-                cacheMisses = cmcResult?.cacheMisses,
             )
         val responsePacket = objectMapper.writeValueAsBytes(response)
 
@@ -248,7 +249,6 @@ class AtlsHandshake(
                     "state" to state.name,
                     "packetSize" to responsePacket.size,
                     "hasReport" to (response.report != null),
-                    "hasMetadata" to (response.metadata != null),
                 )
         }
 
@@ -273,8 +273,6 @@ class AtlsHandshake(
                 mapOf(
                     "version" to req.version,
                     "hasReport" to (req.report != null),
-                    "hasMetadata" to (req.metadata != null),
-                    "hasCacheMisses" to (req.cacheMisses != null),
                     "hasError" to (req.error != null),
                 )
         }
@@ -315,12 +313,9 @@ class AtlsHandshake(
                     payload =
                         mapOf(
                             "hasReport" to true,
-                            "hasMetadata" to (req.metadata != null),
-                            "hasCacheKey" to (cacheKey != null),
-                            "cacheMissesCount" to (req.cacheMisses?.size ?: 0),
                         )
                 }
-                cmcClient.verify(channelBinding, report, req.metadata, req.cacheMisses, cacheKey).also { result ->
+                cmcClient.verify(peerBinding, report, cacheKey).also { result ->
                     LOG.atDebug {
                         message = "CMC verification completed"
                         payload = mapOf("verificationResult" to result)
@@ -553,7 +548,20 @@ class AtlsHandshake(
     }
 
     companion object {
-        const val VERSION = "1.0.0"
+        const val VERSION = "1.3.0"
         private val LOG = KotlinLogging.logger {}
+
+        private const val CLIENT_LABEL = "EXPORTER-CMC-Attestation-Client"
+        private const val SERVER_LABEL = "EXPORTER-CMC-Attestation-Server"
+
+        /**
+         * Create RFC 5705 exporter secrets for an ATLS client and server.
+         * The result is intended to be passed to the [AtlsHandshake] constructor as own and peer binding.
+         */
+        fun createClientServerBindings(session: ExtendedSSLSession): Pair<ByteArray, ByteArray> {
+            val clientBinding = session.exportKeyingMaterialData(CLIENT_LABEL, null, 32)
+            val serverBinding = session.exportKeyingMaterialData(SERVER_LABEL, null, 32)
+            return Pair(clientBinding, serverBinding)
+        }
     }
 }

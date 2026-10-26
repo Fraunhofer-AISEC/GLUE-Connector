@@ -17,6 +17,7 @@ package de.fraunhofer.aisec.glue.atls
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.ktor.server.config.configLoaders
 import io.netty.buffer.ByteBuf
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.ChannelInboundHandlerAdapter
@@ -24,6 +25,7 @@ import io.netty.handler.ssl.SslHandler
 import io.netty.handler.ssl.SslHandshakeCompletionEvent
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.channels.Channel
@@ -65,7 +67,7 @@ class NettyAtlsHandshakeHandler(
                 }
                 handshakeComplete = true
                 handshakeJob =
-                    CoroutineScope(ctx.executor().asCoroutineDispatcher()).launch {
+                    CoroutineScope(Dispatchers.IO).launch {
                         try {
                             performAtlsHandshakeExchange(ctx)
                         } catch (e: CancellationException) {
@@ -103,9 +105,7 @@ class NettyAtlsHandshakeHandler(
                 .engine()
                 .session as ExtendedSSLSession
 
-        // Exporter data comes from the completed TLS session without remote I/O.
-        @Suppress("BlockingMethodInNonBlockingContext")
-        val channelBinding = session.exportKeyingMaterialData("EXPORTER-Channel-Binding", null, 32)
+        val (clientBinding, serverBinding) = AtlsHandshake.createClientServerBindings(session)
         val cacheKey =
             session.peerCertificates.firstOrNull()?.let {
                 MessageDigest.getInstance("SHA-256").digest(it.encoded).toHexString()
@@ -114,7 +114,8 @@ class NettyAtlsHandshakeHandler(
         val handshake =
             AtlsHandshake(
                 objectMapper,
-                channelBinding,
+                serverBinding,
+                clientBinding,
                 cmcClient,
                 AtlsHandshake.AttestationType.MUTUAL,
                 false,

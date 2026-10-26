@@ -60,7 +60,9 @@ class CMCClient(
         // Despite this method signature indicating support for TCP sockets only, unix sockets also work.
         // I suppose what the authors mean to say is that the socket is stream-oriented.
         try {
-            aSocket(selectorManager).tcp().connect(cmcAddress).use { socket ->
+            aSocket(selectorManager).tcp().connect(cmcAddress) {
+                socketTimeout = 30000
+            }.use { socket ->
                 val output = socket.openWriteChannel(autoFlush = false)
                 val messageType =
                     CMC_REQUEST_LOOKUP[T::class] ?: throw IllegalArgumentException(
@@ -139,8 +141,6 @@ class CMCClient(
     suspend fun verify(
         nonce: ByteArray,
         report: String,
-        metadata: Map<String, Any>?,
-        cacheMisses: List<String>? = null,
         peer: String? = null,
     ): Boolean {
         val encodedNonce = Base64.encode(nonce)

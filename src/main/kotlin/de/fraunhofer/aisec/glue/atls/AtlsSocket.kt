@@ -70,17 +70,7 @@ class AtlsSocket(
                     )
             }
 
-            val channelBinding = session.exportKeyingMaterialData("EXPORTER-Channel-Binding", null, 32)
-
-            LOG.atDebug {
-                message = "Extracted channel binding data"
-                payload =
-                    mapOf(
-                        "socket" to inner.remoteSocketAddress.toString(),
-                        "bindingLength" to channelBinding.size,
-                    )
-            }
-
+            val (clientBinding, serverBinding) = AtlsHandshake.createClientServerBindings(session)
             val cacheKey =
                 session.peerCertificates.first()?.let {
                     MessageDigest.getInstance("SHA-256").digest(it.encoded).toHexString()
@@ -99,7 +89,8 @@ class AtlsSocket(
             val atlsHandshake =
                 AtlsHandshake(
                     objectMapper,
-                    channelBinding,
+                    clientBinding,
+                    serverBinding,
                     cmcClient,
                     AtlsHandshake.AttestationType.MUTUAL,
                     true,

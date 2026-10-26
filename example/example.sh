@@ -132,6 +132,7 @@ info "Starting docker compose environment"
 docker compose -p "${compose_project_name}" -f "${compose_file}" up -d --build
 
 remove_compose() {
+  read -r
   info "Removing docker compose environment"
   docker compose -p "${compose_project_name}" -f "${compose_file}" down -v
 }

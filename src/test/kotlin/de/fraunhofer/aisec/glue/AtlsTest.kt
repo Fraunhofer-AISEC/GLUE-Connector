@@ -51,7 +51,7 @@ class AtlsTest {
                 )
 
             val report = client.attest("This is a test".toByteArray())
-            val verify = client.verify("This is a test".toByteArray(), report.report, report.metadata)
+            val verify = client.verify("This is a test".toByteArray(), report.report)
             assertTrue(verify)
         }
 

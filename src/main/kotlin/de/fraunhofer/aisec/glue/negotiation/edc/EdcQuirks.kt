@@ -384,4 +384,6 @@ object EdcQuirks {
 
 fun URI.toEdcFormat(): String = toString().substring(EDC_URI_COMPAT_SCHEME.length + 1)
 
+fun URI.removeEdcPrefix(): String = if (scheme == EDC_URI_COMPAT_SCHEME) toEdcFormat() else toString()
+
 fun uriFromEdcFormat(edcUri: String): URI = URI.create("$EDC_URI_COMPAT_SCHEME:$edcUri")

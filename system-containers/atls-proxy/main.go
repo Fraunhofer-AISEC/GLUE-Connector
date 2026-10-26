@@ -56,7 +56,7 @@ type proxyEndpoint struct {
 }
 
 type atlsProxyConfig struct {
-	Type string `json:"@type"`
+	Type string `json:"type"`
 	// If true, ATLS is enabled globally
 	Enabled bool `json:"http://fhg.de/glue/enabled"`
 	// Either server or client
@@ -79,7 +79,7 @@ func parseConfig() (config, atlsProxyConfig, error) {
 	defer file.Close()
 
 	var conf config
-	err = json.NewDecoder(file).Decode(&conf)
+	err = json.NewDecoder(io.TeeReader(file, os.Stdout)).Decode(&conf)
 	if err != nil {
 		return config{}, atlsProxyConfig{}, fmt.Errorf("could not parse config: %w", err)
 	}

@@ -78,7 +78,7 @@ class NegotiationTest {
     private fun httpClient(mockFactory: suspend MockRequestHandleScope.(HttpRequestData) -> HttpResponseData) =
         HttpClient(MockEngine(mockFactory)) {
             install(ClientContentNegotiation) {
-                register(ContentType.Application.Json, JacksonConverter(objectMapper, streamRequestBody = false))
+                register(ContentType.Application.Json, JacksonConverter(objectMapper, streamBody = false))
             }
             install(DefaultRequest) {
                 userAgent(Constants.TC_USER_AGENT)
@@ -340,7 +340,7 @@ class NegotiationTest {
                         }
                     }
                 }
-            val dataStore = DataStore(objectMapper)
+            val dataStore = DataStore(objectMapper, emptyConfigManager())
             val configManager =
                 ConfigManager(MapApplicationConfig("connector.identity" to "https://test-connector.local", "connector.edcMode" to "none"))
             val negotiationManager =
