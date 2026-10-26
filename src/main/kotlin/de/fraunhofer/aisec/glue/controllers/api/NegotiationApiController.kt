@@ -61,13 +61,11 @@ class NegotiationApiController(
 
                 post {
                     val req = call.receive<NegotiationCreationRequest>()
-                    //  the url and protocol version is derived.
-                    //  For not, it is just the URL with some simple parsing.
                     val peerUrl =
                         if (req.peer.contains("://")) {
                             req.peer
                         } else {
-                            "http://${req.peer}"
+                            "https://${req.peer}"
                         }
 
                     val negotiation = negotiationManager.startNegotiation(peerUrl, req.contractRequest)
@@ -95,12 +93,8 @@ class NegotiationApiController(
                                 payload = mapOf("peer" to req.peer, "contract" to contract.uid, "pipeline" to pipeline.name)
                             }
 
-                            //  ATLS proxy to not trigger another negotiation.
-                            //  This could break in a number of ways, e.g. if the peer property does not match or if the target
-                            //  differs.
-                            val peerUrl = URI(req.peer)
+                            val peerUrl = URI(peerUrl)
                             pipeline.addContract("${peerUrl.host}:${peerUrl.port}", contract)
-                            // pipeline.start()
                         }
                     }
 
