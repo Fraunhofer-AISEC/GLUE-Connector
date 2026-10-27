@@ -1,99 +1,59 @@
 # GLUE Connector
 
-This repository contains the GLUE Connector. GLUE stands for general lightweight, usage control enforcement. 
-The general GLUE documentation can be found [here](./docs/main.md).
+> [!IMPORTANT]
+> The GLUE connector is currently not ready for production use.
+> Please note the [security considerations section](#security-considerations) for current security-related issues.
+> We are working on resolving these issues in the near future.
 
-## API Documentation
+The Generalized Lightweight Usage Enforcement (GLUE) framework enables flexible and secure data processing in
+Trusted Execution Environments (TEEs).
+The framework specifies data processing pipelines as a chain of containers that each perform one processing step.
+A data owner defines their pipeline using a custom ODRL profile described [here](docs/concept-details.md#policies).
+The data owner may also restrict how derived data is used by including a templated follow-up policy that is dynamically
+instantiated by GLUE when data leaves the pipeline.
 
-The OpenAPI specification for the API is available [here](./doc/api.yaml).
-Note that the api specification may not always be in sync with the implementation.
+The GLUE connector is the central orchestrator for the GLUE framework.
+It drives policy negotiation using the [Data Space Protocol](https://eclipse-dataspace-protocol-base.github.io/DataspaceProtocol/2025-1-err2/)
+and manages data processing containers.
+It also provides secure and attested connections to and between processing pipelines running on different hosts based on
+the [CMC](https://github.com/Fraunhofer-AISEC/cmc).
+For more information about the functionality and design decisions of the GLUE connector, please visit
+[our documentation](docs/introduction.md).
+
+## Getting Started
+
+The GLUE connector is written in Kotlin and built using Gradle.
+To build the connector locally, one of the following commands may be used.
+
+```shell
+# Compile only
+./gradlew classes
+# Build a self-contained jar file
+./gradlew shadowJar
+# Build a container image and load it into the local docker daemon
+./gradlew jibDockerBuild
+```
+
+To test and run the GLUE connector, the [CMC](https://github.com/Fraunhofer-AISEC/cmc) and [Docker](https://docker.com)
+are required.
+Once both components are installed, run tests with `./gradlew test`.
+For a full usage example, see the [example directory](example/).
 
 ## Security Considerations
 
-> [!WARNING]  
-> The GLUE Connector does currently not provide user authentication or user management, because it is a prototype to demonstrate usage control.
-> Nonetheless, the security can be equipped by applying standard techniques and best practices like an Nginx proxy server with TLS client certificates in front of the GLUE Connector.
+The GLUE Connector is currently provided as a prototype implementation.
+As such, a number of expected features to deploy an internet-facing service are currently still in  development, which
+includes security features.
+As such, deployments should currently be confined to internal networks or require a properly configured firewall.
 
-We are planning to integrate a WEB-UI which allows the management of users and access. However, it is currently under construction and will be added soon.
+The current version of the GLUE connector does not implement authentication or authorization for any HTTP API.
+This includes both the user-facing API on port 8080 and the inter-connector API on port 8444.
+For the inter-connector API we require attested TLS connections that use the CA certificates provided by the CMC.
+As such, exposing port 8444 to external networks poses a smaller risk, provided the CMC is properly configured.
+The same applies to the input and output ports of each processing pipeline, which uses the same attested TLS protocol
+with the CMC's certificates.
 
-## HTTP-Server Example Using API
-
-This repository also contains example container definitions that use the container pipeline
-mechanism to spawn a simple HTTP echo server.
-First, build the docker http echo server docker image:
-
-```sh
-pushd test-containers
-PREFIX=container-pipeline docker compose build
-popd
-```
-
-Then start two container pipeline connectors with the docker socket mounted
-(Don't forget to stop the containers after or subsequent runs will fail).
-
-```sh
-# Replace with socat socket path from old example if needed
-docker_socket=/var/run/docker.sock
-for i in $(seq 2); do
-  docker run \
-    --rm \
-    --name="connector-$i" \
-    -v "$docker_socket":/var/run/docker.sock \
-    -d \
-    container-registry.gitlab.cc-asp.fraunhofer.de/ccit-glue/usage-control/container-pipeline:latest
-  echo "Connector $i IP: $(docker inspect -f '{{ .NetworkSettings.Networks.bridge.IPAddress }}' "connector-$i")"
-done
-```
-
-[This script](doc/api-example.sh) contains the logic to trigger the process.
-The script will eventually be replaced with a web UI.
-
-```sh
-./doc/api-example.sh <Connector 1 IP>:8080 <Connector 2 IP>:8080 test-containers/example-policy.json
-```
-
-The script will print the port the pipeline is reachable on.
-If everything worked, the following call should print `Test`.
-
-```sh
-curl -d Test http://localhost:<Pipeline Port>/echo
-```
-
-## Raw (old) HTTP-Server Example Usage
-
-### Build the test container image
-
-```sh
-docker build -t container-pipeline/http-echo test-containers/http-echo
-```
-### Start socat to create socket proxy to dump requests and responses:
-
-```sh
-socat -v UNIX-LISTEN:/tmp/docker-socket.sock,fork UNIX-CONNECT:/var/run/docker.sock
-```
-This can be passed to the container manager by exporting the `DOCKER_SOCKET` environment variable.
-
-### Run the connector:
-
-```sh
-./gradlew run
-```
-
-### Register the example policy:
-
-```sh
-./gradlew runPolicyTool --args="-c 127.0.0.1:8080 -p ./test-containers/example-policy.json"
-```
-
-### Create the demo pipeline:
-
-```sh
-curl -X POST -H "Content-Type: application/json" -v -u user:password -d '{"target": "http://dataowner.com/document:1234", "action": "http://www.w3.org/ns/odrl/2/use"}' http://localhost:8080/pipeline
-```
-The server will return the pipeline ID as well as the port the pipeline is listening on.
-
-### Stop/Delete the demo pipeline
-
-```sh
-curl --request DELETE -u user:password http://localhost:8080/pipeline/<pipeline id>
-```
+Due to the use of Linked Data formats (Json-LD), some requests (including those involved in policy negotiation) can
+trigger requests to third-party servers.
+We currently don't implement white-listing to prevent accesses to local networks etc.
+For the time being, only trusted parties should be allowed to access the negotiation interface.
