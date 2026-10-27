@@ -386,10 +386,10 @@ class AtlsHandshake(
             throw IllegalArgumentException("Version ${req.version} is not supported")
         }
 
-        if (req.error != null) {
+        if (req.success != true || req.error != null) {
             LOG.atWarn {
-                message = "Peer reported error in complete"
-                payload = mapOf("error" to req.error)
+                message = "ATLS handshake failed with unsuccessful peer message"
+                payload = mapOf("success" to req.success, "error" to req.error)
             }
             throw IllegalArgumentException("Peer reported an error: ${req.error}")
         }
@@ -398,11 +398,6 @@ class AtlsHandshake(
         LOG.info { "ATLS handshake state machine completed successfully" }
         LOG.atDebug {
             message = "ATLS handshake state machine completed"
-            payload =
-                mapOf(
-                    "finalState" to state.name,
-                    "success" to req.success,
-                )
         }
 
         return null
