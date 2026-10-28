@@ -49,6 +49,8 @@ services:
       context: .
       dockerfile: dockerfiles/cmc.dockerfile
     init: true
+    security_opt:
+      - apparmor:unconfined
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
@@ -139,6 +141,8 @@ services:
       context: .
       dockerfile: dockerfiles/cmc.dockerfile
     init: true
+    security_opt:
+      - apparmor:unconfined
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
@@ -229,6 +233,8 @@ services:
       context: .
       dockerfile: dockerfiles/cmc.dockerfile
     init: true
+    security_opt:
+      - apparmor:unconfined
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
