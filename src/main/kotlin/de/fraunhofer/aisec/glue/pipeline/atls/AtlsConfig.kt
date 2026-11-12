@@ -15,6 +15,7 @@
  */
 package de.fraunhofer.aisec.glue.pipeline.atls
 
+import de.fraunhofer.aisec.glue.atls.AtlsHandshake
 import de.fraunhofer.aisec.glue.config.Config
 import io.ktor.network.sockets.*
 import io.ktor.server.config.*
@@ -48,4 +49,18 @@ class AtlsConfig(
     )
 
     val caCertPath by withDefault(stringProp(), "/var/ca.pem")
+
+    /**
+     * Support mutual and server attestation. Applies to connector and ATLS proxies.
+     */
+    val attest by withDefault(
+        convert(stringProp()) {
+            val type = AtlsHandshake.AttestationType.valueOf(it.uppercase())
+            require(type == AtlsHandshake.AttestationType.MUTUAL || type == AtlsHandshake.AttestationType.SERVER) {
+                "Unsupported ATLS attestation mode $it, must be mutual or server"
+            }
+            type
+        },
+        AtlsHandshake.AttestationType.MUTUAL,
+    )
 }

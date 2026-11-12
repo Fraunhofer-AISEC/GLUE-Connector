@@ -88,6 +88,6 @@ class AtlsManager(
     }
 
     override val socketFactory: SSLSocketFactory by lazy {
-        AtlsSocketFactory(objectMapper, cmcClient, dispatcher, sslContext.socketFactory)
+        AtlsSocketFactory(objectMapper, cmcClient, dispatcher, atlsConfig.attest, sslContext.socketFactory)
     }
 }

@@ -16,6 +16,7 @@
 package de.fraunhofer.aisec.glue
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import de.fraunhofer.aisec.glue.atls.AtlsHandshake
 import de.fraunhofer.aisec.glue.atls.AtlsSocketFactory
 import de.fraunhofer.aisec.glue.atls.CMCClient
 import de.fraunhofer.aisec.glue.atls.CMCKeyManager
@@ -70,7 +71,13 @@ class AtlsTest {
                 engine {
                     config {
                         sslSocketFactory(
-                            AtlsSocketFactory(objectMapper, cmcClient, dispatcher, tlsContext.socketFactory),
+                            AtlsSocketFactory(
+                                objectMapper,
+                                cmcClient,
+                                dispatcher,
+                                AtlsHandshake.AttestationType.MUTUAL,
+                                tlsContext.socketFactory,
+                            ),
                             TrustingX509TrustManager,
                         )
                     }

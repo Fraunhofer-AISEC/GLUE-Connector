@@ -34,6 +34,7 @@ class AtlsSocket(
     private val objectMapper: ObjectMapper,
     private val cmcClient: CMCClient,
     private val dispatcher: CoroutineDispatcher,
+    private val attestationType: AtlsHandshake.AttestationType,
 ) : SSLSocket() {
     @Volatile
     private var handshakeCompleted: Boolean = false
@@ -92,7 +93,7 @@ class AtlsSocket(
                     clientBinding,
                     serverBinding,
                     cmcClient,
-                    AtlsHandshake.AttestationType.MUTUAL,
+                    attestationType,
                     true,
                     cacheKey,
                 )
@@ -102,7 +103,7 @@ class AtlsSocket(
                 payload =
                     mapOf(
                         "socket" to inner.remoteSocketAddress.toString(),
-                        "attestationType" to "SERVER",
+                        "attestationType" to attestationType.name,
                         "useCaching" to true,
                     )
             }

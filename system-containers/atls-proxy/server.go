@@ -88,7 +88,7 @@ func (sp *ServerProxy) listen() error {
 			serverListenAddr,
 			sp.tlsConfig,
 			attestedtls.WithCmcAddr(sp.proxyConfig.CmcAddress),
-			attestedtls.WithAttest(attestedtls.Attest_Mutual),
+			attestedtls.WithAttest(sp.proxyConfig.attestMode),
 			attestedtls.WithCmcApi("socket"),
 			attestedtls.WithMtls(true),
 			attestedtls.WithSerializer(serializer),

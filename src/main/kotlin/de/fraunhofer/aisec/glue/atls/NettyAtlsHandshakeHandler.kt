@@ -43,6 +43,7 @@ import kotlin.coroutines.resumeWithException
 class NettyAtlsHandshakeHandler(
     private val objectMapper: ObjectMapper,
     private val cmcClient: CMCClient,
+    private val attestationType: AtlsHandshake.AttestationType,
 ) : ChannelInboundHandlerAdapter() {
     private var handshakeComplete = false
     private var handshakeJob: Job? = null
@@ -117,7 +118,7 @@ class NettyAtlsHandshakeHandler(
                 serverBinding,
                 clientBinding,
                 cmcClient,
-                AtlsHandshake.AttestationType.MUTUAL,
+                attestationType,
                 false,
                 cacheKey,
             )

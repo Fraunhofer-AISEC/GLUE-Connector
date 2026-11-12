@@ -26,6 +26,7 @@ class AtlsSocketFactory(
     private val objectMapper: ObjectMapper,
     private val cmcClient: CMCClient,
     private val dispatcher: CoroutineDispatcher,
+    private val attestationType: AtlsHandshake.AttestationType,
     inner: SSLSocketFactory?,
 ) : SSLSocketFactory() {
     private val inner: SSLSocketFactory = inner ?: (getDefault() as SSLSocketFactory)
@@ -39,12 +40,12 @@ class AtlsSocketFactory(
         host: String?,
         port: Int,
         autoClose: Boolean,
-    ): Socket = AtlsSocket(inner.createSocket(s, host, port, autoClose) as SSLSocket, objectMapper, cmcClient, dispatcher)
+    ): Socket = AtlsSocket(inner.createSocket(s, host, port, autoClose) as SSLSocket, objectMapper, cmcClient, dispatcher, attestationType)
 
     override fun createSocket(
         host: String?,
         port: Int,
-    ): Socket = AtlsSocket(inner.createSocket(host, port) as SSLSocket, objectMapper, cmcClient, dispatcher)
+    ): Socket = AtlsSocket(inner.createSocket(host, port) as SSLSocket, objectMapper, cmcClient, dispatcher, attestationType)
 
     override fun createSocket(
         host: String?,
@@ -57,12 +58,13 @@ class AtlsSocketFactory(
             objectMapper,
             cmcClient,
             dispatcher,
+            attestationType,
         )
 
     override fun createSocket(
         host: InetAddress?,
         port: Int,
-    ): Socket = AtlsSocket(inner.createSocket(host, port) as SSLSocket, objectMapper, cmcClient, dispatcher)
+    ): Socket = AtlsSocket(inner.createSocket(host, port) as SSLSocket, objectMapper, cmcClient, dispatcher, attestationType)
 
     override fun createSocket(
         address: InetAddress?,
@@ -75,5 +77,6 @@ class AtlsSocketFactory(
             objectMapper,
             cmcClient,
             dispatcher,
+            attestationType,
         )
 }
