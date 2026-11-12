@@ -107,8 +107,9 @@ class NettyAtlsHandshakeHandler(
                 .session as ExtendedSSLSession
 
         val (clientBinding, serverBinding) = AtlsHandshake.createClientServerBindings(session)
+        // Without mTLS, the client has no certificate to identify it in the peer cache
         val cacheKey =
-            session.peerCertificates.firstOrNull()?.let {
+            runCatching { session.peerCertificates }.getOrNull()?.firstOrNull()?.let {
                 MessageDigest.getInstance("SHA-256").digest(it.encoded).toHexString()
             }
 

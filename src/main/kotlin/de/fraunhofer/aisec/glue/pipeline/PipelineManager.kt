@@ -70,6 +70,7 @@ class PipelineManager(
                         proxyEndpoint = proxyConfig.proxyEndpoint,
                         keyId = keyId,
                         attest = atlsConfig.attest.name.lowercase(),
+                        mtls = atlsConfig.mtls,
                     ),
                 ),
             ),
