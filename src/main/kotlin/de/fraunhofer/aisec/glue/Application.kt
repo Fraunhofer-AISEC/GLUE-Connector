@@ -290,6 +290,7 @@ val defaultDependencies by DI.Module {
                                 NettyAtlsHandshakeHandler(
                                     instance(),
                                     atlsManager.cmcClient,
+                                    atlsConfig.attest,
                                 ),
                             )
                         }

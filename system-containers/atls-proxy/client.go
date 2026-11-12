@@ -115,7 +115,7 @@ func (cp *ClientProxy) dialAtls(peerAddr string) (net.Conn, error) {
 		peerAddr,
 		cp.tlsConfig,
 		attestedtls.WithCmcAddr(cp.proxyConfig.CmcAddress),
-		attestedtls.WithAttest(attestedtls.Attest_Mutual),
+		attestedtls.WithAttest(cp.proxyConfig.attestMode),
 		attestedtls.WithCmcApi("socket"),
 		attestedtls.WithMtls(true),
 		attestedtls.WithSerializer(serializer),
@@ -240,8 +240,9 @@ func createClientTLSConfig(proxyConfig atlsProxyConfig) (*tls.Config, error) {
 	}
 
 	return &tls.Config{
-		RootCAs:            caCerts,
-		Certificates:       []tls.Certificate{clientCert},
+		RootCAs:      caCerts,
+		Certificates: []tls.Certificate{clientCert},
+		// The server is authenticated through its attestation, which requires mode mutual or server
 		InsecureSkipVerify: true,
 	}, nil
 }

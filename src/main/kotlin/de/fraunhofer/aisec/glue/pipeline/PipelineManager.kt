@@ -69,6 +69,7 @@ class PipelineManager(
                         caCertificate = File(atlsConfig.caCertPath).readText(),
                         proxyEndpoint = proxyConfig.proxyEndpoint,
                         keyId = keyId,
+                        attest = atlsConfig.attest.name.lowercase(),
                     ),
                 ),
             ),

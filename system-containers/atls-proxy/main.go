@@ -12,6 +12,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/Fraunhofer-AISEC/cmc/attestedtls"
 )
 
 type oneOrMany[T any] []T
@@ -69,6 +71,10 @@ type atlsProxyConfig struct {
 	ProxyEndpoints oneOrMany[proxyEndpoint] `json:"http://fhg.de/glue/proxyEndpoint"`
 	// The key ID to access the CMC TLS signing key with
 	KeyId string `json:"http://fhg.de/glue/keyId"`
+	// Attestation mode: mutual or server
+	Attest string `json:"http://fhg.de/glue/attest"`
+
+	attestMode attestedtls.AttestSelect
 }
 
 func parseConfig() (config, atlsProxyConfig, error) {
@@ -92,6 +98,16 @@ func parseConfig() (config, atlsProxyConfig, error) {
 		}
 
 		if decodedParam.Type == "http://fhg.de/glue/internal/AtlsProxyConfiguration" {
+			decodedParam.attestMode, err = attestedtls.ParseAttestMode(decodedParam.Attest)
+			if err != nil {
+				return config{}, atlsProxyConfig{}, fmt.Errorf("could not parse parameter: %w", err)
+			}
+			// The client authenticates the server through its attestation only
+			if decodedParam.attestMode != attestedtls.Attest_Mutual &&
+				decodedParam.attestMode != attestedtls.Attest_Server {
+				return config{}, atlsProxyConfig{}, fmt.Errorf("unsupported attestation mode %q, must be mutual or server",
+					decodedParam.Attest)
+			}
 			return conf, decodedParam, nil
 		}
 	}
