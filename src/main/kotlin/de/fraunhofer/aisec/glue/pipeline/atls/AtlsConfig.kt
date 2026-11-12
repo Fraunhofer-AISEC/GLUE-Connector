@@ -63,4 +63,9 @@ class AtlsConfig(
         },
         AtlsHandshake.AttestationType.MUTUAL,
     )
+
+    /**
+     * If true, servers require TLS client certificates.
+     */
+    val mtls by withDefault(boolProp(), true)
 }

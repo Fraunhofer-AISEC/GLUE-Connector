@@ -90,7 +90,7 @@ func (sp *ServerProxy) listen() error {
 			attestedtls.WithCmcAddr(sp.proxyConfig.CmcAddress),
 			attestedtls.WithAttest(sp.proxyConfig.attestMode),
 			attestedtls.WithCmcApi("socket"),
-			attestedtls.WithMtls(true),
+			attestedtls.WithMtls(sp.proxyConfig.Mtls),
 			attestedtls.WithSerializer(serializer),
 			attestedtls.WithKeyId(sp.proxyConfig.KeyId),
 			attestedtls.WithResultCb(func(result *attestationreport.AttestationResult) {
@@ -175,10 +175,15 @@ func createServerTLSConfig(proxyConfig atlsProxyConfig) (*tls.Config, error) {
 		return nil, fmt.Errorf("failed to get the server certificate from the CMC: %w", err)
 	}
 
+	clientAuth := tls.NoClientCert
+	if proxyConfig.Mtls {
+		clientAuth = tls.RequireAndVerifyClientCert
+	}
+
 	return &tls.Config{
 		ClientCAs:          caCerts,
 		Certificates:       []tls.Certificate{serverCert},
-		ClientAuth:         tls.RequireAndVerifyClientCert,
+		ClientAuth:         clientAuth,
 		InsecureSkipVerify: true,
 	}, nil
 }

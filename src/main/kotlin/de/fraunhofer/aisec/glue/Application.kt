@@ -275,7 +275,7 @@ val defaultDependencies by DI.Module {
                                     null,
                                     io.netty.handler.ssl.IdentityCipherSuiteFilter.INSTANCE,
                                     null,
-                                    ClientAuth.REQUIRE,
+                                    if (atlsConfig.mtls) ClientAuth.REQUIRE else ClientAuth.NONE,
                                     null,
                                     false,
                                 ).newHandler(channel().alloc())

@@ -73,6 +73,8 @@ type atlsProxyConfig struct {
 	KeyId string `json:"http://fhg.de/glue/keyId"`
 	// Attestation mode: mutual or server
 	Attest string `json:"http://fhg.de/glue/attest"`
+	// If true, the server requires TLS client certificates
+	Mtls bool `json:"http://fhg.de/glue/mtls"`
 
 	attestMode attestedtls.AttestSelect
 }

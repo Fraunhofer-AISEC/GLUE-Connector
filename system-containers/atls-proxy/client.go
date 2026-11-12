@@ -117,7 +117,7 @@ func (cp *ClientProxy) dialAtls(peerAddr string) (net.Conn, error) {
 		attestedtls.WithCmcAddr(cp.proxyConfig.CmcAddress),
 		attestedtls.WithAttest(cp.proxyConfig.attestMode),
 		attestedtls.WithCmcApi("socket"),
-		attestedtls.WithMtls(true),
+		attestedtls.WithMtls(cp.proxyConfig.Mtls),
 		attestedtls.WithSerializer(serializer),
 		attestedtls.WithResultCb(func(result *attestationreport.AttestationResult) {
 			switch result.Summary.Status {

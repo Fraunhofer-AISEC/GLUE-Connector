@@ -42,6 +42,8 @@ class AtlsParameter(
     val keyId: String,
     @param:JsonProperty("http://fhg.de/glue/attest")
     val attest: String,
+    @param:JsonProperty("http://fhg.de/glue/mtls")
+    val mtls: Boolean,
     value: GlueValue? = null,
 ) : GlueParameter(value) {
     override fun equals(other: Any?): Boolean {
@@ -58,6 +60,7 @@ class AtlsParameter(
         if (proxyEndpoint != other.proxyEndpoint) return false
         if (keyId != other.keyId) return false
         if (attest != other.attest) return false
+        if (mtls != other.mtls) return false
 
         return true
     }
@@ -70,6 +73,7 @@ class AtlsParameter(
         result = 31 * result + proxyEndpoint.hashCode()
         result = 31 * result + keyId.hashCode()
         result = 31 * result + attest.hashCode()
+        result = 31 * result + mtls.hashCode()
         return result
     }
 
@@ -78,5 +82,5 @@ class AtlsParameter(
             caCertificate.truncate(
                 16,
             )
-        }, proxyConnections=$proxyEndpoint, keyId=$keyId, attest=$attest)"
+        }, proxyConnections=$proxyEndpoint, keyId=$keyId, attest=$attest, mtls=$mtls)"
 }
