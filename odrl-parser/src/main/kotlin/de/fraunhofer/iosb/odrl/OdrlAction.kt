@@ -21,7 +21,6 @@ import com.fasterxml.jackson.databind.DeserializationContext
 import com.fasterxml.jackson.databind.JsonDeserializer
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.fasterxml.jackson.databind.exc.MismatchedInputException
 import com.fasterxml.jackson.databind.type.CollectionType
 import de.fraunhofer.iosb.odrl.glue.GlueIdentifiers
@@ -33,7 +32,6 @@ import io.konform.validation.ValidationError
 @JsonLd(GlueIdentifiers.CONTEXT)
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type", defaultImpl = OdrlAction::class)
 @JsonTypeName(OdrlIdentifiers.ACTION)
-@JsonDeserialize(using = OdrlActionDeserializer::class)
 data class OdrlAction(
     // According to the ODRL information model, an action must be identified by a rdf:value when using refinements
     @param:JsonProperty(RdfIdentifiers.VALUE)
@@ -120,7 +118,7 @@ class OdrlActionDeserializer : JsonDeserializer<OdrlAction>() {
 
         // Handle the simple string case: "action": "use"
         if (node.isTextual) {
-            return OdrlAction(node.asText())
+            return OdrlAction(mapper.treeToValue(node, RdfValue::class.java))
         }
 
         // Handle object case with rdf:value, @id, or nested action object
@@ -138,10 +136,11 @@ class OdrlActionDeserializer : JsonDeserializer<OdrlAction>() {
             ).unwrapAction()
 
         val value =
-            when {
-                valueNode.isTextual -> RdfValue(valueNode.asText())
-                valueNode.isObject && valueNode.has("@id") -> mapper.treeToValue(valueNode, RdfValue::class.java)
-                else -> throw MismatchedInputException.from(p, RdfValue::class.java, "Invalid value format: $valueNode")
+            if (valueNode.isTextual || (valueNode.isObject && valueNode.has("@id"))) {
+                // Let Jackson invoke RdfValue's constructors so that invalid IRIs surface as ValueInstantiationException
+                mapper.treeToValue(valueNode, RdfValue::class.java)
+            } else {
+                throw MismatchedInputException.from(p, RdfValue::class.java, "Invalid value format: $valueNode")
             }
 
         // Deserialize other properties

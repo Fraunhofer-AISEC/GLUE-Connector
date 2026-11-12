@@ -21,6 +21,7 @@ import com.apicatalog.jsonld.document.JsonDocument
 import com.apicatalog.jsonld.json.JsonProvider
 import com.apicatalog.jsonld.loader.DocumentLoader
 import com.fasterxml.jackson.core.JsonParser
+import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.DeserializationContext
 import com.fasterxml.jackson.databind.JsonDeserializer
 import com.fasterxml.jackson.databind.JsonMappingException
@@ -61,7 +62,13 @@ class JsonLdDeserializer<T>(
                 OdrlIdentifiers.NEQ,
             )
 
-        val bean = mapper.convertValue(fixedJsonLdObject, clazz)
+        val bean =
+            try {
+                mapper.convertValue(fixedJsonLdObject, clazz)
+            } catch (e: IllegalArgumentException) {
+                // If the conversion failed due to a jackson exception, throw it directly
+                throw (e.cause as? JsonProcessingException) ?: e
+            }
         if (bean is JsonLdBeanValidator) {
             val validationErrors = bean.validate()
             if (validationErrors.isNotEmpty()) {

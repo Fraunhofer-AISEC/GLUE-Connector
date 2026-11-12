@@ -15,6 +15,7 @@
  */
 package de.fraunhofer.aisec.glue
 
+import com.fasterxml.jackson.module.kotlin.readValue
 import de.fraunhofer.aisec.glue.DataStore.Companion.ioAsync
 import de.fraunhofer.aisec.glue.config.ConfigManager
 import de.fraunhofer.aisec.glue.config.ConnectorConfig
@@ -64,8 +65,9 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
+import org.junit.jupiter.api.io.TempDir
 import org.slf4j.event.Level
-import java.io.File
+import java.nio.file.Path
 import java.time.Duration
 import java.util.*
 import kotlin.test.*
@@ -75,6 +77,9 @@ import io.ktor.client.plugins.contentnegotiation.ContentNegotiation as ClientCon
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation as ServerContentNegotiation
 
 class NegotiationTest {
+    @TempDir
+    lateinit var tempDir: Path
+
     private fun httpClient(mockFactory: suspend MockRequestHandleScope.(HttpRequestData) -> HttpResponseData) =
         HttpClient(MockEngine(mockFactory)) {
             install(ClientContentNegotiation) {
@@ -340,7 +345,7 @@ class NegotiationTest {
                         }
                     }
                 }
-            val dataStore = DataStore(objectMapper, emptyConfigManager())
+            val dataStore = DataStore(objectMapper, tempDataStoreConfigManager(tempDir))
             val configManager =
                 ConfigManager(MapApplicationConfig("connector.identity" to "https://test-connector.local", "connector.edcMode" to "none"))
             val negotiationManager =
@@ -378,7 +383,7 @@ class NegotiationTest {
 
             agreedLatch.await()
 
-            val negotiation = negotiationManager.getNegotiation(respBody.providerPid, Negotiation.Role.PROVIDER, "consumer")
+            val negotiation = negotiationManager.getNegotiation(respBody.providerPid, Negotiation.Role.PROVIDER, null)
             assertNotNull(negotiation)
 
             val observer =
@@ -477,7 +482,7 @@ class NegotiationTest {
 
             acceptedLatch.await()
 
-            val negotiation = negotiationManager.getNegotiation(respBody.consumerPid, Negotiation.Role.CONSUMER, "provider")
+            val negotiation = negotiationManager.getNegotiation(respBody.consumerPid, Negotiation.Role.CONSUMER, null)
             assertNotNull(negotiation)
 
             val observer =
@@ -877,10 +882,7 @@ class NegotiationTest {
     companion object {
         private val objectMapper = OdrlParser().mapper
 
-        val exampleOffer: OdrlOffer =
-            File("test-containers/example-policy.json").inputStream().use { input ->
-                objectMapper.readValue(input, OdrlOffer::class.java)
-            }
+        val exampleOffer: OdrlOffer = objectMapper.readValue<OdrlOffer>(rawExampleOffer)
 
         val exampleAgreement = exampleOffer.toAgreement(OdrlParser(), OdrlParty("http://dataconsumer.com/org"))
 
