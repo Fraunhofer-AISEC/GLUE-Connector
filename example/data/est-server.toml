@@ -1,0 +1,37 @@
+[log]
+# logging level. Allowed: panic, fatal, error, warn, info, debug, trace
+level = "trace"
+
+[trust]
+# comma-separated paths to trusted root CA PEM files
+root_cas = ["/pki/ca-cert.pem"]
+
+[est]
+# path to the EST CA key for signing CSRs
+ca_key = "/pki/ca-key.pem"
+
+# comma-separated paths to EST CA certificate chain
+ca_chain = ["/pki/ca-cert.pem"]
+
+# TLS key for EST HTTPS server
+tls_key = "/pki/est-server-key.pem"
+
+# comma-separated paths to TLS certificate chain for EST HTTPS server
+tls_ca_chain = ["/pki/est-server-cert.pem", "/pki/ca-cert.pem"]
+
+[est.auth]
+# comma-separated authentication methods for /simpleenroll, empty disables the endpoint. Allowed:
+# none, token, certificate
+simpleenroll = []
+
+# comma-separated authentication methods for /tpmactivateenroll, empty disables the endpoint.
+# Allowed: none, token, certificate
+tpmactivateenroll = ["none"]
+
+[http]
+# folder to be served via HTTP
+folder = "/metadata"
+
+[tpm]
+# verify TPM EK certificate chains
+verify_ek_cert = false

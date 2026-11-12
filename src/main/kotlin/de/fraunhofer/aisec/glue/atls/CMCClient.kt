@@ -273,15 +273,15 @@ class CMCClient(
     enum class TLSKeyAlg(
         val representation: TLSCreateRequest.Alg,
     ) {
-        EC256(TLSCreateRequest.Alg.EC256),
-        EC384(TLSCreateRequest.Alg.EC384),
-        EC521(TLSCreateRequest.Alg.EC521),
-        RSA2048(TLSCreateRequest.Alg.RSA2048),
-        RSA4096(TLSCreateRequest.Alg.RSA4096),
+        EC256(TLSCreateRequest.Alg.ec256),
+        EC384(TLSCreateRequest.Alg.ec384),
+        EC521(TLSCreateRequest.Alg.ec521),
+        RSA2048(TLSCreateRequest.Alg.rsa2048),
+        RSA4096(TLSCreateRequest.Alg.rsa4096),
     }
 
     companion object {
-        private const val VERSION = "1.4.0"
+        private const val VERSION = "1.5.0"
 
         private val CMC_REQUEST_LOOKUP =
             mapOf(

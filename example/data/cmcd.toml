@@ -1,0 +1,43 @@
+[log]
+# logging level. Allowed: panic, fatal, error, warn, info, debug, trace
+level = "trace"
+
+[api]
+# CMC API and address in the form <api>://<address>, e.g. socket:///run/cmc/cmc.sock,
+# socket://127.0.0.1:9955 or grpc://127.0.0.1:9955
+endpoint = "socket:///tmp/cmcd.sock"
+
+[trust]
+# comma-separated paths to trusted root CA PEM files
+root_cas = ["/pki/ca-cert.pem"]
+
+[cmc.attestation]
+# comma-separated list of attestation report drivers, auto selects all detected hardware drivers
+# (tpm, snp, tdx), empty runs a verifier-only CMC. Allowed: auto, azure, sgx, snp, sw, swima, tdx,
+# tpm
+drivers = ["tpm"]
+
+[cmc.attestation.tpm]
+# TPM AK endorsement mode [est:<url> self]:
+#   est:<url>  perform AK credential activation with the EST server
+#   self       self-signed AK certificate for a CVM vTPM, which is bound to the snp or tdx driver as
+#              primary trust anchor
+endorsement = "est:https://estserver:9000/"
+
+[cmc.metadata]
+# comma-separated list of metadata locations [file:// https:// blob://]
+locations = ["file:///metadata"]
+
+[cmc.provisioning]
+# enrollment mode, with the address of the enrollment server for the modes that require one [self
+# est:<url>]
+enrollment = "est:https://estserver:9000/"
+
+[cmc.policies]
+# policy engine for custom verification. Allowed: js
+engine = "js"
+
+[cmc.storage]
+# folder for all data the CMC persists, such as keys, the metadata cache, the peer cache and the
+# hardware vendor collateral cache
+data = "/tmp/cmc-internal"
