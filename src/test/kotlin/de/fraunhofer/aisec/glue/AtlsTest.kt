@@ -40,7 +40,7 @@ import kotlin.test.assertTrue
 
 class AtlsTest {
     @Test
-    @DisabledIfEnvironmentVariable(named = "GITLAB_CI", matches = ".*")
+    @DisabledIfEnvironmentVariable(named = "CI", matches = ".*")
     fun `Test functionality of the CMC API`() =
         runTest {
             val client =
@@ -56,7 +56,7 @@ class AtlsTest {
         }
 
     @Test
-    @DisabledIfEnvironmentVariable(named = "GITLAB_CI", matches = ".*")
+    @DisabledIfEnvironmentVariable(named = "CI", matches = ".*")
     fun `Test ATLS client-side handshake with external server`() {
         val dispatcher = Dispatchers.IO
         val scope = CoroutineScope(dispatcher)
@@ -85,7 +85,7 @@ class AtlsTest {
     }
 
     @Test
-    @DisabledIfEnvironmentVariable(named = "GITLAB_CI", matches = ".*")
+    @DisabledIfEnvironmentVariable(named = "CI", matches = ".*")
     fun `Test CMC-Based signature and certificate handling`() {
         Security.addProvider(CMCProvider())
         System.setProperty("javax.net.debug", "ssl:handshake")

@@ -15,8 +15,8 @@
  */
 package de.fraunhofer.iosb.odrl.glue
 
+import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.JsonMappingException
-import com.fasterxml.jackson.databind.JsonNode
 import de.fraunhofer.iosb.odrl.*
 import de.fraunhofer.iosb.odrl.Commons.Companion.loadFileOrDie
 import org.junit.jupiter.api.assertThrows
@@ -79,13 +79,17 @@ class GlueContainerPipelineTest {
                                         httpUrl = URI.create("http://0.0.0.0:1234/dockerEndpoint"),
                                         value =
                                             GlueValue(
-                                                mapper.readValue(
-                                                    "{\n" +
-                                                        "  \"http://example.com/valueProperty1\": \"testProperty\",\n" +
-                                                        "  \"http://example.com/valueProperty2\": [42, 43, 44]\n" +
-                                                        "}",
-                                                    JsonNode::class.java,
-                                                ),
+                                                // The JSON-LD deserialization path yields LongNodes for all integers,
+                                                // and JsonNode equality is type-strict (IntNode(42) != LongNode(42))
+                                                mapper
+                                                    .reader()
+                                                    .with(DeserializationFeature.USE_LONG_FOR_INTS)
+                                                    .readTree(
+                                                        "{\n" +
+                                                            "  \"http://example.com/valueProperty1\": \"testProperty\",\n" +
+                                                            "  \"http://example.com/valueProperty2\": [42, 43, 44]\n" +
+                                                            "}",
+                                                    ),
                                             ),
                                     ),
                                 ),

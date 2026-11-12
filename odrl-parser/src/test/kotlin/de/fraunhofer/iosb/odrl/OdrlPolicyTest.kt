@@ -203,6 +203,7 @@ class OdrlPolicyTest {
                 "  \"permission\": [\n" +
                 "    {\n" +
                 "      \"uid\": \"http://example.com/permission1\",\n" +
+                "      \"odrl:action\": \"http://www.w3.org/ns/odrl/2/play\",\n" +
                 "      \"assignee\": {\n" +
                 "        \"type\": \"Party\",\n" +
                 "        \"uid\": \"http://example.com/assignee1\"\n" +
@@ -210,6 +211,7 @@ class OdrlPolicyTest {
                 "    },\n" +
                 "    {\n" +
                 "      \"uid\": \"http://example.com/permission2\",\n" +
+                "      \"odrl:action\": \"http://www.w3.org/ns/odrl/2/play\",\n" +
                 "      \"assignee\": {\n" +
                 "        \"type\": \"Party\",\n" +
                 "        \"uid\": \"http://example.com/assignee2\"\n" +
@@ -218,13 +220,13 @@ class OdrlPolicyTest {
                 "  ],\n" +
                 "  \"prohibition\": {\n" +
                 "    \"uid\": \"http://example.com/prohibition1\",\n" +
+                "    \"odrl:action\": \"http://www.w3.org/ns/odrl/2/play\",\n" +
                 "    \"assignee\": {\n" +
                 "      \"type\": \"Party\",\n" +
                 "      \"uid\": \"http://example.com/assignee3\"\n" +
                 "    }\n" +
                 "  },\n" +
                 "  \"profile\": \"http://example.com/profile\",\n" +
-                "  \"odrl:action\": \"http://www.w3.org/ns/odrl/2/play\",\n" +
                 "  \"target\": {\n" +
                 "    \"type\": \"Asset\",\n" +
                 "    \"uid\": \"http://example.com/target\"\n" +
@@ -258,12 +260,15 @@ class OdrlPolicyTest {
             "{\n" +
                 "  \"type\": \"Policy\",\n" +
                 "  \"uid\": \"http://example.com/compositionPolicy\",\n" +
-                "  \"permission\": {},\n" +
-                "  \"profile\": \"http://example.com/profile\",\n" +
-                "  \"odrl:action\": [\n" +
-                "    \"http://www.w3.org/ns/odrl/2/play\",\n" +
-                "    \"http://www.w3.org/ns/odrl/2/stream\"\n" +
+                "  \"permission\": [\n" +
+                "    {\n" +
+                "      \"odrl:action\": \"http://www.w3.org/ns/odrl/2/play\"\n" +
+                "    },\n" +
+                "    {\n" +
+                "      \"odrl:action\": \"http://www.w3.org/ns/odrl/2/stream\"\n" +
+                "    }\n" +
                 "  ],\n" +
+                "  \"profile\": \"http://example.com/profile\",\n" +
                 "  \"target\": [\n" +
                 "    {\n" +
                 "      \"type\": \"Asset\",\n" +
@@ -306,12 +311,14 @@ class OdrlPolicyTest {
                 "  \"permission\": {\n" +
                 "    \"odrl:action\": \"http://www.w3.org/ns/odrl/2/use\"\n" +
                 "  },\n" +
-                "  \"prohibition\": {\n" +
-                "    \"odrl:action\": [\n" +
-                "      \"http://www.w3.org/ns/odrl/2/play\",\n" +
-                "      \"http://www.w3.org/ns/odrl/2/stream\"\n" +
-                "    ]\n" +
-                "  },\n" +
+                "  \"prohibition\": [\n" +
+                "    {\n" +
+                "      \"odrl:action\": \"http://www.w3.org/ns/odrl/2/play\"\n" +
+                "    },\n" +
+                "    {\n" +
+                "      \"odrl:action\": \"http://www.w3.org/ns/odrl/2/stream\"\n" +
+                "    }\n" +
+                "  ],\n" +
                 "  \"profile\": \"http://example.com/profile\",\n" +
                 "  \"target\": [\n" +
                 "    {\n" +

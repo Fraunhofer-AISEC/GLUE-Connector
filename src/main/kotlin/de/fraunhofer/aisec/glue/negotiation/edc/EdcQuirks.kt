@@ -77,42 +77,6 @@ object EdcQuirks {
     }
 
     /**
-     * While the EDC only seems to accept compact serialization of ODRL policies, it needs the shared action parameter
-     * to be pushed down into the individual permissions.
-     * This function moves the action parameter into each permission object, which is rather inelegant...
-     * This should probably be handled in the serializer instead.
-     */
-    fun pushDownAction(compactSerialization: ObjectNode) {
-        val permissionKey = "permission"
-
-        if (!compactSerialization.has(ACTION_KEY)) {
-            // Already done or not serialized in compact form
-            return
-        }
-
-        val action = compactSerialization.remove(ACTION_KEY)
-
-        when (val permission = compactSerialization.get(permissionKey)) {
-            is ArrayNode -> {
-                permission.forEach {
-                    (it as? ObjectNode)?.putIfAbsent(
-                        ACTION_KEY,
-                        action,
-                    ) ?: throw AssertionError("Unexpected type ${it.javaClass.simpleName} for permission")
-                }
-            }
-
-            is ObjectNode -> {
-                permission.putIfAbsent(ACTION_KEY, action)
-            }
-
-            else -> {
-                throw AssertionError("Unexpected type ${permission.javaClass.simpleName} for permission")
-            }
-        }
-    }
-
-    /**
      * The ODRL-Parser encodes the id of an action with refinements as an RDF value.
      * The EDC's parser does not understand this and complains that the action has no @id field.
      * This function unwraps each rdf:value found directly beneath an odrl:action object node.

@@ -16,10 +16,16 @@
 package de.fraunhofer.iosb.odrl.parser
 
 import com.fasterxml.jackson.databind.module.SimpleModule
+import de.fraunhofer.iosb.odrl.OdrlAction
+import de.fraunhofer.iosb.odrl.OdrlActionDeserializer
 
 class OdrlModule(
     private val compactSerialization: Boolean,
 ) : SimpleModule() {
+    init {
+        addDeserializer(OdrlAction::class.java, OdrlActionDeserializer())
+    }
+
     override fun setupModule(context: SetupContext) {
         context.addBeanSerializerModifier(OdrlBeanSerializerModifier(compactSerialization))
         context.addBeanDeserializerModifier(OdrlBeanDeserializerModifier())

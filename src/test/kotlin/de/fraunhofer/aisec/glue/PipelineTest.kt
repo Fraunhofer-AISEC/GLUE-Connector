@@ -44,8 +44,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
 import org.junit.jupiter.api.assertDoesNotThrow
-import java.io.File
+import org.junit.jupiter.api.io.TempDir
 import java.net.InetAddress
+import java.nio.file.Path
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -55,6 +56,9 @@ import io.ktor.client.plugins.contentnegotiation.ContentNegotiation as ClientCon
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation as ServerContentNegotiation
 
 class PipelineTest {
+    @TempDir
+    lateinit var tempDir: Path
+
     // Baseline test to check if the PipelineManager still behaves as it should
     @Test
     fun `Test pipeline creation from contract`() =
@@ -152,7 +156,7 @@ class PipelineTest {
             coEvery { mockCmcClient.tlsKey(any(), any(), any(), any(), any()) } returns "test-key"
 
             val mockRemotePipelineManager = mockk<RemotePipelineManager>()
-            val dataStore = DataStore(objectMapper, emptyConfigManager())
+            val dataStore = DataStore(objectMapper, tempDataStoreConfigManager(tempDir))
             val pipelineManager =
                 PipelineManager(mockRemotePipelineManager, mockBackend, mockCmcClient, ConfigManager(MapApplicationConfig()))
             val policyEngine = PolicyEngine(pipelineManager)
@@ -308,10 +312,7 @@ class PipelineTest {
     companion object {
         private val objectMapper = OdrlParser().mapper
 
-        private val testContract =
-            File("test-containers/example-policy.json").reader().use { r ->
-                OdrlParser().readOdrlPolicy(r)
-            }
+        private val testContract = OdrlParser().readOdrlPolicy(rawExampleOffer.reader())
 
         private val LOG = KotlinLogging.logger {}
     }

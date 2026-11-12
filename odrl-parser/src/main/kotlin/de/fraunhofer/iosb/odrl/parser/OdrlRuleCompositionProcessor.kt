@@ -29,9 +29,9 @@ class OdrlRuleCompositionProcessor {
             OdrlIdentifiers.HAS_DUTY,
         )
 
+    // Properties that are moved between policy and rules in both directions (atomization and compaction)
     private val sharedPropKeys =
         listOf(
-//        OdrlIdentifiers.HAS_ACTION,
             OdrlIdentifiers.TARGET,
             OdrlIdentifiers.OUTPUT,
             OdrlIdentifiers.ASSIGNEE,
@@ -49,6 +49,11 @@ class OdrlRuleCompositionProcessor {
             OdrlIdentifiers.TRACKED_PARTY,
             OdrlIdentifiers.TRACKING_PARTY,
         )
+
+    // Since the EDC does not support shared action keys while requiring shared keys for all the properties in
+    // `sharedPropKeys`, we need to allow both shared and atomized versions of this key when decoding and keep it
+    // atomized when encoding.
+    private val atomizePropKeys = listOf(OdrlIdentifiers.HAS_ACTION) + sharedPropKeys
 
     fun replacePropertyInOdrlRules(
         policy: ObjectNode,
@@ -73,7 +78,7 @@ class OdrlRuleCompositionProcessor {
     }
 
     private fun moveSharedPropertiesToRules(policy: ObjectNode) {
-        for (propKey in sharedPropKeys) {
+        for (propKey in atomizePropKeys) {
             if (!policy.hasNonNull(propKey)) {
                 continue
             }
@@ -120,7 +125,7 @@ class OdrlRuleCompositionProcessor {
         for (ruleKey in ruleKeys) {
             val rule = policy.get(ruleKey) ?: continue
             var ruleList = if (rule is ArrayNode) rule.toList() else listOf(rule)
-            for (propKey in sharedPropKeys) {
+            for (propKey in atomizePropKeys) {
                 ruleList = ruleList.flatMap { reduceOdrlRuleForKey(it, propKey) }
             }
             policy.replace(ruleKey, ArrayNode(JsonNodeFactory.instance, ruleList))

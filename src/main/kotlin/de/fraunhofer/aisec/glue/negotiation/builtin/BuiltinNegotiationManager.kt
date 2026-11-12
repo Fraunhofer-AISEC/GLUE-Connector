@@ -76,7 +76,6 @@ open class BuiltinNegotiationManager(
                     )
 
                 observeNegotiationState(negotiation)
-                negotiations[data.id] = negotiation
             }
         }
     }
