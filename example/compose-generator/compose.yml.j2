@@ -58,7 +58,7 @@ services:
     command:
       - |
         ln -s /tmp/tpm0 /dev/tpm0
-        /opt/cmcd -config /data/cmcd-conf.json
+        /opt/cmcd --config /data/cmcd.toml
     depends_on:
       {{ component.name }}-swtpm:
         condition: service_healthy
@@ -140,7 +140,7 @@ services:
             --x5cs "/pki/est-signing-cert.pem,/pki/ca-cert.pem"
         done
 
-        /opt/estserver -config /data/est-conf.json
+        /opt/estserver --config /data/est-server.toml
     healthcheck:
       test: ["CMD", "curl", "-k", "https://localhost:9000"]
       interval: 1s
