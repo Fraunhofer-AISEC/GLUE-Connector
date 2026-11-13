@@ -103,7 +103,7 @@ val validateOdrlPermission =
 
         // A Permission MUST have one target property value of type Asset
         // Other relation sub-properties MAY be used
-        addConstraint("OdrlPermission: target property is required") { it.target != null }
+        constrain("OdrlPermission: target property is required") { it.target != null }
 
         // A Permission MAY have none or one assigner and/or assignee property values of type Party
         // Other function sub-properties MAY be used

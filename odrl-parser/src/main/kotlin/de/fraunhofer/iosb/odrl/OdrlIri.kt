@@ -42,6 +42,6 @@ fun isIri(uri: URI): Boolean = true
 val validateOdrlIri =
     Validation {
         OdrlIri::uid {
-            addConstraint("OdrlIri: {value} is not a valid IRI") { isIri(it) }
+            constrain("OdrlIri: {value} is not a valid IRI") { isIri(it) }
         }
     }

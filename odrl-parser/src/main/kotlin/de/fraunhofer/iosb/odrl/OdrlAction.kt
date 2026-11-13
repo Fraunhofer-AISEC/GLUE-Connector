@@ -66,12 +66,12 @@ data class OdrlAction(
 val validateOdrlAction =
     Validation {
         OdrlAction::value {
-            addConstraint("OdrlAction: {value} is not a valid IRI") { isIri(it.uid) }
+            constrain("OdrlAction: {value} is not a valid IRI") { isIri(it.uid) }
         }
 
         // An Action MAY have none, one or more refinement property values of type Constraint
         OdrlAction::refinement {
-            addConstraint("OdrlAction: Refinement list must be of homogeneous types Constraint/LogicalConstraint") { list ->
+            constrain("OdrlAction: Refinement list must be of homogeneous types Constraint/LogicalConstraint") { list ->
                 list.all { it is OdrlConstraint } || list.all { it is OdrlLogicalConstraint }
             }
         }
@@ -87,12 +87,12 @@ val validateOdrlAction =
         // An Action (except for use and transfer) MUST have one includedIn property value of type Action
         // Note: This property may be defined in the vocabulary instead of the JSONLD object
         OdrlAction::includedIn ifPresent {
-            addConstraint("OdrlAction: Invalid action in property 'includedIn'") { validateRecursively(it) }
+            constrain("OdrlAction: Invalid action in property 'includedIn'") { validateRecursively(it) }
         }
 
         // An Action MAY have none, one or more implies property values of type Action
         OdrlAction::implies onEach {
-            addConstraint("OdrlAction: Invalid action in property 'implies'") { validateRecursively(it) }
+            constrain("OdrlAction: Invalid action in property 'implies'") { validateRecursively(it) }
         }
     }
 

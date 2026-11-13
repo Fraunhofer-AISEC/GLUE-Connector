@@ -111,7 +111,7 @@ val validateOdrlDuty =
 
         // A Duty MAY have none, one or many consequence property values of type Duty
         OdrlDuty::consequence onEach {
-            addConstraint("OdrlDuty: Invalid duty in property 'consequence'") { validateRecursively(it) }
+            constrain("OdrlDuty: Invalid duty in property 'consequence'") { validateRecursively(it) }
         }
     }
 

@@ -21,7 +21,7 @@ import de.fraunhofer.iosb.odrl.parser.JsonLd
 import de.fraunhofer.iosb.odrl.parser.JsonLdBeanValidator
 import io.konform.validation.Validation
 import io.konform.validation.ValidationError
-import io.konform.validation.jsonschema.minimum
+import io.konform.validation.constraints.minimum
 import java.net.URI
 
 @JsonLd(GlueIdentifiers.CONTEXT)
@@ -63,11 +63,11 @@ val validateOdrlLogicalConstraint =
     Validation<OdrlLogicalConstraint> {
         // A Logical Constraint MAY have none or one uid property value of type IRI
         OdrlLogicalConstraint::uid ifPresent {
-            addConstraint("OdrlLogicalConstraint: {value} is not a valid IRI") { isIri(it) }
+            constrain("OdrlLogicalConstraint: {value} is not a valid IRI") { isIri(it) }
         }
 
         // A Logical Constraint MUST have one operand sub-property indicating the logical relationship of the compared existing constraints
-        addConstraint("OdrlLogicalConstraint: Use exactly ONE operand of 'or', 'xone', 'and', 'andSequence'") {
+        constrain("OdrlLogicalConstraint: Use exactly ONE operand of 'or', 'xone', 'and', 'andSequence'") {
             (if (it.or.isEmpty()) 0 else 1) + (if (it.xone.isEmpty()) 0 else 1) + (if (it.and.isEmpty()) 0 else 1) +
                 (if (it.andSequence.isEmpty()) 0 else 1) ==
                 1
