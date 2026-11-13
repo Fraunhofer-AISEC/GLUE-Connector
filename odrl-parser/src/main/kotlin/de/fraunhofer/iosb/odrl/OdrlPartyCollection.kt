@@ -57,7 +57,7 @@ val validateOdrlPartyCollection =
 
         // A PartyCollection MAY have none, one, or many refinement property values of type Constraint
         OdrlPartyCollection::refinement {
-            addConstraint("OdrlPartyCollection: Refinement list must be of homogeneous types Constraint/LogicalConstraint") { list ->
+            constrain("OdrlPartyCollection: Refinement list must be of homogeneous types Constraint/LogicalConstraint") { list ->
                 list.all { it is OdrlConstraint } || list.all { it is OdrlLogicalConstraint }
             }
         }

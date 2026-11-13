@@ -40,6 +40,6 @@ data class OdrlOperator(
 val validateOdrlOperator =
     Validation {
         OdrlOperator::uid {
-            addConstraint("OdrlOperator: {value} is not a valid IRI") { isIri(it) }
+            constrain("OdrlOperator: {value} is not a valid IRI") { isIri(it) }
         }
     }

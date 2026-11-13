@@ -20,7 +20,7 @@ import de.fraunhofer.iosb.odrl.OdrlRightOperand
 import de.fraunhofer.iosb.odrl.parser.JsonLdBeanValidator
 import io.konform.validation.Validation
 import io.konform.validation.ValidationError
-import io.konform.validation.jsonschema.minItems
+import io.konform.validation.constraints.minItems
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type", defaultImpl = GlueContainerPipeline::class)
 @JsonTypeName(GlueIdentifiers.CONTAINER_PIPELINE)
@@ -48,7 +48,7 @@ data class GlueContainerPipeline(
 val validateGlueContainerPipeline =
     Validation {
         GlueContainerPipeline::platformSecurity onEach {
-            addConstraint("GlueContainerPipeline: {value} must be one of 'tpm2', 'sgx', 'tdx' or 'amd-sev'") {
+            constrain("GlueContainerPipeline: {value} must be one of 'tpm2', 'sgx', 'tdx' or 'amd-sev'") {
                 listOf("tpm2", "sgx", "tdx", "amd-sev").any { it2 -> it2.equals(it, false) }
             }
         }

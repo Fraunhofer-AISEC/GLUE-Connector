@@ -22,7 +22,7 @@ import de.fraunhofer.iosb.odrl.parser.JsonLd
 import de.fraunhofer.iosb.odrl.parser.JsonLdBeanValidator
 import io.konform.validation.Validation
 import io.konform.validation.ValidationError
-import io.konform.validation.jsonschema.minimum
+import io.konform.validation.constraints.minimum
 import java.net.URI
 
 @JsonLd(GlueIdentifiers.CONTEXT)
@@ -104,7 +104,7 @@ val validateOdrlPolicy =
     Validation<OdrlPolicy> {
         // A Policy MUST have one uid property value of type IRI
         OdrlPolicy::uid {
-            addConstraint("OdrlPolicy: {value} is not a valid IRI") { isIri(it) }
+            constrain("OdrlPolicy: {value} is not a valid IRI") { isIri(it) }
         }
 
         // A Policy MUST have at least one permission, prohibition, or obligation property values

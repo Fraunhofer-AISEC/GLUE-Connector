@@ -23,7 +23,7 @@ import de.fraunhofer.iosb.odrl.parser.JsonLd
 import de.fraunhofer.iosb.odrl.parser.JsonLdBeanValidator
 import io.konform.validation.Validation
 import io.konform.validation.ValidationError
-import io.konform.validation.jsonschema.minimum
+import io.konform.validation.constraints.minimum
 import java.net.URI
 
 @JsonLd(GlueIdentifiers.CONTEXT)
@@ -75,7 +75,7 @@ val validateOdrlConstraint =
     Validation<OdrlConstraint> {
         // A Constraint MAY have none or one uid property value of type IRI
         OdrlConstraint::uid ifPresent {
-            addConstraint("OdrlConstraint: {value} is not a valid IRI") { isIri(it) }
+            constrain("OdrlConstraint: {value} is not a valid IRI") { isIri(it) }
         }
 
         // A Constraint MUST have one leftOperand property value of type LeftOperand
@@ -95,7 +95,7 @@ val validateOdrlConstraint =
         //   - One rightOperandReference property value of type
         //       (i) IRI, or
         //       (ii) for set-based operators: list of IRIs
-        addConstraint("OdrlConstraint: Use either 'rightOperand' OR 'rightOperandReference'") {
+        constrain("OdrlConstraint: Use either 'rightOperand' OR 'rightOperandReference'") {
             it.rightOperand.isEmpty() || it.rightOperandReference.isEmpty()
         }
         validate("constraintRightOperandNotEmpty", { it.rightOperand.size + it.rightOperandReference.size }) {

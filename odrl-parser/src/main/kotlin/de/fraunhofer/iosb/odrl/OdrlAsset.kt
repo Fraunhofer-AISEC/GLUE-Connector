@@ -53,7 +53,7 @@ val validateOdrlAsset =
     Validation {
         // An Asset SHOULD have one uid property value of type IRI
         OdrlAsset::uid ifPresent {
-            addConstraint("OdrlAsset: {value} is not a valid IRI") { isIri(it) }
+            constrain("OdrlAsset: {value} is not a valid IRI") { isIri(it) }
         }
 
         // An Asset MAY have none, one, or many partOf property values of type AssetCollection

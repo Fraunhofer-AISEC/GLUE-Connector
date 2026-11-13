@@ -40,6 +40,6 @@ data class OdrlLeftOperand(
 val validateOdrlLeftOperand =
     Validation {
         OdrlLeftOperand::uid {
-            addConstraint("OdrlLeftOperand: {value} is not a valid IRI") { isIri(it) }
+            constrain("OdrlLeftOperand: {value} is not a valid IRI") { isIri(it) }
         }
     }

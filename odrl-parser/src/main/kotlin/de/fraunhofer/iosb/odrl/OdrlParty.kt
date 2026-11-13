@@ -53,7 +53,7 @@ val validateOdrlParty =
     Validation {
         // A Party SHOULD have one uid property value of type IRI
         OdrlParty::uid ifPresent {
-            addConstraint("OdrlParty: {value} is not a valid IRI") { isIri(it) }
+            constrain("OdrlParty: {value} is not a valid IRI") { isIri(it) }
         }
 
         // A Party MAY have none, one, or many partOf property values of type PartyCollection

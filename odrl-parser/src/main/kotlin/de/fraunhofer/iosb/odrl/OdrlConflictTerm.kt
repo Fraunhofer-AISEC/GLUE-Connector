@@ -45,7 +45,7 @@ data class OdrlConflictTerm(
 
 val validateOdrlConflictTerm =
     Validation<OdrlConflictTerm> {
-        addConstraint("OdrlConflictTerm: {value} must be one of 'invalid', 'prohibit', or 'perm'") {
+        constrain("OdrlConflictTerm: {value} must be one of 'invalid', 'prohibit', or 'perm'") {
             it.isInvalid() || it.isProhibit() || it.isPerm()
         }
     }

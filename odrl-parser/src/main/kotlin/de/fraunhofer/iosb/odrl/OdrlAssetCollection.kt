@@ -57,7 +57,7 @@ val validateOdrlAssetCollection =
 
         // An AssetCollection MAY have none, one, or many refinement property values of type Constraint
         OdrlAssetCollection::refinement {
-            addConstraint("OdrlAssetCollection: Refinement list must be of homogeneous types Constraint/LogicalConstraint") { list ->
+            constrain("OdrlAssetCollection: Refinement list must be of homogeneous types Constraint/LogicalConstraint") { list ->
                 list.all { it is OdrlConstraint } || list.all { it is OdrlLogicalConstraint }
             }
         }

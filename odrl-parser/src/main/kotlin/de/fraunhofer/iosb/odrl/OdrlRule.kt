@@ -159,7 +159,7 @@ val validateOdrlRule =
     Validation {
         // A Rule MAY have none or one uid property values of type IRI
         OdrlRule::uid ifPresent {
-            addConstraint("OdrlRule: {value} is not a valid IRI") { isIri(it) }
+            constrain("OdrlRule: {value} is not a valid IRI") { isIri(it) }
         }
 
         // A Rule MUST have one action property value of type Action
@@ -224,7 +224,7 @@ val validateOdrlRule =
 
         // A Rule MAY have none, one or many constraint property values of type Constraint/LogicalConstraint
         OdrlRule::constraint {
-            addConstraint("OdrlRule: Constraint list must be of homogeneous types Constraint/LogicalConstraint") { list ->
+            constrain("OdrlRule: Constraint list must be of homogeneous types Constraint/LogicalConstraint") { list ->
                 list.all { it is OdrlConstraint } || list.all { it is OdrlLogicalConstraint }
             }
         }
