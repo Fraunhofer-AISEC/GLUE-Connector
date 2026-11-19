@@ -21,6 +21,8 @@ jobs:
   build:
     name: Build, test and publish
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: ${{ github.event_name == 'push' && 'dockerhub' || '' }}
     permissions:
       contents: read
       checks: write
@@ -35,6 +37,8 @@ jobs:
       BUILD_PLATFORMS: ${{ github.event_name == 'pull_request' && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
         with:
@@ -51,12 +55,6 @@ jobs:
           set-host: true
 
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
-
-      - uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4
-        if: ${{ env.PUSH_IMAGES == 'true' }}
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       # Only used for the tags, which are the same for all images
       - id: meta
@@ -75,8 +73,10 @@ jobs:
           META_JSON: ${{ steps.meta.outputs.json }}
         run: echo "IMAGE_TAGS=$(jq -r '.tags | map(sub(".*:"; "")) | join(",")' <<< "$META_JSON")" >> "$GITHUB_ENV"
 
-      # Also tagged with the default names used by the tests, which fall back to local images when pulling fails
+      # Also tagged with the default names used by the tests, which fall back to local images when pulling fails.
       - name: Build container images
+        env:
+          SOURCE_DATE_EPOCH: 0
         run: |
           for entry in $DOCKER_IMAGES; do
             image="${entry%%=*}"
@@ -86,10 +86,10 @@ jobs:
               tag_args+=(--tag "$IMAGE_PREFIX/$image:$tag")
             done
             # No QEMU needed, the Dockerfiles cross-compile on the build platform
-            docker buildx build --load \
+            docker buildx build \
               --platform "$BUILD_PLATFORMS" \
-              --cache-from "type=gha,scope=$image" \
-              --cache-to "type=gha,mode=max,scope=$image" \
+              --provenance=false \
+              --output type=docker,rewrite-timestamp=true \
               "${tag_args[@]}" \
               "$context"
           done
@@ -113,17 +113,19 @@ jobs:
         with:
           report_paths: build/test-results/test/TEST-*.xml
 
+      - uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4
+        if: ${{ env.PUSH_IMAGES == 'true' }}
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       # Jib cannot build multi-platform images without pushing them, so pull requests only get the compile
       # check from shadowJar. The image needs an explicit tag, otherwise Jib also pushes latest.
+      # Jib picks up the credentials from the Docker config written by the login action.
       - name: Build and push container-pipeline image
         if: ${{ env.PUSH_IMAGES == 'true' }}
-        env:
-          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         run: |
           ./gradlew jib \
-            -Djib.to.auth.username="$DOCKERHUB_USERNAME" \
-            -Djib.to.auth.password="$DOCKERHUB_TOKEN" \
             -Djib.to.image="$IMAGE_PREFIX/container-pipeline:${IMAGE_TAGS%%,*}" \
             -Djib.to.tags="$IMAGE_TAGS"
 
@@ -141,4 +143,6 @@ jobs:
     uses: ./.github/workflows/example-bundle.yml
     with:
       image-tag: ${{ needs.build.outputs.version }}
-    secrets: inherit
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}

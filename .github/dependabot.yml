@@ -4,6 +4,9 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    # Give freshly published (and possibly compromised) releases time to be noticed. Security updates are exempt.
+    cooldown:
+      default-days: 7
     groups:
       github-actions:
         patterns:
@@ -16,6 +19,9 @@ updates:
       - /test-containers/proxy
     schedule:
       interval: weekly
+    # Give freshly published (and possibly compromised) releases time to be noticed. Security updates are exempt.
+    cooldown:
+      default-days: 7
     groups:
       gomod:
         patterns:
@@ -24,7 +30,25 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    # Give freshly published (and possibly compromised) releases time to be noticed. Security updates are exempt.
+    cooldown:
+      default-days: 7
     groups:
       gradle:
+        patterns:
+          - "*"
+  - package-ecosystem: docker
+    directories:
+      - /system-containers/atls-proxy
+      - /test-containers/forwarder
+      - /test-containers/http-echo
+      - /test-containers/proxy
+    schedule:
+      interval: weekly
+    # Give freshly published (and possibly compromised) releases time to be noticed. Security updates are exempt.
+    cooldown:
+      default-days: 7
+    groups:
+      docker:
         patterns:
           - "*"

@@ -12,6 +12,12 @@ on:
       image-tag:
         type: string
         required: true
+    # Optional, the secrets of the dockerhub environment take precedence
+    secrets:
+      DOCKERHUB_USERNAME:
+        required: false
+      DOCKERHUB_TOKEN:
+        required: false
 
 permissions:
   contents: read
@@ -19,11 +25,12 @@ permissions:
 jobs:
   bundle:
     runs-on: ubuntu-latest
-    env:
-      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+    timeout-minutes: 15
+    environment: dockerhub
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
 
       - name: Install dependencies
         run: |
@@ -32,8 +39,13 @@ jobs:
 
       # The images are public, logging in only avoids the anonymous pull rate limit
       - name: Log in to Docker Hub
-        if: ${{ env.DOCKERHUB_USERNAME != '' }}
-        run: skopeo login --username "$DOCKERHUB_USERNAME" --password-stdin docker.io <<< "$DOCKERHUB_TOKEN"
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          if [ -n "$DOCKERHUB_USERNAME" ]; then
+            skopeo login --username "$DOCKERHUB_USERNAME" --password-stdin docker.io <<< "$DOCKERHUB_TOKEN"
+          fi
 
       - name: Build bundle
         working-directory: example
