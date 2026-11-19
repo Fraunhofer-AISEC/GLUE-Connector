@@ -1,13 +1,5 @@
 ## Getting Started
 
-> [!IMPORTANT]
-> Irgendwo muss aber auch noch grundsätzlich stehen, wie man den Spaß konfiguriert und aufsetzt.
-> Da kann wenns ist auch ich nochmal was schreiben.
-> Die Frage wäre wo und in welchem Umfang.
->
-> Rep: Es wird ja schon die eigentliche technische Anleitung verlinkt in den GLUE Examples. 
-> Also wir müssen nicht alles doppelt schreiben. Diese Docu hier ist gedacht für einen Einstig der etwas höher-leveliger ist.
-
 The GLUE repository contains a simple examples for demonstration. 
 The corresponding code can be seen here: [GLUE Examples](https://gitlab.cc-asp.fraunhofer.de/ccit-glue/usage-control/container-pipeline/-/tree/main/example?ref_type=heads).
 <!--- TODO Update the link -->
