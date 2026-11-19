@@ -1,10 +1,7 @@
 # List of Containers for Container-based and pipelined Usage-Control (CoPi-UC)
 
-> [!NOTE]
-> Wenn wir auf GHCR umziehen, dann brauchts hoffentlich keinen speziellen Zugriff mehr und wir können hier einfach die URL reinschreiben.
-
-The GLUE Connector provides numerous precompiled instances of example containers to be used inside processing chains. 
-More information about the container registry and how to get access can be found in [Container Registry](container-registry.md).
+The GLUE Connector provides numerous precompiled instances of example containers to be used inside processing chains.
+We currently host our example containers on [Docker Hub](https://hub.docker.com/orgs/fraunhoferaisec).
 
 ## Available Containers
 
