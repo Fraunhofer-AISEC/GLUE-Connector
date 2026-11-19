@@ -45,7 +45,7 @@ jobs:
           distribution: temurin
           java-version: 25
 
-      - uses: gradle/actions/setup-gradle@445a164ce8dd7af4e36840ca2f5aa4e1faf842f2 # v6
+      - uses: gradle/actions/setup-gradle@c0152e9a6b68fc2b5c1f256331f2e8f82b68ad62 # v6
 
       # The containerd image store can hold multi-platform images, so they can be built once,
       # used by the tests and pushed afterwards
