@@ -17,5 +17,3 @@ The following sections provide insights and different entry points to our docume
 [Use Cases](use-cases.md) summarizes different use-cases which all require usage control and can be realized with the GLUE connector.
 
 [Containers and their Functions](containers.md) lists the available standard containers which work out-of-the-box.
-
-[Container Registry](container-registry.md) instructs how to get containers from our registry.
