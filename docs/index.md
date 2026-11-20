@@ -1,6 +1,6 @@
-# Trusted Connector Next Documentation
+# GLUE Connector Documentation
 
-Welcome! This is the documentation of the Github project [GLUE Connector](TODO).
+Welcome! This is the documentation of the Github project [GLUE Connector](https://github.com/Fraunhofer-AISEC/GLUE-Connector/).
 
 GLUE stands for General and Lightweight Usage Enforcement. 
 Our connector can enforce secure usage control for data pipelines executed on a remote cloud system.

@@ -108,6 +108,7 @@ The same data processing network can be launched on a remote system.
 
 
 ### More Information
+
 More information about the provided examples, how they can be modified and further details of the configurable parameters can be found in the [GLUE Examples](https://gitlab.cc-asp.fraunhofer.de/ccit-glue/usage-control/container-pipeline/-/tree/main/example?ref_type=heads).
 
 See the [Concept Overview](concept-overview.md) for more information on the concepts and design decisions underlying the GLUE Connector.
