@@ -64,7 +64,3 @@ A container that can change the format of the data in a configurable manner.
 
 Extraction tester: e.g. At least 10 data sets (protection against extraction)
 Selectable mass operation on fields (e.g. average, sum, variance)
-
-## More Information
-
-Next can be seen the [Container Registry](container-registry.md).

@@ -32,5 +32,3 @@ The format applied is ODRL, more information about the topic can be found in [Co
 The data plane focusses only on the transmission of datasets.
 This is the plane, where the GLUE connector launches, attests and enforces the previously agreed upon data processing pipelines.
 The data flow must be implemented directly in the form of a chain (or a directed graph which is currently future work) from one container to the next.
-
-More information can be found in the [Concept Deep-Dive](concept-details.md).
