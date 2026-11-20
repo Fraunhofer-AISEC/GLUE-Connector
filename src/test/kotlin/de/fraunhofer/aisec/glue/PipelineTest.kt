@@ -15,6 +15,7 @@
  */
 package de.fraunhofer.aisec.glue
 
+import de.fraunhofer.aisec.glue.events.EventBus
 import de.fraunhofer.aisec.glue.atls.CMCClient
 import de.fraunhofer.aisec.glue.config.ConfigManager
 import de.fraunhofer.aisec.glue.controllers.PipelineController
@@ -156,11 +157,13 @@ class PipelineTest {
             coEvery { mockCmcClient.tlsKey(any(), any(), any(), any(), any()) } returns "test-key"
 
             val mockRemotePipelineManager = mockk<RemotePipelineManager>()
-            val dataStore = DataStore(objectMapper, tempDataStoreConfigManager(tempDir))
+            val eventBus = EventBus()
+            val dataStoreConfigManager = tempDataStoreConfigManager(tempDir)
+            val dataStore = DataStore(objectMapper, dataStoreConfigManager, eventBus)
             val pipelineManager =
                 PipelineManager(mockRemotePipelineManager, mockBackend, mockCmcClient, ConfigManager(MapApplicationConfig()))
             val policyEngine = PolicyEngine(pipelineManager)
-            val pipelineController = PipelineController(dataStore, pipelineManager, policyEngine)
+            val pipelineController = PipelineController(ContractManager(dataStore, eventBus, dataStoreConfigManager), pipelineManager, policyEngine)
 
             dataStore.addContract(testContract)
 
@@ -223,7 +226,7 @@ class PipelineTest {
     fun `Test the docker-based pipeline implementation`() =
         runTest(timeout = 30.hours) {
             // Since we do real io calls, we cannot use the virtual time provided by the kotlin coroutines test runner.
-            // We don't want to use runBlocking, as it does not have the nice coroutine dumps os runTest, so here we are...
+            // We don't want to use runBlocking, as it does not have the nice coroutine dumps as runTest, so here we are...
             withContext(Dispatchers.Default) {
                 val dockerClient = DockerClient.fromEnv()
                 assertTrue(dockerClient.runCatching { ping() }.isSuccess, "Cannot run test, docker cannot be pinged")

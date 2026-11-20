@@ -34,6 +34,8 @@ import de.fraunhofer.aisec.glue.controllers.api.PipelineApiController
 import de.fraunhofer.aisec.glue.controllers.api.RemotePipelineApiController
 import de.fraunhofer.aisec.glue.controllers.internal.ContainerInterfaceController
 import de.fraunhofer.aisec.glue.docker.DockerClient
+import de.fraunhofer.aisec.glue.events.EventBus
+import de.fraunhofer.aisec.glue.events.EventStream
 import de.fraunhofer.aisec.glue.jsonld.FileSystemDocumentCache
 import de.fraunhofer.aisec.glue.logging.LogbackObjectMapperInjector
 import de.fraunhofer.aisec.glue.negotiation.NegotiationManager
@@ -169,6 +171,8 @@ val defaultDependencies by DI.Module {
             )
         }
     bind<ObjectMapper>() with singleton { instance<OdrlParser>().mapper }
+    bind<EventBus>() with singleton { EventBus() }
+    bind<EventStream>() with singleton { EventStream(instance(), instance()) }
     bind<DockerClient>() with singleton { DockerClient.fromEnv() }
     bind<CMCClient>() with
         singleton {
@@ -180,7 +184,8 @@ val defaultDependencies by DI.Module {
     bind<Backend>() with singleton { DockerBackend(instance(), instance(), instance()) }
     bind<PipelineManager>() with singleton { PipelineManager(instance(), instance(), instance(), instance()) }
     bind<PolicyEngine>() with singleton { PolicyEngine(instance()) }
-    bind<DataStore>() with singleton { DataStore(instance(), instance()) }
+    bind<DataStore>() with singleton { DataStore(instance(), instance(), instance()) }
+    bind<ContractManager>() with singleton { ContractManager(instance(), instance(), instance()) }
     bind<ConnectorConfig>() with singleton { instance<ConfigManager>().getConfig(::ConnectorConfig) }
     bind<NegotiationManager>() with
         singleton {
@@ -188,6 +193,7 @@ val defaultDependencies by DI.Module {
                 instance(),
                 instance(),
                 DummyNegotiator(),
+                instance(),
                 instance(),
                 instance(),
                 instance(),
