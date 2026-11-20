@@ -113,7 +113,3 @@ The contract negotiation component has to be available in each GLUE connector an
 The UC/Pipeline manager issues policies and controls the container deployment manager. 
 The container deployment manager deploys and configures the containers of each pipeline.
 The Policy Enforcement Point (PEP) has to be available within each container, however, in GLUE the PEP is indirectly implemented by the available logic of containers and enforced by feature availablity.
-
-## More Information
-
-Next can be seen the [Use Cases](use-cases.md).
