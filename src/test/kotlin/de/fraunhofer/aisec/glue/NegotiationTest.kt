@@ -15,6 +15,9 @@
  */
 package de.fraunhofer.aisec.glue
 
+import de.fraunhofer.aisec.glue.events.EventBus
+import de.fraunhofer.aisec.glue.events.on
+import de.fraunhofer.aisec.glue.negotiation.builtin.NegotiationUpdatedEvent
 import com.fasterxml.jackson.module.kotlin.readValue
 import de.fraunhofer.aisec.glue.DataStore.Companion.ioAsync
 import de.fraunhofer.aisec.glue.config.ConfigManager
@@ -53,7 +56,6 @@ import io.ktor.server.request.*
 import io.ktor.server.routing.*
 import io.ktor.server.testing.*
 import io.mockk.coEvery
-import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.*
 import kotlinx.coroutines.CancellationException
@@ -77,6 +79,8 @@ import io.ktor.client.plugins.contentnegotiation.ContentNegotiation as ClientCon
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation as ServerContentNegotiation
 
 class NegotiationTest {
+    private val eventBus = EventBus()
+
     @TempDir
     lateinit var tempDir: Path
 
@@ -134,6 +138,7 @@ class NegotiationTest {
                     dataStore,
                     OdrlParser(),
                     configManager,
+                    eventBus,
                 )
 
             val contractRequest =
@@ -161,7 +166,7 @@ class NegotiationTest {
                     NegotiationState.VERIFIED,
                     NegotiationState.FINALIZED,
                 )
-            stateMachineObserver.record(negotiation)
+            stateMachineObserver.record(negotiation, eventBus)
 
             val initialResp = negotiation.submitMessage(contractRequest)
             assertIs<ContractNegotiation>(initialResp)
@@ -182,7 +187,6 @@ class NegotiationTest {
             stateMachineObserver.verify()
 
             // Verify that the returned and stored policies are the same
-            coVerify { dataStore.addContract(any()) }
         }
 
     @Test
@@ -222,6 +226,7 @@ class NegotiationTest {
                     dataStore,
                     OdrlParser(),
                     configManager,
+                    eventBus,
                 )
 
             val contractOffer =
@@ -250,7 +255,7 @@ class NegotiationTest {
                     NegotiationState.VERIFIED,
                     NegotiationState.FINALIZED,
                 )
-            stateMachineObserver.record(negotiation)
+            stateMachineObserver.record(negotiation, eventBus)
 
             val initialResp = negotiation.submitMessage(contractOffer)
             assertIs<ContractNegotiation>(initialResp)
@@ -283,7 +288,6 @@ class NegotiationTest {
 
             stateMachineObserver.verify()
 
-            coVerify { dataStore.addContract(any()) }
         }
 
     private fun ApplicationTestBuilder.configureTestApp(controller: AtlsController) {
@@ -345,7 +349,7 @@ class NegotiationTest {
                         }
                     }
                 }
-            val dataStore = DataStore(objectMapper, tempDataStoreConfigManager(tempDir))
+            val dataStore = DataStore(objectMapper, tempDataStoreConfigManager(tempDir), eventBus)
             val configManager =
                 ConfigManager(MapApplicationConfig("connector.identity" to "https://test-connector.local", "connector.edcMode" to "none"))
             val negotiationManager =
@@ -356,6 +360,7 @@ class NegotiationTest {
                     dataStore,
                     OdrlParser(),
                     configManager,
+                    eventBus,
                 )
             val controller = BuiltinNegotiationController(negotiationManager, configManager.getConfig(::ConnectorConfig))
 
@@ -393,7 +398,7 @@ class NegotiationTest {
                     NegotiationState.VERIFIED,
                     NegotiationState.FINALIZED,
                 )
-            observer.record(negotiation)
+            observer.record(negotiation, eventBus)
 
             agreedContinueLatch.complete(Unit)
 
@@ -455,6 +460,7 @@ class NegotiationTest {
                     dataStore,
                     OdrlParser(),
                     configManager,
+                    eventBus,
                 )
             val controller = BuiltinNegotiationController(negotiationManager, configManager.getConfig(::ConnectorConfig))
 
@@ -493,7 +499,7 @@ class NegotiationTest {
                     NegotiationState.VERIFIED,
                     NegotiationState.FINALIZED,
                 )
-            observer.record(negotiation)
+            observer.record(negotiation, eventBus)
 
             acceptedContinueLatch.complete(Unit)
 
@@ -553,7 +559,13 @@ class NegotiationTest {
 
             val odrlParser = OdrlParser()
 
-            val providerDataStore = mockDataStore()
+            val providerDataStoreConfigManager = tempDataStoreConfigManager(tempDir.resolve("provider"))
+            val providerDataStore = DataStore(objectMapper, providerDataStoreConfigManager, eventBus)
+            val providerContractManager = ContractManager(providerDataStore, eventBus, providerDataStoreConfigManager)
+            // Simulate a slow provider, so the consumer considers the negotiation finalized before the provider does
+            eventBus.on<NegotiationUpdatedEvent>(priority = EventBus.PRIORITY_HIGH - 1) {
+                if (it.data.state == NegotiationState.FINALIZED) delay(200)
+            }
 
             val providerConfig = MapApplicationConfig("connector.identity" to "http://dataowner.com/org", "connector.edcMode" to "none")
             val providerConfigManager = ConfigManager(providerConfig)
@@ -565,11 +577,13 @@ class NegotiationTest {
                     providerDataStore,
                     odrlParser,
                     providerConfigManager,
+                    eventBus,
                 )
             val providerController =
                 BuiltinNegotiationController(providerNegotiationManager, providerConfigManager.getConfig(::ConnectorConfig))
 
-            val consumerDataStore = mockDataStore()
+            val consumerEventBus = EventBus()
+            val consumerDataStore = DataStore(objectMapper, tempDataStoreConfigManager(tempDir.resolve("consumer")), consumerEventBus)
 
             val consumerConfig = MapApplicationConfig("connector.identity" to "http://dataconsumer.com/org", "connector.edcMode" to "none")
             val consumerConfigManager = ConfigManager(consumerConfig)
@@ -581,6 +595,7 @@ class NegotiationTest {
                     consumerDataStore,
                     odrlParser,
                     consumerConfigManager,
+                    consumerEventBus,
                 )
             val consumerController =
                 BuiltinNegotiationController(consumerNegotiationManager, consumerConfigManager.getConfig(::ConnectorConfig))
@@ -652,8 +667,12 @@ class NegotiationTest {
                         ).awaitCompletion()
                 }
 
-            coVerify { providerDataStore.addContract(negotiatedPolicy) }
-            coVerify { consumerDataStore.addContract(negotiatedPolicy) }
+            // The consumer may use the agreement as soon as the negotiation completes, e.g., to request a pipeline from
+            // the provider. The provider must then find it, even if it has not finalized the negotiation yet.
+            assertEquals(negotiatedPolicy.uid, consumerDataStore.getContract(negotiatedPolicy.uid.toString())?.uid)
+            assertEquals(negotiatedPolicy.uid, providerContractManager.getContract(negotiatedPolicy.uid.toString())?.uid)
+            assertEquals(listOf(NegotiationState.FINALIZED), consumerDataStore.negotiations().map { it.state })
+            assertEquals(listOf(NegotiationState.FINALIZED), providerDataStore.negotiations().map { it.state })
         }
 
     @Test
@@ -711,6 +730,7 @@ class NegotiationTest {
                     odrlParser = OdrlParser(),
                     ownIdentity = "consumer",
                     scope = CoroutineScope(currentCoroutineContext()),
+                    eventBus = eventBus,
                 )
             assertNotNull(negotiation)
 
@@ -723,7 +743,7 @@ class NegotiationTest {
                     NegotiationState.VERIFIED,
                     NegotiationState.FINALIZED,
                 )
-            stateMachineObserver.record(negotiation)
+            stateMachineObserver.record(negotiation, eventBus)
 
             val initialResp = negotiation.submitMessage(contractOffer)
             assertIs<ContractNegotiation>(initialResp)
@@ -820,6 +840,7 @@ class NegotiationTest {
                     odrlParser = OdrlParser(),
                     ownIdentity = "https://test-connector.local",
                     scope = CoroutineScope(currentCoroutineContext() + initialJob),
+                    eventBus = eventBus,
                 )
             assertNotNull(negotiation)
 
@@ -837,6 +858,7 @@ class NegotiationTest {
                     odrlParser = OdrlParser(),
                     ownIdentity = "https://test-connector.local",
                     scope = CoroutineScope(currentCoroutineContext() + CoroutineName("RecoveredNegotiation")),
+                    eventBus = eventBus,
                 )
 
             val verifyReq =
@@ -858,11 +880,13 @@ class NegotiationTest {
         private val recordJob = CompletableDeferred<Unit>()
         private val actualStates = mutableListOf<NegotiationState>()
 
-        fun record(negotiation: BuiltinNegotiation) {
-            recordJob
+        fun record(
+            negotiation: BuiltinNegotiation,
+            eventBus: EventBus,
+        ) {
             var currentState = negotiation.data.state
             actualStates.add(currentState)
-            negotiation.stateObservers.add { data ->
+            eventBus.on<NegotiationUpdatedEvent>(filter = { it.data.id == negotiation.data.id }) { (data) ->
                 if (data.state != currentState) {
                     actualStates.add(data.state)
                     if (data.state in setOf(NegotiationState.FINALIZED, NegotiationState.TERMINATED)) {

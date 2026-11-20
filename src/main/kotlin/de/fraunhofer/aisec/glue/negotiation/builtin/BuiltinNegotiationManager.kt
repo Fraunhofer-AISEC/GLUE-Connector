@@ -19,9 +19,11 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import de.fraunhofer.aisec.glue.DataStore
 import de.fraunhofer.aisec.glue.config.ConfigManager
 import de.fraunhofer.aisec.glue.config.ConnectorConfig
+import de.fraunhofer.aisec.glue.events.EventBus
 import de.fraunhofer.aisec.glue.models.negotiation.ContractNegotiation
 import de.fraunhofer.aisec.glue.models.negotiation.ContractRequestMessage
 import de.fraunhofer.aisec.glue.models.negotiation.NegotiationState
+import de.fraunhofer.aisec.glue.models.negotiation.isTerminal
 import de.fraunhofer.aisec.glue.negotiation.Negotiation
 import de.fraunhofer.aisec.glue.negotiation.NegotiationManager
 import de.fraunhofer.aisec.glue.negotiation.edc.removeEdcPrefix
@@ -54,6 +56,7 @@ open class BuiltinNegotiationManager(
     private val dataStore: DataStore,
     private val odrlParser: OdrlParser,
     configManager: ConfigManager,
+    private val eventBus: EventBus,
     scope: CoroutineScope = CoroutineScope(Dispatchers.Default),
 ) : NegotiationManager() {
     private val connectorConfig = configManager.getConfig(::ConnectorConfig)
@@ -73,9 +76,9 @@ open class BuiltinNegotiationManager(
                         odrlParser = odrlParser,
                         ownIdentity = connectorConfig.identity,
                         scope = childScope,
+                        eventBus = eventBus,
                     )
-
-                observeNegotiationState(negotiation)
+                negotiations[negotiation.data.id] = negotiation
             }
         }
     }
@@ -213,8 +216,10 @@ open class BuiltinNegotiationManager(
                     odrlParser = odrlParser,
                     ownIdentity = connectorConfig.identity,
                     scope = childScope,
+                    eventBus = eventBus,
                 )
-            observeNegotiationState(negotiation)
+            negotiations[negotiation.data.id] = negotiation
+            eventBus.emit(NegotiationCreatedEvent(negotiation.data))
 
             // This call here is kind of hacky since kotlin coroutines does not have condition variables.
             // In case the peer sends a message to our negotiation object before this function returns, we have it wait.
@@ -267,8 +272,10 @@ open class BuiltinNegotiationManager(
                 odrlParser = odrlParser,
                 ownIdentity = connectorConfig.identity,
                 scope = childScope,
+                eventBus = eventBus,
             )
-        observeNegotiationState(negotiation)
+        negotiations[negotiation.data.id] = negotiation
+        eventBus.emit(NegotiationCreatedEvent(negotiation.data))
         return negotiation
     }
 
@@ -316,28 +323,6 @@ open class BuiltinNegotiationManager(
     }
 
     private fun newProcessId(): UUID = UUID.randomUUID()
-
-    /**
-     * Observe updates to the negotiation state and updates and dispatch them accordingly.
-     * Optionally accepts a future to receive the final contract when finishing the negotiation.
-     */
-    private suspend fun observeNegotiationState(negotiation: BuiltinNegotiation) {
-        dataStore.addNegotiation(negotiation.data)
-        negotiation.stateObservers.add { data ->
-            LOG.atTrace {
-                message = "Observing negotiation state update"
-                payload = mapOf("negotiation" to data)
-            }
-
-            dataStore.updateNegotiation(data)
-
-            if (data.state == NegotiationState.FINALIZED) {
-                assert(data.contract != null && data.contract is OdrlAgreement)
-                dataStore.addContract(data.contract as OdrlAgreement)
-            }
-        }
-        negotiations[negotiation.data.id] = negotiation
-    }
 
     private fun handleCoroutineException(
         context: CoroutineContext,

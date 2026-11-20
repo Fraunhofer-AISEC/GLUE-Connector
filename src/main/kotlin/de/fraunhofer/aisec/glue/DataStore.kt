@@ -18,7 +18,12 @@ package de.fraunhofer.aisec.glue
 import com.fasterxml.jackson.databind.ObjectMapper
 import de.fraunhofer.aisec.glue.config.Config
 import de.fraunhofer.aisec.glue.config.ConfigManager
+import de.fraunhofer.aisec.glue.events.EventBus
+import de.fraunhofer.aisec.glue.events.on
+import de.fraunhofer.aisec.glue.models.negotiation.NegotiationState
 import de.fraunhofer.aisec.glue.negotiation.builtin.BuiltinNegotiationData
+import de.fraunhofer.aisec.glue.negotiation.builtin.NegotiationCreatedEvent
+import de.fraunhofer.aisec.glue.negotiation.builtin.NegotiationUpdatedEvent
 import de.fraunhofer.aisec.glue.tables.Contracts
 import de.fraunhofer.aisec.glue.tables.Lookups
 import de.fraunhofer.aisec.glue.tables.Negotiations
@@ -26,9 +31,7 @@ import de.fraunhofer.iosb.odrl.OdrlPolicy
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ktor.http.*
 import io.ktor.server.config.*
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.asCoroutineDispatcher
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
 import org.apache.commons.dbcp2.BasicDataSource
 import org.flywaydb.core.Flyway
 import org.ktorm.database.Database
@@ -41,6 +44,8 @@ import kotlin.io.path.createDirectories
 class DataStore(
     objectMapper: ObjectMapper,
     configManager: ConfigManager,
+    eventBus: EventBus,
+    scope: CoroutineScope = CoroutineScope(Dispatchers.Default),
 ) {
     private val config = configManager.getConfig(::DataStoreConfig)
 
@@ -54,15 +59,6 @@ class DataStore(
         }
     }
 
-    // Let Flyway handle the database setup/migrations
-    init {
-        Flyway
-            .configure()
-            .dataSource(dataSource)
-            .load()
-            .migrate()
-    }
-
     private val connection: Database
         get() = Database.connect(dataSource)
 
@@ -73,6 +69,30 @@ class DataStore(
 
     val negotiationsTable = Negotiations(objectMapper)
     val Database.negotiations get() = this.sequenceOf(negotiationsTable)
+
+    init {
+        // Let Flyway handle the database setup/migrations
+        Flyway
+            .configure()
+            .dataSource(dataSource)
+            .load()
+            .migrate()
+
+        // Note: This could theoretically race if the event bus exposes any relevant events before the coroutine runs.
+        // Its very unlikely that this happens and handling this properly would require async lifecycle management.
+        scope.launch {
+            eventBus.on<NegotiationCreatedEvent>(priority = EventBus.PRIORITY_HIGH, throws = true) {
+                addNegotiation(it.data)
+            }
+            eventBus.on<NegotiationUpdatedEvent>(priority = EventBus.PRIORITY_HIGH, throws = true) {
+                updateNegotiation(it.data)
+
+                if (it.data.state == NegotiationState.FINALIZED) {
+                    addContract(it.data.contract!!)
+                }
+            }
+        }
+    }
 
     suspend fun addContract(contract: OdrlPolicy): Unit =
         ioAsync {
