@@ -1,5 +1,5 @@
 # List of Use Cases für Usage Control
-The following are examples of Usage Control that can be realized using our Trusted Connector Next.
+The following are examples of Usage Control that can be realized using our GLUE Connector.
 
 ## Usase Control for Generation of Cyber-Threat-Intelligence (CTI)
 

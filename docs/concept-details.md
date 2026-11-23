@@ -7,8 +7,8 @@
 | Connector deployment with supporting services. Insecure deployments do not include components in grey. |
 
 The figure above shows the services involved in each connector deployment as well as their interactions with each other as well as with the external service containers.
-Alongside the trusted connector itself, we deploy a separate docker daemon for each connector. 
-The trusted connector uses this docker daemon to manage individual pipeline containers.
+Alongside the GLUE Connector itself, we deploy a separate docker daemon for each connector. 
+The GLUE Connector uses this docker daemon to manage individual pipeline containers.
 
 The [Container Measurement Component (CMC)](https://github.com/Fraunhofer-AISEC/cmc) provides cross-platform attestation capabilities via its API, which we use to attest the connectors.
 Trust anchor is either the Trusted Execution Environment's hardware used for measuring the software stack or a Trusted Platform Module (TPM). 
