@@ -5,7 +5,7 @@ The examples use docker compose to orchestrate the required components as contai
 
 ## Dependencies
 
-Running the example requires docker compose, openssl, yq, jo, envsubst, curl, and skopeo.
+Running the example requires docker compose, openssl, yq, jo, envsubst, curl, skopeo, and python 3 with the jinja2 and PyYAML packages.
 We assume that a docker daemon is already available and that you have access to it.
 [Podman](https://podman.io/) may also work, but we do not officially support it.
 In addition to the dependencies, the examples require that port `5000` is available on the host machine.
@@ -16,19 +16,19 @@ In addition to the dependencies, the examples require that port `5000` is availa
 > The installation command assumes that the [official docker repository](https://docs.docker.com/engine/install/debian/#install-using-the-repository) is configured.
 
 ```shell
-apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin openssl yq jo gettext-base curl skopeo
+apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin openssl yq jo gettext-base curl skopeo python3 python3-jinja2 python3-yaml
 ```
 
 ### Arch Linux
 
 ```shell
-pacman -S docker docker-buildx docker-compose openssl yq jo gettext curl skopeo
+pacman -S docker docker-buildx docker-compose openssl yq jo gettext curl skopeo python python-jinja python-yaml
 ```
 
 ### Nix Shell
 
 ```shell
-nix-shell -p docker-client docker-buildx docker-compose openssl yq jo gettext curl skopeo
+nix-shell -p docker-client docker-buildx docker-compose openssl yq jo gettext curl skopeo "python3.withPackages (ps: [ ps.jinja2 ps.pyyaml ])"
 ```
 
 ## Running Examples
