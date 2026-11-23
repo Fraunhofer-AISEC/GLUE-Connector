@@ -16,7 +16,7 @@ services:
       - -P:atls.cmcAddress=unix:/tmp/cmcd.sock
       - -P:atls.caCertPath=/pki/ca-cert.pem
       - -P:atls.proxyContainer=registry:5000/atls-proxy:latest
-      - -P:atls.proxyHash=sha256:7c3fc337862216f1960ab29f56c04b95ba5bcdb7c050373890398e0df0a361d2
+      - -P:atls.proxyHash=sha256:a2b53203bdc50a2e185ca1f5e43e4bf2cd0a99fa03c2b6883a6d49c0644e8cab
       - -P:connector.identity=http://initiator
       - -P:connector.publicUrl=http://initiator:8444
     environment:
@@ -61,7 +61,7 @@ services:
       - -P:atls.cmcAddress=unix:/tmp/cmcd.sock
       - -P:atls.caCertPath=/pki/ca-cert.pem
       - -P:atls.proxyContainer=registry:5000/atls-proxy:latest
-      - -P:atls.proxyHash=sha256:7c3fc337862216f1960ab29f56c04b95ba5bcdb7c050373890398e0df0a361d2
+      - -P:atls.proxyHash=sha256:a2b53203bdc50a2e185ca1f5e43e4bf2cd0a99fa03c2b6883a6d49c0644e8cab
       - -P:connector.identity=http://intermediary
       - -P:connector.publicUrl=http://intermediary:8444
     environment:
@@ -106,7 +106,7 @@ services:
       - -P:atls.cmcAddress=unix:/tmp/cmcd.sock
       - -P:atls.caCertPath=/pki/ca-cert.pem
       - -P:atls.proxyContainer=registry:5000/atls-proxy:latest
-      - -P:atls.proxyHash=sha256:7c3fc337862216f1960ab29f56c04b95ba5bcdb7c050373890398e0df0a361d2
+      - -P:atls.proxyHash=sha256:a2b53203bdc50a2e185ca1f5e43e4bf2cd0a99fa03c2b6883a6d49c0644e8cab
       - -P:connector.identity=http://destination
       - -P:connector.publicUrl=http://destination:8444
     environment:

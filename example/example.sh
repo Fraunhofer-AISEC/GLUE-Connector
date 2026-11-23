@@ -22,6 +22,22 @@ require() {
   fi
 }
 
+require_python() {
+  require python3
+
+  missing_modules=()
+  for module in "$@"; do
+    if ! python3 -c 'import importlib, sys; importlib.import_module(sys.argv[1])' "$module" > /dev/null 2>&1; then
+      missing_modules+=("$module")
+    fi
+  done
+
+  if (( ${#missing_modules[@]} != 0 )); then
+    echo "The following python modules are required but not installed: ${missing_modules[*]}" >&2
+    return 1
+  fi
+}
+
 info() {
   printf "${BOLD}${BLUE}==> ${RESET}${BOLD}%s${RESET}\n" "$*" >&2
 }
@@ -37,10 +53,12 @@ error() {
 print_help() {
   printf "Usage: %s [Options] <example name>\n" "$0"
   printf "Options:\n"
-  printf "  --insecure        Disable aTLS support\n"
-  printf "  --regenerate-pki  Generate new certificates\n"
-  printf "  --refetch-images  Re-fetch all container images from the registry\n"
-  printf "  --help            Show this message and exit\n"
+  printf "  --insecure            Disable aTLS support\n"
+  printf "  --regenerate-pki      Generate new certificates\n"
+  printf "  --refetch-images      Re-fetch all container images from the registry (implies --regenerate-compose)\n"
+  printf "  --regenerate-compose  Regenerate the compose files for the examples\n" 
+  printf "  --prepare-only        Stop this script after the preparation steps are completed\n"
+  printf "  --help                Show this message and exit\n"
 }
 
 # Simple Go-style exit handler stack
@@ -63,6 +81,8 @@ trap _run_deferred EXIT
 insecure=false
 regenerate_pki=false
 refetch_images=false
+regenerate_compose=false
+prepare_only=false
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -78,6 +98,14 @@ while [[ $# -gt 0 ]]; do
       refetch_images=true
       shift
       ;;
+    --regenerate-compose)
+      regenerate_compose=true
+      shift
+      ;;
+    --prepare-only)
+      prepare_only=true
+      shift
+      ;;
     --help)
       print_help >&2
       exit 0
@@ -88,7 +116,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ $# -eq 0 ]]; then
+if [[ $# -eq 0 ]] && ! ${prepare_only}; then
   print_help >&2
   exit 1
 fi
@@ -103,15 +131,14 @@ if [ ! -d images ] || ${refetch_images}; then
   require mkdir
 fi
 
+if [ ! -d images ] || ${refetch_images} || ${regenerate_compose}; then
+  require_python jinja2 yaml
+fi
+
 # shellcheck disable=SC2015
 compose_file="$1$($insecure && echo "-insecure" || true).compose.yml"
 policy_file="$1.policy.json"
 compose_project_name="example_$(echo "$1" | tr "-" "_")"
-
-if [ ! -f "${compose_file}" ] || [ ! -f "${policy_file}" ]; then
-  echo "Example $1 does not exist" >&2
-  exit 1
-fi
 
 if [ ! -d pki ] || ${regenerate_pki}; then
     info "Generating new PKI certificates"
@@ -120,7 +147,23 @@ fi
 
 if [ ! -d images ] || ${refetch_images}; then
     info "Preparing example image archives"
+    regenerate_compose=true
     ./scripts/prepare-images.sh
+fi
+
+if ${regenerate_compose}; then
+  info "Regenerating docker-compose files"
+  ./scripts/generate-compose.sh
+fi
+
+if ${prepare_only}; then
+  info "Preparation finished, exiting"
+  exit 0
+fi
+
+if [ ! -f "${compose_file}" ] || [ ! -f "${policy_file}" ]; then
+  echo "Example $1 does not exist" >&2
+  exit 1
 fi
 
 connector_image="container-pipeline:latest"
