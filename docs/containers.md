@@ -21,7 +21,7 @@ End container that enables the final output of the data to clearly predefined in
 
 ### Filter-Container
 
-The contianer is configured via a configurable regular expression To dynamically delete special records.
+The container is configured via a configurable regular expression to dynamically delete special records.
 Example: records for a specific group must be removed.
 
 ### Anonymizer-Container
@@ -32,7 +32,7 @@ Example: reliable deletion of first name or last name fields.
 ### Attribute-Reference-Protection-Container
 
 If certain data records are personally identifiable, they must be deleted or the property must be removed.
-Example: only one female entry is only one woman in the data set.
+Example: a single female entry is the only one in the data set.
 
 Typical technics for protection against attribute inference make use of: 
 - K-Anonimity
@@ -60,7 +60,7 @@ A container that can provide datasets with an additional label as meta informati
 
 A container that can change the format of the data in a configurable manner.
 
-### Database-Container / a.k.a. Aggregations-Container
+### Database-Container / a.k.a. Aggregation-Container
 
 Extraction tester: e.g. At least 10 data sets (protection against extraction)
 Selectable mass operation on fields (e.g. average, sum, variance)
