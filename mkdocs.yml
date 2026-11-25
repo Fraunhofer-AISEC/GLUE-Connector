@@ -1,9 +1,9 @@
-site_name: SAFE4SOC Information Sharing Gateway
-site_description: Documentation for the SAFE4SOC Information Sharing Gateway
-site_url: https://fraunhofer-aisec.github.io/safe4soc-gateway/
+site_name: GLUE Connector Documentation
+site_description: Documentation for the General-Lightweight-Usage-control-Enforcement Framework
+site_url: https://github.com/Fraunhofer-AISEC/GLUE-Connector
 
-repo_url: https://github.com/Fraunhofer-AISEC/safe4soc-gateway
-repo_name: Fraunhofer-AISEC/safe4soc-gateway
+repo_url: https://github.com/Fraunhofer-AISEC/GLUE-Connector
+repo_name: Fraunhofer-AISEC/GLUE-Connector
 
 docs_dir: docs
 
@@ -42,7 +42,7 @@ nav:
   - Concept Details: concept-details.md
   - Use Cases: use-cases.md
   - Containers: containers.md
-  - Container Registry: container-registry.md
+  - Documentation: documentation.md
 
 markdown_extensions:
   - toc:
