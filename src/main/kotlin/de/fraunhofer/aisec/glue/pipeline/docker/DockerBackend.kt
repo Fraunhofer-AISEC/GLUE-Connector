@@ -25,6 +25,7 @@ import de.fraunhofer.aisec.glue.docker.Network
 import de.fraunhofer.aisec.glue.docker.model.*
 import de.fraunhofer.aisec.glue.pipeline.*
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.ktor.client.plugins.*
 import io.ktor.server.config.*
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -78,12 +79,12 @@ class DockerBackend(
         contractId: String,
         targetId: String,
     ): MutableList<ContainerCreateRequest> {
-        checkHashes(pipelineSpec)
+        val pinnedImages = checkHashes(pipelineSpec)
         return pipelineSpec
-            .map { c ->
+            .mapIndexed { i, c ->
                 //       We probably should persist this to the point where we inject the config
                 ContainerCreateRequest(
-                    image = c.base.image,
+                    image = pinnedImages[i],
                     hostConfig =
                         HostConfig(
                             networkMode = if (c.base.allowNetwork == true) "bridge" else "none",
@@ -102,12 +103,14 @@ class DockerBackend(
     }
 
     // Hash check adapted from https://github.com/Fraunhofer-AISEC/trusted-connector/blob/16fb97953c89e796d80c52cacc7a4445c1dda019/ids-dataflow-control/src/main/kotlin/de/fhg/aisec/ids/dataflowcontrol/usagecontrol/DockerImageConstraint.kt#L104
-    private suspend fun checkHashes(pipelineDef: List<AugmentedGlueContainer>) {
-        for (augmentedGlueContainer in pipelineDef) {
+    // Images are resolved by their hash, the hash check below remains as an additional safeguard.
+    private suspend fun checkHashes(pipelineDef: List<AugmentedGlueContainer>): List<String> {
+        return pipelineDef.map { augmentedGlueContainer ->
             val glueContainer = augmentedGlueContainer.base
             val expectedHash = glueContainer.hash
-            val imageToCheck = dockerClient.images.get(glueContainer.image)
-            val inspectResponse = imageToCheck.inspect()
+            // Pin the image by manifest digest (tag stripped), fall back to the hash as a local image ID
+            val repository = glueContainer.image.substringBefore('@').replace(Regex(":[^/]*$"), "")
+            val (imageToCheck, inspectResponse) = dockerClient.images.get(repository, tag = expectedHash).let { it to it.inspect() }
             val idHash = inspectResponse.id
             val repoDigests = inspectResponse.repoDigests?.map { it.split("@").last() }
 
@@ -122,7 +125,7 @@ class DockerBackend(
                             "repoDigests" to repoDigests?.joinToString(", "),
                         )
                 }
-                continue
+                return@map imageToCheck.name
             }
 
             LOG.atWarn {
