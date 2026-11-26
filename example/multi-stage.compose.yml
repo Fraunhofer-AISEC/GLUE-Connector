@@ -37,6 +37,13 @@ services:
       - initiator-tmp:/tmp
     environment:
       DOCKER_HOST: "unix:///tmp/docker.sock"
+    # The ndots option set by the outer docker stops the inner docker's DNS from forwarding single-label names, like
+    # the compose service names, to the compose DNS. Remove it before starting the inner docker daemon.
+    entrypoint:
+      - sh
+      - -c
+      - printf '%s\n' "$$(sed '/^options/d' /etc/resolv.conf)" > /etc/resolv.conf && exec dockerd-entrypoint.sh "$$@"
+      - --
     command:
       - --insecure-registry=registry:5000
     depends_on:
@@ -129,6 +136,13 @@ services:
       - intermediary-tmp:/tmp
     environment:
       DOCKER_HOST: "unix:///tmp/docker.sock"
+    # The ndots option set by the outer docker stops the inner docker's DNS from forwarding single-label names, like
+    # the compose service names, to the compose DNS. Remove it before starting the inner docker daemon.
+    entrypoint:
+      - sh
+      - -c
+      - printf '%s\n' "$$(sed '/^options/d' /etc/resolv.conf)" > /etc/resolv.conf && exec dockerd-entrypoint.sh "$$@"
+      - --
     command:
       - --insecure-registry=registry:5000
     depends_on:
@@ -221,6 +235,13 @@ services:
       - destination-tmp:/tmp
     environment:
       DOCKER_HOST: "unix:///tmp/docker.sock"
+    # The ndots option set by the outer docker stops the inner docker's DNS from forwarding single-label names, like
+    # the compose service names, to the compose DNS. Remove it before starting the inner docker daemon.
+    entrypoint:
+      - sh
+      - -c
+      - printf '%s\n' "$$(sed '/^options/d' /etc/resolv.conf)" > /etc/resolv.conf && exec dockerd-entrypoint.sh "$$@"
+      - --
     command:
       - --insecure-registry=registry:5000
     depends_on:

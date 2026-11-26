@@ -198,6 +198,8 @@ fi
 
 start_pipeline_output="$("./scripts/$start_script" "${start_pipeline_args[@]}" )"
 read -r pipeline_host pipeline_id pipeline_port < <(echo "$start_pipeline_output")
+# The reported pipeline host is the compose service name, which only resolves inside the compose network
+pipeline_port="${pipeline_host}:${pipeline_port##*:}"
 
 stop_pipeline() {
   info "Stopping pipeline"
@@ -214,8 +216,11 @@ curl -sS --fail -d "$example_data" "http://${pipeline_port}/echo" >/dev/null &
 await_container_logs() {
   local host="$1"
   local container="$2"
-  local image="registry:5000/${container}:latest"
-  local id
+  local digest image id
+
+  # Pipeline images are pulled by digest, so the ancestor filter only matches the digest reference
+  digest="$(skopeo inspect --tls-verify=false "docker://localhost:5000/${container}:latest" | yq -r '.Digest')"
+  image="registry:5000/${container}@${digest}"
 
   for i in $(seq 60); do
     id="$(docker exec "${compose_project_name}-${host}-docker-1" docker ps --filter "ancestor=${image}" --format "{{ .ID }}" | head -n1)"
