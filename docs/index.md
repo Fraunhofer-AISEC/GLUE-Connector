@@ -17,3 +17,5 @@ The following sections provide insights and different entry points to our docume
 [Use Cases](use-cases.md) summarizes different use-cases which all require usage control and can be realized with the GLUE connector.
 
 [Containers and their Functions](containers.md) lists the available standard containers which work out-of-the-box.
+
+[Network Exposure](network-exposure.md) explains how the connector and its pipelines are reached by other connectors.

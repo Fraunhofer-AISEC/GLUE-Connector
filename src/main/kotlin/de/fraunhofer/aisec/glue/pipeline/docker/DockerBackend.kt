@@ -23,14 +23,19 @@ import de.fraunhofer.aisec.glue.docker.Container
 import de.fraunhofer.aisec.glue.docker.DockerClient
 import de.fraunhofer.aisec.glue.docker.Network
 import de.fraunhofer.aisec.glue.docker.model.*
-import de.fraunhofer.aisec.glue.pipeline.*
+import de.fraunhofer.aisec.glue.pipeline.AugmentedGlueContainer
+import de.fraunhofer.aisec.glue.pipeline.Backend
+import de.fraunhofer.aisec.glue.pipeline.ContainerInfo
+import de.fraunhofer.aisec.glue.pipeline.ContainerPipeline
+import de.fraunhofer.aisec.glue.pipeline.ContainerPort
+import de.fraunhofer.aisec.glue.pipeline.IPv4Address
+import de.fraunhofer.aisec.glue.pipeline.IPv4Network
+import de.fraunhofer.aisec.glue.pipeline.SniProxyConfig
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.ktor.client.plugins.*
 import io.ktor.server.config.*
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
-import java.net.InetAddress
 import java.util.concurrent.ConcurrentLinkedQueue
 
 class DockerBackend(
@@ -46,6 +51,7 @@ class DockerBackend(
             .iterator()
     private val config = configManager.getConfig(::DockerConfig)
     private val connectorConfig = configManager.getConfig(::ConnectorConfig)
+    private val sniProxyConfig = configManager.getConfig(::SniProxyConfig)
 
     // Note: There is no reliable way to determine if running in a container.
     // Checking for .dockerenv is an implementation detail and the hostname can be overwritten.
@@ -216,13 +222,20 @@ class DockerBackend(
             throw IllegalArgumentException("The provided spec contains no containers")
         }
 
-        val sniDomain = connectorConfig.publicDomain
-        val sniMode = sniDomain != null
+        // The entry container is either exposed by publishing its entry port on an ephemeral host port, or by giving it
+        // a DNS name that an SNI proxy uses to route TLS connections to it.
+        val entryHostname = if (sniProxyConfig.enabled) "$id.${connectorConfig.pipelineHost}" else null
 
-        if (!sniMode) {
-            // Legacy mode: publish port 8080 on a random ephemeral host port
-            val publishPorts = listOf("8080/tcp")
-            containerCreateReqs[0] =
+        containerCreateReqs[0] =
+            if (sniProxyConfig.enabled) {
+                // If the SNI proy is enabled, we prefix the pipeline's ID to the public endpoint and set the first
+                // container's hostname.
+                // The SNI proxy must then use the common docker network to forward connections to the correct pipeline.
+                containerCreateReqs[0].copy(hostname = entryHostname)
+            } else {
+                // Alternatively, we can simply expose all ports that have a corresponding EXPOSE in the dockerfile.
+                // This might overexpose the container, but is simpler and allows multiple ports/protocols.
+                val publishPorts = listOf("$ENTRY_PORT/tcp")
                 containerCreateReqs[0].copy(
                     exposedPorts = publishPorts.associateWith { emptyMap<Any, Any>() },
                     hostConfig =
@@ -237,15 +250,7 @@ class DockerBackend(
                                 },
                         ),
                 )
-        } else {
-            // SNI mode: set the hostname of the entry container to the pipeline FQDN.
-            // No port publishing — Envoy routes TLS connections via SNI.
-            val fqdn = "$id.$sniDomain"
-            containerCreateReqs[0] =
-                containerCreateReqs[0].copy(
-                    hostname = fqdn,
-                )
-        }
+            }
 
         val containers = createContainers(id, containerCreateReqs)
         val networks =
@@ -256,27 +261,36 @@ class DockerBackend(
                 throw e
             }
 
-        if (sniMode) {
-            // Connect the entry container to the Envoy mux network with the FQDN as
-            // a network alias so that Envoy (also on that network) can resolve it
-            // via Docker's embedded DNS.
-            val fqdn = "$id.$sniDomain"
-            try {
-                val envoyNet = dockerClient.networks.get(config.envoyNetworkName)
-                envoyNet.connect(containers[0], aliases = listOf(fqdn))
-            } catch (e: Exception) {
-                LOG.atError {
-                    message = "Failed to connect entry container to Envoy mux network"
-                    cause = e
-                    payload = mapOf("container" to containers[0].name, "network" to config.envoyNetworkName)
+        val sniEntryPort =
+            entryHostname?.let {
+                // Connect the first container to the shared network with the SNI proxy, using its DNS name as an alias.
+                // Since the hostname is already set to the correct value, this should not be needed, but better safe
+                // than sorry I guess.
+                try {
+                    dockerClient.networks.get(config.sniProxyNetwork).connect(containers[0], aliases = listOf(it))
+                } catch (e: Exception) {
+                    LOG.atError {
+                        message = "Failed to connect entry container to the SNI proxy network"
+                        cause = e
+                        payload = mapOf("container" to containers[0].name, "network" to config.sniProxyNetwork)
+                    }
+                    containers.forEach { c -> c.runCatching { remove() } }
+                    networks.forEach { n -> n.runCatching { remove() } }
+                    throw e
                 }
-                containers.forEach { it.runCatching { remove() } }
-                networks.forEach { it.runCatching { remove() } }
-                throw e
+                ContainerPort(ENTRY_PORT, "$it:${sniProxyConfig.port ?: connectorConfig.publicUrl.port}", "tcp")
             }
-        }
 
-        return DockerContainerPipeline(id, contractId, targetId, objectMapper, containers, networks, config, sniDomain)
+        return DockerContainerPipeline(
+            id,
+            contractId,
+            targetId,
+            objectMapper,
+            containers,
+            networks,
+            connectorConfig.pipelineHost,
+            sniEntryPort,
+        )
     }
 
     override suspend fun getConnectorIp(relativeTo: ContainerInfo): String {
@@ -333,13 +347,18 @@ class DockerBackend(
     class DockerConfig(
         inner: ApplicationConfig,
     ) : Config(inner) {
-        val publicHostname: String by withDefault(stringProp(), InetAddress.getLocalHost().hostAddress)
-        val envoyNetworkName by withDefault(stringProp(), "envoy-mux")
-        val sniProxyPort by withDefault(intProp(), 8444)
-        val pipelineEntryPort by withDefault(intProp(), 8080)
+        /**
+         * The docker network that the first container of each pipeline is connected to when the SNI proxy is in use
+         * (see [SniProxyConfig]).
+         * The proxy must be connected to this network as well.
+         */
+        val sniProxyNetwork by withDefault(stringProp(), "sni-proxy")
     }
 
     companion object {
         private val LOG = KotlinLogging.logger {}
+
+        // The port that the atls-proxy container listens on.
+        private const val ENTRY_PORT: UShort = 8080u
     }
 }

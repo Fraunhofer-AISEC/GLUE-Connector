@@ -40,8 +40,8 @@ class DockerContainerPipeline internal constructor(
     private val objectMapper: ObjectMapper,
     val containers: List<Container>,
     val networks: List<Network>,
-    private val config: DockerBackend.DockerConfig,
-    private val sniDomain: String?,
+    private val pipelineHost: String,
+    private val sniEntryPort: ContainerPort?,
 ) : ContainerPipeline(name, contractId, targetId) {
     private val closed = AtomicBoolean(false)
     private val followUpContracts: MutableMap<String, MutableSet<OdrlPolicy>> = mutableMapOf()
@@ -154,7 +154,7 @@ class DockerContainerPipeline internal constructor(
             .map { b ->
                 val hostIp =
                     when (bindings[0].hostIp) {
-                        "0.0.0.0", "::" -> config.publicHostname
+                        "0.0.0.0", "::" -> pipelineHost
                         else -> bindings[0].hostIp
                     }
 
@@ -166,15 +166,10 @@ class DockerContainerPipeline internal constructor(
         containers[index].let { c ->
             val inspect = c.inspect()
 
+            // With an SNI proxy, the entry container has no published ports and is reachable via the proxy instead
             val ports =
-                if (sniDomain != null && index == 0) {
-                    listOf(
-                        ContainerPort(
-                            containerPort = config.pipelineEntryPort.toUShort(),
-                            hostAddress = "$name.$sniDomain:${config.sniProxyPort}",
-                            protocol = "tcp",
-                        ),
-                    )
+                if (sniEntryPort != null && index == 0) {
+                    listOf(sniEntryPort)
                 } else {
                     inspect.networkSettings?.ports?.flatMap { (k, v) ->
                         v?.let { parsePortBinding(k, v) } ?: emptyList()

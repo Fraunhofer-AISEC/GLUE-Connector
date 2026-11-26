@@ -31,7 +31,9 @@ class ConnectorConfig(
     val identity by required(stringProp())
 
     /**
-     * The default public URL to use for callbacks when starting a negotiation.
+     * The public URL of this connector's inter-connector API.
+     * It is used as the callback URL when starting a negotiation and its host is added to the connector's aTLS
+     * certificate.
      * When this property is not set, the local IP address is used, which will likely not be routable in production.
      */
     val publicUrl by withDefault(
@@ -42,15 +44,21 @@ class ConnectorConfig(
         URLBuilder(host = InetAddress.getLocalHost().hostAddress, port = 8080).build(),
     )
 
+    private val pipelineHostProp by stringProp("pipelineHost")
+
     /**
-     * Public DNS domain name used for SNI-based routing of (A)TLS traffic to pipelines.
-     * When set, pipeline entry containers are assigned hostnames of the form
-     * `<pipelineId>.<publicDomain>` and connected to the Envoy mux network so
-     * that Envoy's SNI dynamic forward proxy can route TLS connections to them
-     * on a single port. When unset, the legacy random-ephemeral-port behaviour
-     * is used.
+     * The host under which external peers reach this connector's pipelines.
+     * It defaults to the host component of the [publicUrl] configuration property.
+     *
+     * When using SNI proxy mode, the host must be a valid DNS name.
+     * Pipelines are registered as subdomains by their pipeline ID under this host name.
+     * How this is done depends on the pipeline backend in use.
+     *
+     * When exposing pipelines on ephemeral ports, this property shall contain the host name that the container is
+     * reachable on.
+     * Peers are expected to directly connect to these ports, potentially conflicting with firewall rules.
      */
-    val publicDomain by stringProp()
+    val pipelineHost: String get() = pipelineHostProp ?: publicUrl.host
 
     enum class EdcMode {
         NONE,
