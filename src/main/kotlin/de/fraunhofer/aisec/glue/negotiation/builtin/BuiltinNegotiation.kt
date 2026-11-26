@@ -16,6 +16,8 @@
 package de.fraunhofer.aisec.glue.negotiation.builtin
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import de.fraunhofer.aisec.glue.events.EventBus
+import de.fraunhofer.aisec.glue.events.once
 import de.fraunhofer.aisec.glue.models.negotiation.*
 import de.fraunhofer.aisec.glue.negotiation.Negotiation
 import de.fraunhofer.aisec.glue.negotiation.NegotiationException
@@ -35,10 +37,8 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
-import java.net.URI
 import java.nio.ByteBuffer
 import java.util.*
-import java.util.concurrent.ConcurrentLinkedQueue
 
 /**
  * The main driver for the builtin DSP negotiation process.
@@ -54,15 +54,8 @@ class BuiltinNegotiation(
     private val odrlParser: OdrlParser,
     val ownIdentity: String,
     scope: CoroutineScope,
-    initialStateObservers: Collection<suspend (BuiltinNegotiationData) -> Unit> = emptyList(),
+    private val eventBus: EventBus,
 ) : Negotiation {
-    /**
-     * A collection of observers notified about all state updates.
-     * All observers are called synchronously and in order of registration.
-     * [Exception]s in observers are caught and logged.
-     */
-    val stateObservers: ConcurrentLinkedQueue<suspend (BuiltinNegotiationData) -> Unit> = ConcurrentLinkedQueue(initialStateObservers)
-
     /**
      * The current state of the negotiation.
      * All updates to the state replace this object, meaning that references to this object will always capture a snapshot of the negotiation.
@@ -234,25 +227,7 @@ class BuiltinNegotiation(
         }
         data = newData
 
-        for (observer in stateObservers) {
-            try {
-                observer(newData)
-            } catch (e: Exception) {
-                LOG.atWarn {
-                    message = "Exception in negotiation state observer"
-                    cause = e
-                    payload =
-                        mapOf(
-                            "role" to role,
-                            "id" to id,
-                            "peerId" to peerPid,
-                            // I don't think there is a better way to log this information.
-                            // Maybe the index would be better, but would require a debugger to be useful at all.
-                            "observer" to observer,
-                        )
-                }
-            }
-        }
+        eventBus.emit(NegotiationUpdatedEvent(newData))
     }
 
     /**
@@ -763,8 +738,6 @@ class BuiltinNegotiation(
             return
         }
 
-        //       Should this be passed to the negotiator as well?
-
         // If the provider tries to send a (semantically) different agreement, reject and terminate the negotiation.
         // We leave the semantics to the negotiator :)
         if (!negotiator.verifyAgreement(currentPolicy as OdrlOffer, req.agreement)) {
@@ -861,21 +834,44 @@ class BuiltinNegotiation(
 
     override suspend fun awaitCompletion(): OdrlAgreement {
         val resultFuture = CompletableDeferred<OdrlAgreement>()
-        stateObservers.add { data ->
-            if (data.state == NegotiationState.FINALIZED) {
-                resultFuture.complete(data.contract as OdrlAgreement)
-            } else if (data.state == NegotiationState.TERMINATED) {
-                resultFuture.completeExceptionally(
-                    NegotiationException(
-                        "Negotiation terminated: ${data.failureReason}",
-                    ),
-                )
+        val handler =
+            eventBus.once<NegotiationUpdatedEvent>(filter = {
+                it.data.id == data.id &&
+                    it.data.state.isTerminal
+            }) {
+                when (it.data.state) {
+                    NegotiationState.FINALIZED -> {
+                        resultFuture.complete(it.data.contract as OdrlAgreement)
+                    }
+
+                    NegotiationState.TERMINATED -> {
+                        resultFuture.completeExceptionally(
+                            NegotiationException(
+                                "Negotiation terminated: ${it.data.failureReason}",
+                            ),
+                        )
+                    }
+
+                    else -> {
+                        throw AssertionError("unreachable")
+                    }
+                }
             }
-        }
+
         return when (data.state) {
-            NegotiationState.FINALIZED -> data.contract as OdrlAgreement
-            NegotiationState.TERMINATED -> throw NegotiationException("Negotiation terminated: ${data.failureReason}")
-            else -> resultFuture.await()
+            NegotiationState.FINALIZED -> {
+                handler.cancel()
+                data.contract as OdrlAgreement
+            }
+
+            NegotiationState.TERMINATED -> {
+                handler.cancel()
+                throw NegotiationException("Negotiation terminated: ${data.failureReason}")
+            }
+
+            else -> {
+                resultFuture.await()
+            }
         }
     }
 

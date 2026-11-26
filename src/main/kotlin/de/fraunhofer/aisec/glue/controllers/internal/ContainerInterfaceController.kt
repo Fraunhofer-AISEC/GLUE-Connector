@@ -16,7 +16,7 @@
 package de.fraunhofer.aisec.glue.controllers.internal
 
 import com.fasterxml.jackson.databind.JsonNode
-import de.fraunhofer.aisec.glue.DataStore
+import de.fraunhofer.aisec.glue.ContractManager
 import de.fraunhofer.aisec.glue.controllers.Controller
 import de.fraunhofer.aisec.glue.negotiation.NegotiationManager
 import de.fraunhofer.aisec.glue.negotiation.toOffer
@@ -43,7 +43,7 @@ import java.net.URI
 class ContainerInterfaceController(
     private val negotiationManager: NegotiationManager,
     private val pipelineManager: PipelineManager,
-    private val dataStore: DataStore,
+    private val contractManager: ContractManager,
     private val policyEngine: PolicyEngine,
     private val httpClient: HttpClient,
     private val odrlParser: OdrlParser,
@@ -169,7 +169,7 @@ class ContainerInterfaceController(
                             }
                         }
                     } else {
-                        val contract = dataStore.getContract(callingPipeline.contractId)
+                        val contract = contractManager.getContract(callingPipeline.contractId)
                         //  stopped?
                         assert(contract != null) {
                             "Contract for existing pipeline does not exist, which should not be possible"

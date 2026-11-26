@@ -44,3 +44,6 @@ enum class NegotiationState {
     @JsonProperty("${Namespaces.DSPACE}/TERMINATED")
     TERMINATED,
 }
+
+val NegotiationState.isTerminal
+    get() = this == NegotiationState.FINALIZED || this == NegotiationState.TERMINATED

@@ -15,7 +15,7 @@
  */
 package de.fraunhofer.aisec.glue.controllers
 
-import de.fraunhofer.aisec.glue.DataStore
+import de.fraunhofer.aisec.glue.ContractManager
 import de.fraunhofer.aisec.glue.models.pipeline.PipelineCreateRequest
 import de.fraunhofer.aisec.glue.models.pipeline.PipelineCreateResponse
 import de.fraunhofer.aisec.glue.pipeline.PipelineManager
@@ -35,7 +35,7 @@ import java.net.URI
  * policies.
  */
 class PipelineController(
-    private val dataStore: DataStore,
+    private val contractManager: ContractManager,
     private val pipelineManager: PipelineManager,
     private val policyEngine: PolicyEngine,
 ) : AtlsController {
@@ -48,7 +48,7 @@ class PipelineController(
                 val req = call.receive<PipelineCreateRequest>()
 
                 val contract =
-                    dataStore.getContract(req.contractId)
+                    contractManager.getContract(req.contractId)
 
                 // Responds with `NotFound` if contract missing
                 if (contract == null) {

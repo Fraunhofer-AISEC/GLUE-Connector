@@ -20,6 +20,7 @@ import de.fraunhofer.aisec.glue.DataStore
 import de.fraunhofer.aisec.glue.config.ConfigManager
 import de.fraunhofer.aisec.glue.config.ConnectorConfig
 import de.fraunhofer.aisec.glue.controllers.BuiltinNegotiationController
+import de.fraunhofer.aisec.glue.events.EventBus
 import de.fraunhofer.aisec.glue.negotiation.builtin.BuiltinNegotiationManager
 import de.fraunhofer.aisec.glue.negotiation.builtin.DummyNegotiator
 import de.fraunhofer.iosb.odrl.OdrlOffer
@@ -114,14 +115,16 @@ fun main(args: Array<String>) {
         val appConfig = MapApplicationConfig("connector.identity" to "https://contract-registry-tool.local")
         val configManager = ConfigManager(appConfig)
         val connectorConfig = configManager.getConfig(::ConnectorConfig)
+        val eventBus = EventBus()
         val negotiationManager =
             BuiltinNegotiationManager(
                 httpClient,
                 objectMapper,
                 DummyNegotiator(true),
-                DataStore(objectMapper, configManager),
+                DataStore(objectMapper, configManager, eventBus),
                 OdrlParser(),
                 configManager,
+                eventBus,
             )
 
         val closeChan = Channel<Unit>()
