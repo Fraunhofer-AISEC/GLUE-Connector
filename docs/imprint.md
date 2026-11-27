@@ -1,17 +1,3 @@
----
-title: "Imprint"
-linkTitle: "Imprint"
-weight: 20
-no_list: false
-menu:
-  main:
-    weight: 20
-hide:
-  - navigation
-description: >
-    The CPG library is a language-agnostic graph representation of source code.
----
-
 # Imprint
 
 ## Website Provider
