@@ -43,6 +43,7 @@ nav:
   - Use Cases: use-cases.md
   - Containers: containers.md
   - Documentation: documentation.md
+  - Imprint: imprint.md
 
 markdown_extensions:
   - toc:
