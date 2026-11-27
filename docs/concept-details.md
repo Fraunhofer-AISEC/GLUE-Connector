@@ -7,8 +7,8 @@
 | Connector deployment with supporting services. Insecure deployments do not include components in grey. |
 
 The figure above shows the services involved in each connector deployment as well as their interactions with each other as well as with the external service containers.
-Alongside the trusted connector itself, we deploy a separate docker daemon for each connector. 
-The trusted connector uses this docker daemon to manage individual pipeline containers.
+Alongside the GLUE Connector itself, we deploy a separate docker daemon for each connector. 
+The GLUE Connector uses this docker daemon to manage individual pipeline containers.
 
 The [Container Measurement Component (CMC)](https://github.com/Fraunhofer-AISEC/cmc) provides cross-platform attestation capabilities via its API, which we use to attest the connectors.
 Trust anchor is either the Trusted Execution Environment's hardware used for measuring the software stack or a Trusted Platform Module (TPM). 
@@ -113,7 +113,3 @@ The contract negotiation component has to be available in each GLUE connector an
 The UC/Pipeline manager issues policies and controls the container deployment manager. 
 The container deployment manager deploys and configures the containers of each pipeline.
 The Policy Enforcement Point (PEP) has to be available within each container, however, in GLUE the PEP is indirectly implemented by the available logic of containers and enforced by feature availablity.
-
-## More Information
-
-Next can be seen the [Use Cases](use-cases.md).

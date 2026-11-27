@@ -5,7 +5,7 @@ The corresponding code can be seen here: [GLUE Examples](https://gitlab.cc-asp.f
 <!--- TODO Update the link -->
 
 <!--- Taken from Code-README.md -->
-This directory contains examples for the deployment of the Trusted Connector.
+This directory contains examples for the deployment of the GLUE Connector.
 The examples use docker compose to orchestrate the required components as containers.
 
 ## Prerequisites
@@ -37,7 +37,7 @@ nix-shell -p docker-client docker-buildx docker-compose openssl yq jo gettext cu
 
 ## Running Examples
 
-To demonstrate the different capabilities of the Trusted Connector, we provide a set of examples.
+To demonstrate the different capabilities of the GLUE Connector, we provide a set of examples.
 Each example defines its own actors and policy that may deploy different pipeline configurations.
 To start an example, run `./example.sh <example>` or run `./example.sh --help` for more information on its complete
 functionality.
@@ -72,7 +72,7 @@ sockets and files.
 
 Figure 1 shows the services involved in each connector deployment as well as their interactions with each other as well
 as with the external service containers.
-Alongside the trusted connector itself, we deploy a separate docker daemon for each connector. The trusted connector
+Alongside the GLUE Connector itself, we deploy a separate docker daemon for each connector. The GLUE Connector
 uses this docker daemon to manage individual pipeline containers.
 To ensure that the examples work in any environment, we bundle all container images and load them into a local container
 registry on startup.
@@ -100,6 +100,7 @@ The same data processing network can be launched on a remote system.
 
 
 ### More Information
-More information about the provided examples, how they can be modified and further details of the configurable parameters can be found in the [GLUE Examples](https://gitlab.cc-asp.fraunhofer.de/ccit-glue/usage-control/container-pipeline/-/tree/main/example?ref_type=heads).
+
+More information about the provided examples, how they can be modified and further details of the configurable parameters can be found in the [GLUE Examples](https://github.com/Fraunhofer-AISEC/GLUE-Connector/tree/main/example).
 
 See the [Concept Overview](concept-overview.md) for more information on the concepts and design decisions underlying the GLUE Connector.
