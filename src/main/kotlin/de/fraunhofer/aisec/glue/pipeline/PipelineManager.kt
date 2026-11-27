@@ -43,6 +43,7 @@ class PipelineManager(
     private val pipelineMutex = Mutex()
     private val atlsConfig = config.getConfig(::AtlsConfig)
     private val connectorConfig = config.getConfig(::ConnectorConfig)
+    private val sniProxyConfig = config.getConfig(::SniProxyConfig)
 
     private fun createPipelineName(): String = generateSequence { Random.nextBytes(8).toHexString() }.first { n -> !pipelines.contains(n) }
 
@@ -121,13 +122,16 @@ class PipelineManager(
 
             val keyId =
                 if (atlsConfig.enabled) {
-                    // This determines if the public URL must be added to the pipeline cert as ip address or dns name
-                    val hostnameIsIp = runCatching { IPv4Address.parse(connectorConfig.publicUrl.host) }.isSuccess
+                    // The pipeline cert must match the host that external peers use to reach the pipeline.
+                    // With an SNI proxy, that is the pipeline's own DNS name.
+                    // Otherwise, the pipeline host must be added to the cert as ip address or dns name.
+                    val host = connectorConfig.pipelineHost
+                    val hostnameIsIp = runCatching { IPv4Address.parse(host) }.isSuccess
                     val (dnsNames, ipAddresses) =
-                        if (hostnameIsIp) {
-                            Pair(listOf<String>(), listOf(connectorConfig.publicUrl.host))
-                        } else {
-                            Pair(listOf(connectorConfig.publicUrl.host), listOf())
+                        when {
+                            sniProxyConfig.enabled -> Pair(listOf("$name.$host"), emptyList<String>())
+                            hostnameIsIp -> Pair(emptyList(), listOf(host))
+                            else -> Pair(listOf(host), emptyList())
                         }
 
                     cmcClient.tlsKey(name, dnsNames, ipAddresses)

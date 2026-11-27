@@ -233,7 +233,7 @@ class PipelineTest {
                 val configManager =
                     ConfigManager(
                         MapApplicationConfig(
-                            "docker.publicHostname" to (System.getenv("DOCKER_HOSTNAME") ?: InetAddress.getLocalHost().hostAddress),
+                            "connector.pipelineHost" to (System.getenv("DOCKER_HOSTNAME") ?: InetAddress.getLocalHost().hostAddress),
                             // We don't have a CMC in the CI, so don't attempt to spawn aTLS proxies
                             "atls.enabled" to "false",
                         ),

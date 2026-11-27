@@ -18,22 +18,26 @@ package de.fraunhofer.aisec.glue.pipeline.docker
 import com.fasterxml.jackson.databind.ObjectMapper
 import de.fraunhofer.aisec.glue.config.Config
 import de.fraunhofer.aisec.glue.config.ConfigManager
+import de.fraunhofer.aisec.glue.config.ConnectorConfig
 import de.fraunhofer.aisec.glue.docker.Container
 import de.fraunhofer.aisec.glue.docker.DockerClient
+import de.fraunhofer.aisec.glue.docker.Image
 import de.fraunhofer.aisec.glue.docker.Network
 import de.fraunhofer.aisec.glue.docker.model.*
 import de.fraunhofer.aisec.glue.pipeline.AugmentedGlueContainer
 import de.fraunhofer.aisec.glue.pipeline.Backend
 import de.fraunhofer.aisec.glue.pipeline.ContainerInfo
 import de.fraunhofer.aisec.glue.pipeline.ContainerPipeline
+import de.fraunhofer.aisec.glue.pipeline.ContainerPort
 import de.fraunhofer.aisec.glue.pipeline.IPv4Address
 import de.fraunhofer.aisec.glue.pipeline.IPv4Network
+import de.fraunhofer.aisec.glue.pipeline.SniProxyConfig
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.ktor.client.plugins.ResponseException
 import io.ktor.server.config.*
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
-import java.net.InetAddress
 import java.util.concurrent.ConcurrentLinkedQueue
 
 class DockerBackend(
@@ -48,6 +52,8 @@ class DockerBackend(
             .subnets(subnetLen)
             .iterator()
     private val config = configManager.getConfig(::DockerConfig)
+    private val connectorConfig = configManager.getConfig(::ConnectorConfig)
+    private val sniProxyConfig = configManager.getConfig(::SniProxyConfig)
 
     // Note: There is no reliable way to determine if running in a container.
     // Checking for .dockerenv is an implementation detail and the hostname can be overwritten.
@@ -64,7 +70,7 @@ class DockerBackend(
         close: suspend (R) -> Unit,
         map: suspend (Int, T) -> R,
     ): List<R> {
-        val completed = ConcurrentLinkedQueue<R>()
+        val completed = ConcurrentLinkedQueue<R & Any>()
         try {
             return coroutineScope {
                 input.mapIndexed { index, item -> async { map(index, item).also(completed::add) } }.awaitAll()
@@ -81,12 +87,12 @@ class DockerBackend(
         contractId: String,
         targetId: String,
     ): MutableList<ContainerCreateRequest> {
-        checkHashes(pipelineSpec)
+        val pinnedImages = checkHashes(pipelineSpec)
         return pipelineSpec
-            .map { c ->
+            .mapIndexed { i, c ->
                 //       We probably should persist this to the point where we inject the config
                 ContainerCreateRequest(
-                    image = c.base.image,
+                    image = pinnedImages[i],
                     hostConfig =
                         HostConfig(
                             networkMode = if (c.base.allowNetwork == true) "bridge" else "none",
@@ -105,11 +111,20 @@ class DockerBackend(
     }
 
     // Hash check adapted from https://github.com/Fraunhofer-AISEC/trusted-connector/blob/16fb97953c89e796d80c52cacc7a4445c1dda019/ids-dataflow-control/src/main/kotlin/de/fhg/aisec/ids/dataflowcontrol/usagecontrol/DockerImageConstraint.kt#L104
-    private suspend fun checkHashes(pipelineDef: List<AugmentedGlueContainer>) {
-        for (augmentedGlueContainer in pipelineDef) {
+    // Images are resolved by their hash, the hash check below remains as an additional safeguard.
+    private suspend fun checkHashes(pipelineDef: List<AugmentedGlueContainer>): List<String> {
+        return pipelineDef.map { augmentedGlueContainer ->
             val glueContainer = augmentedGlueContainer.base
             val expectedHash = glueContainer.hash
-            val imageToCheck = dockerClient.images.get(glueContainer.image)
+            // Pin the image by manifest digest (tag stripped), fall back to the hash as a local image ID
+            val repository = glueContainer.image.substringBefore('@').replace(Regex(":[^/]*$"), "")
+            val imageToCheck =
+                try {
+                    dockerClient.images.get(repository, tag = expectedHash)
+                } catch (_: ResponseException) {
+                    // An image ID cannot be pulled, but it identifies locally available (e.g. self-built) images
+                    Image(dockerClient, expectedHash)
+                }
             val inspectResponse = imageToCheck.inspect()
             val idHash = inspectResponse.id
             val repoDigests = inspectResponse.repoDigests?.map { it.split("@").last() }
@@ -125,7 +140,7 @@ class DockerBackend(
                             "repoDigests" to repoDigests?.joinToString(", "),
                         )
                 }
-                continue
+                return@map imageToCheck.name
             }
 
             LOG.atWarn {
@@ -216,25 +231,35 @@ class DockerBackend(
             throw IllegalArgumentException("The provided spec contains no containers")
         }
 
-        //       Alternatively, we can simply expose all ports that have a corresponding EXPOSE in the dockerfile.
-        //       While simpler, that could have unintended side effects and lead to over exposure
-        val publishPorts = listOf("8080/tcp")
+        // The entry container is either exposed by publishing its entry port on an ephemeral host port, or by giving it
+        // a DNS name that an SNI proxy uses to route TLS connections to it.
+        val entryHostname = if (sniProxyConfig.enabled) "$id.${connectorConfig.pipelineHost}" else null
 
         containerCreateReqs[0] =
-            containerCreateReqs[0].copy(
-                exposedPorts = publishPorts.associateWith { emptyMap<Any, Any>() },
-                hostConfig =
-                    containerCreateReqs[0].hostConfig!!.copy(
-                        portBindings =
-                            publishPorts.associateWith {
-                                listOf(
-                                    PortBinding(
-                                        hostPort = "",
-                                    ),
-                                )
-                            },
-                    ),
-            )
+            if (sniProxyConfig.enabled) {
+                // If the SNI proy is enabled, we prefix the pipeline's ID to the public endpoint and set the first
+                // container's hostname.
+                // The SNI proxy must then use the common docker network to forward connections to the correct pipeline.
+                containerCreateReqs[0].copy(hostname = entryHostname)
+            } else {
+                // Alternatively, we can simply expose all ports that have a corresponding EXPOSE in the dockerfile.
+                // This might overexpose the container, but is simpler and allows multiple ports/protocols.
+                val publishPorts = listOf("$ENTRY_PORT/tcp")
+                containerCreateReqs[0].copy(
+                    exposedPorts = publishPorts.associateWith { emptyMap<Any, Any>() },
+                    hostConfig =
+                        containerCreateReqs[0].hostConfig!!.copy(
+                            portBindings =
+                                publishPorts.associateWith {
+                                    listOf(
+                                        PortBinding(
+                                            hostPort = "",
+                                        ),
+                                    )
+                                },
+                        ),
+                )
+            }
 
         val containers = createContainers(id, containerCreateReqs)
         val networks =
@@ -245,7 +270,36 @@ class DockerBackend(
                 throw e
             }
 
-        return DockerContainerPipeline(id, contractId, targetId, objectMapper, containers, networks, config)
+        val sniEntryPort =
+            entryHostname?.let {
+                // Connect the first container to the shared network with the SNI proxy, using its DNS name as an alias.
+                // Since the hostname is already set to the correct value, this should not be needed, but better safe
+                // than sorry I guess.
+                try {
+                    dockerClient.networks.get(config.sniProxyNetwork).connect(containers[0], aliases = listOf(it))
+                } catch (e: Exception) {
+                    LOG.atError {
+                        message = "Failed to connect entry container to the SNI proxy network"
+                        cause = e
+                        payload = mapOf("container" to containers[0].name, "network" to config.sniProxyNetwork)
+                    }
+                    containers.forEach { c -> c.runCatching { remove() } }
+                    networks.forEach { n -> n.runCatching { remove() } }
+                    throw e
+                }
+                ContainerPort(ENTRY_PORT, "$it:${sniProxyConfig.port ?: connectorConfig.publicUrl.port}", "tcp")
+            }
+
+        return DockerContainerPipeline(
+            id,
+            contractId,
+            targetId,
+            objectMapper,
+            containers,
+            networks,
+            connectorConfig.pipelineHost,
+            sniEntryPort,
+        )
     }
 
     override suspend fun getConnectorIp(relativeTo: ContainerInfo): String {
@@ -302,10 +356,18 @@ class DockerBackend(
     class DockerConfig(
         inner: ApplicationConfig,
     ) : Config(inner) {
-        val publicHostname: String by withDefault(stringProp(), InetAddress.getLocalHost().hostAddress)
+        /**
+         * The docker network that the first container of each pipeline is connected to when the SNI proxy is in use
+         * (see [SniProxyConfig]).
+         * The proxy must be connected to this network as well.
+         */
+        val sniProxyNetwork by withDefault(stringProp(), "sni-proxy")
     }
 
     companion object {
         private val LOG = KotlinLogging.logger {}
+
+        // The port that the atls-proxy container listens on.
+        private const val ENTRY_PORT: UShort = 8080u
     }
 }

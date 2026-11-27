@@ -25,8 +25,10 @@ import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
+import io.ktor.client.statement.bodyAsText
 import io.ktor.http.*
 import io.ktor.serialization.jackson.*
+import kotlinx.coroutines.runBlocking
 import java.io.Closeable
 import java.net.ConnectException
 import java.net.URI
@@ -175,35 +177,46 @@ class DockerClient(
     val networks = Networks()
 
     inner class Images {
-        suspend fun createByPull(name: String): Image {
+        /**
+         * Pull the image [name] from its registry.
+         *
+         * @param tag optional tag or digest to pull. Overrides any tag in the image name.
+         */
+        suspend fun createByPull(
+            name: String,
+            tag: String? = null,
+        ): Image {
             LOG.atDebug {
                 message = "Attempting to pull the image from image registry"
-                payload = mapOf("imageName" to name)
+                payload = mapOf("imageName" to name, "tag" to tag)
             }
-            try {
-                httpClient.post(endpoint("images/create")) {
-                    parameter("fromImage", name)
-                    System.getenv("REGISTRY_AUTH_TOKEN")?.let {
-                        header("X-Registry-Auth", it)
-                    }
-                }
-            } catch (e: ClientRequestException) {
-                LOG.atWarn {
-                    message = "Failed to pull image, will try local image"
-                    payload = mapOf("imageName" to name)
-                    cause = e
+            httpClient.post(endpoint("images/create")) {
+                parameter("fromImage", name)
+                parameter("tag", tag)
+                System.getenv("REGISTRY_AUTH_TOKEN")?.let {
+                    header("X-Registry-Auth", it)
                 }
             }
-            return Image(this@DockerClient, name)
+
+            return Image(this@DockerClient, reference(name, tag))
         }
 
-        suspend fun get(name: String): Image {
-            val image = Image(this@DockerClient, name)
+        /**
+         * Get a reference to image [name], pulling it if it is not available locally.
+         * This function always performs at least one inspect API call to determine the image's presence.
+         *
+         * @param tag optional tag or digest of the image.
+         */
+        suspend fun get(
+            name: String,
+            tag: String? = null,
+        ): Image {
+            val image = Image(this@DockerClient, reference(name, tag))
 
             try {
                 image.inspect()
             } catch (_: ClientRequestException) {
-                return createByPull(name)
+                return createByPull(name, tag)
             }
 
             return image
@@ -211,6 +224,19 @@ class DockerClient(
     }
 
     val images = Images()
+
+    // Get the normalized reference for an image with an optional tag parameter.
+    // Digests are identified as they contain a colon, which is not allowed in a tag.
+    // Note that this is not proper docker reference parsing, but since this is an internal function with wrong results
+    // being rejected by docker immediately, this is fine.
+    private fun reference(
+        name: String,
+        tag: String?,
+    ) = when {
+        tag == null -> name
+        ':' in tag -> "$name@$tag"
+        else -> "$name:$tag"
+    }
 
     companion object {
         private val LOG = KotlinLogging.logger {}
