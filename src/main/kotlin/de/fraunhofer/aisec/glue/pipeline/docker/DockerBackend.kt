@@ -21,6 +21,7 @@ import de.fraunhofer.aisec.glue.config.ConfigManager
 import de.fraunhofer.aisec.glue.config.ConnectorConfig
 import de.fraunhofer.aisec.glue.docker.Container
 import de.fraunhofer.aisec.glue.docker.DockerClient
+import de.fraunhofer.aisec.glue.docker.Image
 import de.fraunhofer.aisec.glue.docker.Network
 import de.fraunhofer.aisec.glue.docker.model.*
 import de.fraunhofer.aisec.glue.pipeline.AugmentedGlueContainer
@@ -32,6 +33,7 @@ import de.fraunhofer.aisec.glue.pipeline.IPv4Address
 import de.fraunhofer.aisec.glue.pipeline.IPv4Network
 import de.fraunhofer.aisec.glue.pipeline.SniProxyConfig
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.ktor.client.plugins.ResponseException
 import io.ktor.server.config.*
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -116,7 +118,14 @@ class DockerBackend(
             val expectedHash = glueContainer.hash
             // Pin the image by manifest digest (tag stripped), fall back to the hash as a local image ID
             val repository = glueContainer.image.substringBefore('@').replace(Regex(":[^/]*$"), "")
-            val (imageToCheck, inspectResponse) = dockerClient.images.get(repository, tag = expectedHash).let { it to it.inspect() }
+            val imageToCheck =
+                try {
+                    dockerClient.images.get(repository, tag = expectedHash)
+                } catch (_: ResponseException) {
+                    // An image ID cannot be pulled, but it identifies locally available (e.g. self-built) images
+                    Image(dockerClient, expectedHash)
+                }
+            val inspectResponse = imageToCheck.inspect()
             val idHash = inspectResponse.id
             val repoDigests = inspectResponse.repoDigests?.map { it.split("@").last() }
 
