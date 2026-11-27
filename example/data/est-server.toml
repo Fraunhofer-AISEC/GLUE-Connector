@@ -20,9 +20,13 @@ tls_key = "/pki/est-server-key.pem"
 tls_ca_chain = ["/pki/est-server-cert.pem", "/pki/ca-cert.pem"]
 
 [est.auth]
-# comma-separated authentication methods for /simpleenroll, empty disables the endpoint. Allowed:
-# none, token, certificate
-simpleenroll = []
+# comma-separated authentication methods for /simpleenroll, empty disables the endpoint. attestation
+# verifies the attestation report in the CSR. Allowed: none, token, certificate, attestation
+simpleenroll = ["attestation"]
+
+# comma-separated authentication methods for /simplereenroll, which must all succeed, empty disables
+# the endpoint. Allowed: certificate, attestation
+simplereenroll = []
 
 # comma-separated authentication methods for /tpmactivateenroll, empty disables the endpoint.
 # Allowed: none, token, certificate

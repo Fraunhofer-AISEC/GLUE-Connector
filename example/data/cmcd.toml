@@ -28,10 +28,10 @@ endorsement = "est:https://estserver:9000/"
 # comma-separated list of metadata locations [file:// https:// blob://]
 locations = ["file:///metadata"]
 
-[cmc.provisioning]
+[cmc.enrollment]
 # enrollment mode, with the address of the enrollment server for the modes that require one [self
 # est:<url>]
-enrollment = "est:https://estserver:9000/"
+server = "est:https://estserver:9000/"
 
 [cmc.policies]
 # policy engine for custom verification. Allowed: js
