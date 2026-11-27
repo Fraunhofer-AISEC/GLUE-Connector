@@ -6,7 +6,7 @@ on:
       - main
     paths:
       - "docs/**"
-      - "mkdocs.yml"
+      - ".github/mkdocs.yml"
       - ".github/workflows/documentation.yml"
   workflow_dispatch:
 
@@ -30,4 +30,4 @@ jobs:
         run: pip install "mkdocs-material==9.*"
 
       - name: Deploy to GitHub Pages
-        run: mkdocs gh-deploy --force
+        run: mkdocs gh-deploy -f .github/mkdocs.yml --force

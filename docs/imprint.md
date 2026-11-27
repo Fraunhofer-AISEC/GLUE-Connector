@@ -1,7 +1,7 @@
 # Imprint
 
 ## Website Provider
-The website www.codyze.io is provided by Fraunhofer-Gesellschaft zur Förderung der angewandten Forschung e.V.
+The website [fraunhofer-aisec.github.io/glue-connector](https://fraunhofer-aisec.github.io/GLUE-Connector) is provided by Fraunhofer-Gesellschaft zur Förderung der angewandten Forschung e.V.
 
 Fraunhofer-Gesellschaft zur Förderung der angewandten Forschung e.V.<br />
 Hansastraße 27 c<br />
@@ -54,7 +54,7 @@ Executive Board Member for Finances and Controlling (executive unit VD)
 # Usage Rights
 © Fraunhofer-Gesellschaft e. V., Munich
 
-The source code of Codyze and the CPG is licensed under the Apache License, Version 2.0. See the [LICENSE](https://github.com/fraunhofer-aisec/codyze/blob/main/LICENSE) file for the full license text.
+The source code of the GLUE Connector is licensed under the Apache License, Version 2.0. See the [LICENSE](https://github.com/Fraunhofer-AISEC/GLUE-Connector/blob/main/LICENSE) file for the full license text.
 You may use, modify, and distribute it, including for commercial purposes, subject to the terms of that license. Third-party components remain subject to their respective licenses.
 
 
