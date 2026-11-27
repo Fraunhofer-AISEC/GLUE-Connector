@@ -1,51 +1,29 @@
 # Documentation
 
+The project documentation you are currently reading is part of the GLUE Connector repository on GitHub.
+Its source code resiedes in the [`docs/` directory](https://github.com/Fraunhofer-AISEC/GLUE-Connector/docs).
+When documentation changes are merged into main, the documentation page is updated automatically by GitHub Actions.
+
 ## Compilation of Project Documentation
 
-Use these commands to compile the project documentation for local usage.
+As with any code contributions, changes to the documentation must be built and tested before contributing.
+The following command may be used to compile the documentation and place the rendered outputs under `site/`
 
 ```bash
 docker compose -f docker-compose.docs.yml run --rm mkdocs build
 ```
-The resulting files are placed in site/.
 
-## Automatically publish to GitHub Pages
+The following file compose file must be present at the repository root as `docker-compose.docs.yml`.
 
-Create .github/workflows/documentation.yml:
+```yaml
+name: glue-documentation.md
+
+services:
+  mkdocs:
+    image: squidfunk/mkdocs-material:9
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./:/docs
+    command: serve --dev-addr=0.0.0.0:8000
 ```
-name: Publish Documentation
-
-on:
-push:
-branches:
-- main
-paths:
-- "docs/**"
-- "mkdocs.yml"
-- ".github/workflows/documentation.yml"
-workflow_dispatch:
-
-permissions:
-contents: write
-
-jobs:
-deploy:
-runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install MkDocs
-        run: pip install "mkdocs-material==9.*"
-
-      - name: Deploy to GitHub Pages
-        run: mkdocs gh-deploy --force
-```
-
-This builds the documentation and pushes the generated website to the gh-pages branch.
